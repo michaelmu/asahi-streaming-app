@@ -2,16 +2,17 @@ package ai.shieldtv.app.debug
 
 import ai.shieldtv.app.feature.SettingsFeatureFactory
 import ai.shieldtv.app.integration.debrid.realdebrid.debug.RealDebridDebugState
+import kotlinx.coroutines.runBlocking
 
 object StartAuthRunner {
     @JvmStatic
-    suspend fun main(args: Array<String>) {
+    fun main(args: Array<String>) = runBlocking {
         val settingsViewModel = SettingsFeatureFactory.createViewModel()
         val state = settingsViewModel.startLinking()
         val flow = state.deviceCodeFlow
         if (flow == null) {
             println("No device flow returned")
-            return
+            return@runBlocking
         }
         AuthDebugStore.save(flow)
         println("Verification URL: ${flow.verificationUrl}")
