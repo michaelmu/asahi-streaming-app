@@ -117,6 +117,8 @@ Ugly but functional beats polished and fake.
 ## Goal
 Make account linking and core debrid capabilities real.
 
+Implementation note: before Phase 2 can be considered truly active on Android, the shared networking layer must stop depending on JVM-only `java.net.http.HttpClient`. Local emulator testing has already shown that this crashes the Android runtime during app startup when the broader graph is initialized.
+
 ## Tasks
 - implement Real-Debrid API client
 - implement device code auth flow
@@ -250,17 +252,18 @@ If I were executing this in order, I’d do:
 
 1. create Android project + module skeleton
 2. create `core:model`, `domain`, and core interfaces
-3. build Search screen + TMDb search
-4. build Details screen + episode browsing
-5. build Settings/Account screen shell
-6. implement Real-Debrid auth
-7. implement source provider contract + one provider
-8. implement source normalization + ranking
-9. build Sources screen
-10. implement RD resolution
-11. integrate Media3 playback
-12. add progress/resume
-13. polish errors/settings/provider toggles
+3. replace JVM-only networking with an Android-compatible HTTP stack
+4. build Search screen + TMDb search
+5. build Details screen + episode browsing
+6. build Settings/Account screen shell
+7. implement Real-Debrid auth
+8. implement source provider contract + one provider
+9. implement source normalization + ranking
+10. build Sources screen
+11. implement RD resolution
+12. integrate Media3 playback
+13. add progress/resume
+14. polish errors/settings/provider toggles
 
 That ordering minimizes fake architecture and maximizes working-product feedback.
 
@@ -321,11 +324,11 @@ These are all tempting. Most are not early blockers.
 
 The roadmap is now clear enough that the next practical move is:
 
-## Start actual scaffolding
+## Make the networking layer Android-safe
 Meaning:
-- create the Android project
-- create the initial Gradle modules
-- create the first package structure
-- add placeholder Kotlin files for core contracts
+- replace `java.net.http.HttpClient` usage with an Android-compatible client
+- reconnect TMDb / RD / provider integrations through that shared stack
+- keep the app launchable on emulator/device while the migration happens
+- then re-enable live auth and broader end-to-end app flows
 
-That is the point where planning officially becomes implementation.
+That is the current highest-leverage implementation task because emulator testing has already proven it is a real runtime blocker.

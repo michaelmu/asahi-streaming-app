@@ -383,6 +383,8 @@ Current first real-provider direction: a Torrentio-style JSON stream provider is
 
 Current auth direction: Real-Debrid should follow a Fenlight-like device-code flow, with local token persistence and downstream reuse for cache checks, resolution, and playback-related debrid actions. Environment token overrides can exist for development, but stored device-flow tokens should be the primary runtime source. The initial device-flow bootstrap client id can follow Fenlight’s default (`X245A4XAIBGVM`) unless explicitly overridden.
 
+Android runtime note: local emulator testing exposed that the current shared HTTP layer is still using `java.net.http.HttpClient`, which is not available on Android. That means the broad app graph cannot be treated as Android-safe yet. Until networking is migrated to an Android-compatible stack, startup/debug surfaces should avoid initializing graph segments that touch the current HTTP factory.
+
 ## Goal
 Replicate the *benefit* of CocoScrapers without reproducing Python/Kodi plugin mechanics.
 
@@ -611,7 +613,7 @@ For this app, a sane Kotlin-native version would be:
 - module structure
 - navigation shell
 - theme/focus baseline for Android TV
-- network stack
+- Android-compatible network stack
 - persistence baseline
 
 ## Milestone 1 - metadata vertical slice

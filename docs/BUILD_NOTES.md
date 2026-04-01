@@ -13,6 +13,8 @@ Use a dedicated polling task for device auth so the app can wait and retry inste
 For the most reliable manual testing, prefer a single live auth-flow runner that starts and polls in the same process.
 The in-app auth debug surface should follow the same rule: start and poll inside one running session rather than relying on disconnected manual steps.
 
+Android runtime update: local emulator testing now works for install/launch/log capture. That testing exposed a real Android incompatibility in the current networking layer: the app graph still reaches `java.net.http.HttpClient`, which is JVM-only and crashes on Android with `NoClassDefFoundError`. Until the HTTP stack is migrated to an Android-compatible client, keep startup isolated from the broader app graph so the APK remains launchable for runtime validation.
+
 ## Immediate priorities
 - keep Android app resources/manifest sane
 - keep module conventions centralized
@@ -21,14 +23,12 @@ The in-app auth debug surface should follow the same rule: start and poll inside
 - make bootstrap expectations explicit even before the real wrapper/build verification exists
 
 ## Near-term next steps
-- add Gradle wrapper / verify build bootstrap
-- make module/plugin setup internally consistent
-- fix buildSrc/root plugin resolution and versioning issues surfaced by first bootstrap attempts
-- fix first compile-time dependency gaps exposed by real builds (currently coroutine/Flow dependencies in domain and playback integration)
+- replace the current JVM-only HTTP layer with an Android-compatible client (preferably OkHttp)
+- keep module/plugin setup internally consistent
 - align Android/JVM target settings when Gradle surfaces toolchain mismatches
 - avoid enabling Compose in the app convention until the app actually carries Compose runtime dependencies and a real Compose UI host
 - use the debug shell to expose small end-to-end preview paths for real slices while the full TV UI is still pending
-- prefer enriching those preview paths across search/details/sources/playback before investing heavily in placeholder UI chrome
+- reintroduce live RD auth only after the startup path no longer touches JVM-only networking classes
 - introduce real network integrations behind existing repository/api/mapper boundaries, with graceful fallback to fake adapters while the buildable baseline is protected
 - when real adapters are introduced, prefer minimal JSON parsing first over premature full DTO systems, so the live path can be verified quickly
 - keep app-layer wiring insulated from transport/client implementation types; expose factories or repository boundaries instead
@@ -43,8 +43,7 @@ The in-app auth debug surface should follow the same rule: start and poll inside
 - replace placeholder cache marking with a real instant-availability-style path as soon as the pipeline shape is proven
 - keep the Real-Debrid HTTP path config-gated so the preview and build remain usable even before credentials/tokens are fully configured
 - keep app-layer DI insulated from debrid transport/client construction just like TMDb/source feed wiring
-- make preview playback use the actual top-ranked source so debug output reflects the real source-selection behavior
 - evolve the sources side toward explicit provider adapters before swapping in real transports/providers
 - transitional transport-shaped adapters are still useful, but the target architecture is now fully in-app provider logic rather than dependence on remote addon endpoints
 - decide when to switch from placeholder text UI to real Android TV UI host
-- avoid adding more feature complexity until bootstrap gaps are reduced
+- avoid adding more feature complexity until the Android runtime path is clean
