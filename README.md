@@ -10,6 +10,7 @@ Current repo state:
 - feature slices for metadata, auth, sources, and playback are scaffolded
 - app-level coordinator/navigation spine exists
 - temporary UI shell placeholder exists at the app layer
+- the app activity now renders a minimal debug text view instead of doing nothing
 
 ## Planning docs
 See `docs/` for the current planning set:
