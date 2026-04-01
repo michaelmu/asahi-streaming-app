@@ -8,5 +8,6 @@ data class TitleDetails(
     val genres: List<String> = emptyList(),
     val runtimeMinutes: Int? = null,
     val seasonCount: Int? = null,
-    val episodeCount: Int? = null
+    val episodeCount: Int? = null,
+    val episodesBySeason: Map<Int, List<EpisodeSummary>> = emptyMap()
 )

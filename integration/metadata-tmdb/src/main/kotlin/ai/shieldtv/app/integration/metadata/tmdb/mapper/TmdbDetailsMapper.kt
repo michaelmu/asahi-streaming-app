@@ -14,7 +14,8 @@ class TmdbDetailsMapper {
             genres = listOf("Drama", "Sci-Fi"),
             runtimeMinutes = if (mediaRef.mediaType.name == "MOVIE") 120 else 45,
             seasonCount = if (mediaRef.mediaType.name == "SHOW") 3 else null,
-            episodeCount = if (mediaRef.mediaType.name == "SHOW") 10 else null
+            episodeCount = if (mediaRef.mediaType.name == "SHOW") 10 else null,
+            episodesBySeason = emptyMap()
         )
     }
 
@@ -47,7 +48,8 @@ class TmdbDetailsMapper {
                 runtimeMinutes = root.optInt("runtime").takeIf { it > 0 }
                     ?: root.optJSONArray("episode_run_time")?.optInt(0)?.takeIf { it > 0 },
                 seasonCount = root.optInt("number_of_seasons").takeIf { it > 0 },
-                episodeCount = root.optInt("number_of_episodes").takeIf { it > 0 }
+                episodeCount = root.optInt("number_of_episodes").takeIf { it > 0 },
+                episodesBySeason = emptyMap()
             )
         }.getOrElse {
             fromMediaRef(fallback)

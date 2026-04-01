@@ -27,4 +27,11 @@ class RealTmdbApi(
             url = "https://api.themoviedb.org/3/$path/$tmdbId?api_key=$apiKey&append_to_response=external_ids"
         )
     }
+
+    override suspend fun getSeasonDetails(tmdbId: String, seasonNumber: Int): String {
+        val apiKey = apiKeyProvider() ?: return "{}"
+        return httpClient.get(
+            url = "https://api.themoviedb.org/3/tv/$tmdbId/season/$seasonNumber?api_key=$apiKey"
+        )
+    }
 }

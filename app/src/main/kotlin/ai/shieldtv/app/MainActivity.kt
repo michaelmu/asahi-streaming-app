@@ -348,17 +348,35 @@ class MainActivity : ComponentActivity() {
             textSize = 18f
         })
 
-        val displayedEpisodes = 12
-        (1..displayedEpisodes).forEach { episode ->
+        val realEpisodes = details.episodesBySeason[activeSeason].orEmpty()
+        val episodeChoices = if (realEpisodes.isNotEmpty()) {
+            realEpisodes.take(16)
+        } else {
+            (1..12).map { episode ->
+                ai.shieldtv.app.core.model.media.EpisodeSummary(
+                    seasonNumber = activeSeason,
+                    episodeNumber = episode,
+                    title = "Episode $episode"
+                )
+            }
+        }
+        episodeChoices.forEach { episode ->
             episodeRow.addView(Button(this).apply {
-                text = "E${episode.toString().padStart(2, '0')}"
+                text = buildString {
+                    append("E")
+                    append(episode.episodeNumber.toString().padStart(2, '0'))
+                    episode.title?.takeIf { it.isNotBlank() }?.let {
+                        append(" ")
+                        append(it.take(18))
+                    }
+                }
                 setOnClickListener {
                     selectedSeasonNumber = activeSeason
-                    selectedEpisodeNumber = episode
+                    selectedEpisodeNumber = episode.episodeNumber
                     loadSourcesFor(
                         mediaRef = mediaRef,
                         seasonNumber = activeSeason,
-                        episodeNumber = episode
+                        episodeNumber = episode.episodeNumber
                     )
                 }
             })

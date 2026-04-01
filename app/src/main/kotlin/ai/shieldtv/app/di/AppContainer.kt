@@ -18,6 +18,7 @@ import ai.shieldtv.app.integration.metadata.tmdb.TmdbFactory
 import ai.shieldtv.app.integration.metadata.tmdb.api.FakeTmdbApi
 import ai.shieldtv.app.integration.metadata.tmdb.mapper.TmdbDetailsMapper
 import ai.shieldtv.app.integration.metadata.tmdb.mapper.TmdbSearchMapper
+import ai.shieldtv.app.integration.metadata.tmdb.mapper.TmdbSeasonMapper
 import ai.shieldtv.app.integration.metadata.tmdb.repository.TmdbMetadataRepository
 import ai.shieldtv.app.integration.playback.media3.engine.Media3PlaybackEngine
 import ai.shieldtv.app.integration.scrapers.normalize.DefaultSourceNormalizer
@@ -38,11 +39,13 @@ object AppContainer {
     private val fallbackTmdbApi by lazy { FakeTmdbApi() }
     private val tmdbSearchMapper by lazy { TmdbSearchMapper() }
     private val tmdbDetailsMapper by lazy { TmdbDetailsMapper() }
+    private val tmdbSeasonMapper by lazy { TmdbSeasonMapper() }
     private val metadataRepository by lazy {
         TmdbMetadataRepository(
             tmdbApi = tmdbApi,
             tmdbSearchMapper = tmdbSearchMapper,
             tmdbDetailsMapper = tmdbDetailsMapper,
+            tmdbSeasonMapper = tmdbSeasonMapper,
             fallbackTmdbApi = fallbackTmdbApi
         )
     }
