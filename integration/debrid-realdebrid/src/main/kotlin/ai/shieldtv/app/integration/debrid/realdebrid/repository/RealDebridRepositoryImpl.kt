@@ -27,7 +27,11 @@ class RealDebridRepositoryImpl(
     }
 
     override suspend fun startDeviceFlow(): DeviceCodeFlow {
-        return realDebridAuthMapper.toDeviceCodeFlow(realDebridApi.startDeviceFlow())
+        val flow = realDebridAuthMapper.toDeviceCodeFlow(realDebridApi.startDeviceFlow())
+        if (flow.deviceCode.isBlank() || flow.userCode.isBlank() || flow.verificationUrl.isBlank()) {
+            throw IllegalStateException("Real-Debrid device flow could not be started")
+        }
+        return flow
     }
 
     override suspend fun pollDeviceFlow(flow: DeviceCodeFlow): RealDebridAuthState {

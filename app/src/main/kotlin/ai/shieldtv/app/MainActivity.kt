@@ -33,6 +33,8 @@ import ai.shieldtv.app.feature.search.presentation.SearchViewModel
 import ai.shieldtv.app.feature.sources.presentation.SourcesPresenter
 import ai.shieldtv.app.feature.sources.presentation.SourcesViewModel
 import ai.shieldtv.app.integration.playback.media3.engine.Media3PlaybackEngine
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -73,6 +75,7 @@ class MainActivity : ComponentActivity() {
     private var selectedTitleDetails: TitleDetails? = null
     private var authState: RealDebridAuthState = RealDebridAuthState(isLinked = false)
     private var activeDeviceFlow: DeviceCodeFlow? = null
+    private var authPollingJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -83,6 +86,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        authPollingJob?.cancel()
         super.onDestroy()
         AppContainer.playbackEngine.release()
     }
@@ -234,13 +238,21 @@ class MainActivity : ComponentActivity() {
             })
         }
 
+        appendBody(
+            authContainer,
+            buildString {
+                append("Token store path: ")
+                append(ai.shieldtv.app.integration.debrid.realdebrid.auth.RealDebridTokenStore().debugFilePath())
+            }
+        )
+
         activeDeviceFlow?.let { flow ->
             appendBody(
                 authContainer,
                 buildString {
                     appendLine("Open: ${flow.verificationUrl}")
                     appendLine("Code: ${flow.userCode}")
-                    append("After authorizing, tap Poll Link Status.")
+                    append("Polling starts automatically for up to 2 minutes after you begin linking.")
                 }
             )
             authContainer.addView(Button(this).apply {
@@ -262,9 +274,11 @@ class MainActivity : ComponentActivity() {
             }.onSuccess { flow ->
                 activeDeviceFlow = flow
                 authState = RealDebridAuthState(isLinked = false, authInProgress = true, lastError = null)
-                setLoading(false, "Real-Debrid device flow started.")
+                setLoading(false, "Real-Debrid device flow started: ${flow.userCode}")
                 renderAuthPanel()
+                startAutoPolling(flow)
             }.onFailure { error ->
+                authPollingJob?.cancel()
                 authState = RealDebridAuthState(isLinked = false, authInProgress = false, lastError = error.message)
                 setLoading(false, "Failed to start Real-Debrid link flow.")
                 renderAuthPanel()
@@ -280,6 +294,7 @@ class MainActivity : ComponentActivity() {
             }.onSuccess { state ->
                 authState = state
                 if (state.isLinked) {
+                    authPollingJob?.cancel()
                     activeDeviceFlow = null
                     setLoading(false, "Real-Debrid linked successfully.")
                 } else {
@@ -289,6 +304,44 @@ class MainActivity : ComponentActivity() {
             }.onFailure { error ->
                 authState = RealDebridAuthState(isLinked = false, authInProgress = true, lastError = error.message)
                 setLoading(false, "Polling Real-Debrid link failed.")
+                renderAuthPanel()
+            }
+        }
+    }
+
+    private fun startAutoPolling(flow: DeviceCodeFlow) {
+        authPollingJob?.cancel()
+        authPollingJob = lifecycleScope.launch {
+            val startedAt = System.currentTimeMillis()
+            val timeoutMs = 2 * 60 * 1000L
+            while (System.currentTimeMillis() - startedAt < timeoutMs && !authState.isLinked) {
+                delay(flow.pollIntervalSeconds.coerceAtLeast(2) * 1000L)
+                runCatching {
+                    AppContainer.pollRealDebridDeviceFlowUseCase(flow)
+                }.onSuccess { state ->
+                    authState = state
+                    if (state.isLinked) {
+                        activeDeviceFlow = null
+                        statusText.text = "Real-Debrid linked successfully."
+                        renderAuthPanel()
+                        return@launch
+                    }
+                    renderAuthPanel()
+                }.onFailure { error ->
+                    authState = RealDebridAuthState(
+                        isLinked = false,
+                        authInProgress = true,
+                        lastError = error.message
+                    )
+                    renderAuthPanel()
+                }
+            }
+            if (!authState.isLinked && activeDeviceFlow != null) {
+                authState = authState.copy(
+                    authInProgress = false,
+                    lastError = authState.lastError ?: "Real-Debrid link timed out after 2 minutes."
+                )
+                statusText.text = "Real-Debrid link polling timed out."
                 renderAuthPanel()
             }
         }
