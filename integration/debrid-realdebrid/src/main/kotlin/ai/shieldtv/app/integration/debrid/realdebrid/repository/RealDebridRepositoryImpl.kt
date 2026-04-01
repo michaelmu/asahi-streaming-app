@@ -8,12 +8,14 @@ import ai.shieldtv.app.domain.repository.DebridRepository
 import ai.shieldtv.app.integration.debrid.realdebrid.api.RealDebridApi
 import ai.shieldtv.app.integration.debrid.realdebrid.auth.RealDebridTokenStore
 import ai.shieldtv.app.integration.debrid.realdebrid.mapper.RealDebridAuthMapper
+import ai.shieldtv.app.integration.debrid.realdebrid.resolver.RealDebridResolver
 
 class RealDebridRepositoryImpl(
     private val realDebridApi: RealDebridApi,
     private val realDebridAuthMapper: RealDebridAuthMapper,
     private val tokenStore: RealDebridTokenStore
 ) : DebridRepository {
+    private val resolver = RealDebridResolver(realDebridApi)
     override suspend fun getAuthState(): RealDebridAuthState {
         val tokens = tokenStore.get()
         return RealDebridAuthState(
@@ -65,8 +67,11 @@ class RealDebridRepositoryImpl(
                 ResolvedStream(url = url, source = source)
             }
             url.startsWith("magnet:", ignoreCase = true) -> {
-                throw IllegalStateException(
-                    "Magnet source selected, but Real-Debrid stream resolution is not implemented yet for playback."
+                val resolved = resolver.resolveMagnet(url, source.mediaRef)
+                ResolvedStream(
+                    url = resolved.streamUrl,
+                    mimeType = resolved.mimeType,
+                    source = source
                 )
             }
             else -> {

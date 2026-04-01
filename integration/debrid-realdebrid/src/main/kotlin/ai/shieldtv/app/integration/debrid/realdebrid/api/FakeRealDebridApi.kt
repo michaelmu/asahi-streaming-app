@@ -40,4 +40,35 @@ class FakeRealDebridApi : RealDebridApi {
         }
         return body
     }
+
+    override suspend fun addMagnet(magnet: String): RealDebridTorrentAddResponse? {
+        return RealDebridTorrentAddResponse(id = "fake-torrent-id", uri = magnet)
+    }
+
+    override suspend fun getTorrentInfo(torrentId: String): RealDebridTorrentInfo? {
+        return RealDebridTorrentInfo(
+            id = torrentId,
+            filename = "fake-file.mkv",
+            status = "downloaded",
+            links = listOf("https://example.invalid/fake-stream.mkv"),
+            files = listOf(
+                RealDebridTorrentFile(
+                    id = 1,
+                    path = "/fake-file.mkv",
+                    bytes = 1_500_000_000,
+                    selected = 1
+                )
+            )
+        )
+    }
+
+    override suspend fun selectTorrentFiles(torrentId: String, fileIdsCsv: String): Boolean = true
+
+    override suspend fun unrestrictLink(link: String): RealDebridUnrestrictedLink? {
+        return RealDebridUnrestrictedLink(
+            download = link,
+            filename = "fake-file.mkv",
+            mimeType = "video/x-matroska"
+        )
+    }
 }

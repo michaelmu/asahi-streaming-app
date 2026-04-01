@@ -8,6 +8,7 @@ import ai.shieldtv.app.integration.debrid.realdebrid.config.RealDebridConfig
 import ai.shieldtv.app.integration.debrid.realdebrid.debug.RealDebridDebugState
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import org.json.JSONArray
 import org.json.JSONObject
 
 class RealDebridHttpApi(
@@ -125,6 +126,107 @@ class RealDebridHttpApi(
             RealDebridDebugState.lastInstantAvailabilityResponse = ""
             RealDebridDebugState.lastInstantAvailabilityError = error.message ?: error::class.java.simpleName
             "{}"
+        }
+    }
+
+    override suspend fun addMagnet(magnet: String): RealDebridTorrentAddResponse? {
+        val accessToken = tokenStore.get()?.accessToken ?: RealDebridConfig.accessToken() ?: return null
+        val body = "magnet=${URLEncoder.encode(magnet, StandardCharsets.UTF_8)}"
+        return runCatching {
+            val response = httpClient.post(
+                url = "https://api.real-debrid.com/rest/1.0/torrents/addMagnet",
+                body = body,
+                headers = mapOf(
+                    "Authorization" to "Bearer $accessToken",
+                    "Content-Type" to "application/x-www-form-urlencoded"
+                )
+            )
+            val json = JSONObject(response)
+            RealDebridTorrentAddResponse(
+                id = json.optString("id"),
+                uri = json.optString("uri").ifBlank { null }
+            )
+        }.getOrNull()
+    }
+
+    override suspend fun getTorrentInfo(torrentId: String): RealDebridTorrentInfo? {
+        val accessToken = tokenStore.get()?.accessToken ?: RealDebridConfig.accessToken() ?: return null
+        return runCatching {
+            val response = httpClient.get(
+                url = "https://api.real-debrid.com/rest/1.0/torrents/info/$torrentId",
+                headers = mapOf("Authorization" to "Bearer $accessToken")
+            )
+            val json = JSONObject(response)
+            RealDebridTorrentInfo(
+                id = json.optString("id"),
+                filename = json.optString("filename"),
+                status = json.optString("status"),
+                links = json.optJSONArray("links").toStringList(),
+                files = json.optJSONArray("files").toTorrentFiles()
+            )
+        }.getOrNull()
+    }
+
+    override suspend fun selectTorrentFiles(torrentId: String, fileIdsCsv: String): Boolean {
+        val accessToken = tokenStore.get()?.accessToken ?: RealDebridConfig.accessToken() ?: return false
+        val body = "files=${URLEncoder.encode(fileIdsCsv, StandardCharsets.UTF_8)}"
+        return runCatching {
+            httpClient.post(
+                url = "https://api.real-debrid.com/rest/1.0/torrents/selectFiles/$torrentId",
+                body = body,
+                headers = mapOf(
+                    "Authorization" to "Bearer $accessToken",
+                    "Content-Type" to "application/x-www-form-urlencoded"
+                )
+            )
+            true
+        }.getOrDefault(false)
+    }
+
+    override suspend fun unrestrictLink(link: String): RealDebridUnrestrictedLink? {
+        val accessToken = tokenStore.get()?.accessToken ?: RealDebridConfig.accessToken() ?: return null
+        val body = "link=${URLEncoder.encode(link, StandardCharsets.UTF_8)}"
+        return runCatching {
+            val response = httpClient.post(
+                url = "https://api.real-debrid.com/rest/1.0/unrestrict/link",
+                body = body,
+                headers = mapOf(
+                    "Authorization" to "Bearer $accessToken",
+                    "Content-Type" to "application/x-www-form-urlencoded"
+                )
+            )
+            val json = JSONObject(response)
+            RealDebridUnrestrictedLink(
+                download = json.optString("download"),
+                filename = json.optString("filename").ifBlank { null },
+                mimeType = json.optString("mimeType").ifBlank { null }
+            )
+        }.getOrNull()
+    }
+
+    private fun JSONArray?.toStringList(): List<String> {
+        if (this == null) return emptyList()
+        return buildList {
+            for (index in 0 until length()) {
+                optString(index).takeIf { it.isNotBlank() }?.let(::add)
+            }
+        }
+    }
+
+    private fun JSONArray?.toTorrentFiles(): List<RealDebridTorrentFile> {
+        if (this == null) return emptyList()
+        return buildList {
+            for (index in 0 until length()) {
+                val item = optJSONObject(index) ?: continue
+                add(
+                    RealDebridTorrentFile(
+                        id = item.optInt("id"),
+                        path = item.optString("path"),
+                        bytes = item.optLong("bytes"),
+                        selected = item.optInt("selected")
+                    )
+                )
+            }
         }
     }
 }

@@ -12,6 +12,10 @@ interface RealDebridApi {
         clientSecret: String
     ): RealDebridTokenResponse?
     suspend fun instantAvailability(infoHashes: List<String>): String
+    suspend fun addMagnet(magnet: String): RealDebridTorrentAddResponse?
+    suspend fun getTorrentInfo(torrentId: String): RealDebridTorrentInfo?
+    suspend fun selectTorrentFiles(torrentId: String, fileIdsCsv: String): Boolean
+    suspend fun unrestrictLink(link: String): RealDebridUnrestrictedLink?
 }
 
 data class DeviceFlowResponse(
