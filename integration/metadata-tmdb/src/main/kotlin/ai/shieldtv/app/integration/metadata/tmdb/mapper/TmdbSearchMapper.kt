@@ -12,14 +12,26 @@ class TmdbSearchMapper {
             SearchResult(
                 mediaRef = MediaRef(
                     mediaType = MediaType.MOVIE,
-                    ids = MediaIds(tmdbId = null, imdbId = null, tvdbId = null),
-                    title = query,
-                    year = null
+                    ids = MediaIds(tmdbId = "tmdb-${query.lowercase()}", imdbId = null, tvdbId = null),
+                    title = query.replaceFirstChar { it.uppercase() },
+                    year = 2024
                 ),
-                subtitle = "Placeholder TMDb result",
+                subtitle = "Movie • Placeholder TMDb result",
                 posterUrl = null,
                 backdropUrl = null,
-                badges = listOf("stub")
+                badges = listOf("movie", "stub")
+            ),
+            SearchResult(
+                mediaRef = MediaRef(
+                    mediaType = MediaType.SHOW,
+                    ids = MediaIds(tmdbId = "tmdb-show-${query.lowercase()}", imdbId = null, tvdbId = null),
+                    title = "$query Series",
+                    year = 2023
+                ),
+                subtitle = "Show • Placeholder TMDb result",
+                posterUrl = null,
+                backdropUrl = null,
+                badges = listOf("show", "stub")
             )
         )
     }
