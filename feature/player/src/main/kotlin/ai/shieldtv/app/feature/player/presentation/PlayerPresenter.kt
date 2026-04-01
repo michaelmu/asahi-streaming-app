@@ -16,9 +16,9 @@ class PlayerPresenter(
             val resolvedStream = resolveSourceUseCase(source)
             val playbackItem = buildPlaybackItemUseCase(resolvedStream)
             playbackEngine.prepare(playbackItem)
-            PlayerUiState(loading = false, error = null)
+            PlayerUiState(loading = false, prepared = true, error = null)
         } catch (error: Throwable) {
-            PlayerUiState(error = error.message)
+            PlayerUiState(prepared = false, error = error.message)
         }
     }
 }

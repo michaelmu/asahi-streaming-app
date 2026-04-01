@@ -19,6 +19,6 @@ Update: the real Gradle wrapper has now been generated successfully. The next st
 - align Android/JVM target settings when Gradle surfaces toolchain mismatches
 - avoid enabling Compose in the app convention until the app actually carries Compose runtime dependencies and a real Compose UI host
 - use the debug shell to expose small end-to-end preview paths for real slices while the full TV UI is still pending
-- prefer enriching those preview paths across search/details/sources before investing heavily in placeholder UI chrome
+- prefer enriching those preview paths across search/details/sources/playback before investing heavily in placeholder UI chrome
 - decide when to switch from placeholder text UI to real Android TV UI host
 - avoid adding more feature complexity until bootstrap gaps are reduced

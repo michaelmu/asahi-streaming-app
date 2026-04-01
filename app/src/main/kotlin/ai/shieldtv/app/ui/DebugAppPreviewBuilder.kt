@@ -6,6 +6,7 @@ import kotlinx.coroutines.runBlocking
 
 class DebugAppPreviewBuilder {
     private val sourcePreviewBuilder = SourcePreviewBuilder()
+    private val playbackPreviewBuilder = PlaybackPreviewBuilder()
 
     fun build(): String = runBlocking {
         val searchViewModel = SearchFeatureFactory.createViewModel()
@@ -15,6 +16,7 @@ class DebugAppPreviewBuilder {
         val firstResult = searchState.results.firstOrNull()
         val detailsState = firstResult?.let { detailsViewModel.load(it.mediaRef) }
         val sourcePreview = sourcePreviewBuilder.build(searchViewModel)
+        val playbackPreview = playbackPreviewBuilder.build(searchViewModel)
 
         buildString {
             appendLine("Preview Query: asahi")
@@ -27,7 +29,9 @@ class DebugAppPreviewBuilder {
             appendLine(detailsState?.item?.mediaRef?.title ?: "none")
             appendLine(detailsState?.item?.overview ?: "none")
             appendLine()
-            append(sourcePreview)
+            appendLine(sourcePreview)
+            appendLine()
+            append(playbackPreview)
         }
     }
 }
