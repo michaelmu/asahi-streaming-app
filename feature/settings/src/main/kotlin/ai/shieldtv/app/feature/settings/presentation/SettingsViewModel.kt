@@ -6,6 +6,10 @@ import ai.shieldtv.app.feature.settings.ui.AccountUiState
 class SettingsViewModel(
     private val accountPresenter: AccountPresenter
 ) {
+    suspend fun getAuthState(): AccountUiState {
+        return accountPresenter.getAuthState()
+    }
+
     suspend fun startLinking(): AccountUiState {
         return accountPresenter.startLinking()
     }

@@ -21,6 +21,8 @@ class SourcePreviewBuilder {
 
         val byProvider = sourcesState.sources.groupingBy { it.providerId }.eachCount()
         val torrentioCount = sourcesState.sources.count { (it.rawMetadata["transport"] ?: "").contains("torrentio") || it.providerId == "torrentio" }
+        val rdCount = sourcesState.sources.count { it.debridService.name == "REAL_DEBRID" }
+        val cachedCount = sourcesState.sources.count { it.cacheStatus.name == "CACHED" }
 
         return buildString {
             appendLine("Sources Preview:")
@@ -28,6 +30,8 @@ class SourcePreviewBuilder {
             appendLine("Source media IMDb: ${sourceMediaRef.ids.imdbId ?: "none"}")
             appendLine("Total sources: ${sourcesState.sources.size}")
             appendLine("Torrentio-like sources: $torrentioCount")
+            appendLine("RD-tagged sources: $rdCount")
+            appendLine("Cached sources: $cachedCount")
             appendLine("By provider: ${if (byProvider.isEmpty()) "none" else byProvider.entries.joinToString { "${it.key}=${it.value}" }}")
             sourcesState.sources.forEachIndexed { index, source ->
                 val transport = source.rawMetadata["transport"] ?: "in-memory"

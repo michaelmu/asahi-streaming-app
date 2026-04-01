@@ -7,3 +7,6 @@ local.properties
 /captures/
 .externalNativeBuild/
 .cxx/
+
+app/debug/
+/app/app/

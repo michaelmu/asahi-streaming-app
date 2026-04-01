@@ -1,5 +1,6 @@
 package ai.shieldtv.app.di
 
+import ai.shieldtv.app.domain.usecase.auth.GetRealDebridAuthStateUseCase
 import ai.shieldtv.app.domain.usecase.auth.PollRealDebridDeviceFlowUseCase
 import ai.shieldtv.app.domain.usecase.auth.StartRealDebridDeviceFlowUseCase
 import ai.shieldtv.app.domain.usecase.details.GetTitleDetailsUseCase
@@ -26,6 +27,7 @@ import ai.shieldtv.app.integration.scrapers.provider.JsonSourceProviderAdapter
 import ai.shieldtv.app.integration.scrapers.provider.ProviderRegistry
 import ai.shieldtv.app.integration.scrapers.provider.SourcesFeedFactory
 import ai.shieldtv.app.integration.scrapers.provider.sample.SampleTemplateSourceProvider
+import ai.shieldtv.app.integration.scrapers.provider.torrentio.TorrentioConfig
 import ai.shieldtv.app.integration.scrapers.provider.torrentio.TorrentioSourceProvider
 import ai.shieldtv.app.integration.scrapers.ranking.DefaultSourceRanker
 import ai.shieldtv.app.integration.scrapers.ranking.RealDebridSourceCacheMarker
@@ -65,15 +67,16 @@ object AppContainer {
     }
 
     private val providerRegistry by lazy {
-        ProviderRegistry(
-            providers = listOf(
-                FakeSourceProvider(),
-                FakeSourceProvider(adapter = HttpSourceProviderAdapter()),
-                FakeSourceProvider(adapter = JsonSourceProviderAdapter(remoteJsonSourceFeed::load)),
-                SampleTemplateSourceProvider(),
-                TorrentioSourceProvider(realDebridTokenProvider)
-            )
-        )
+        val providers = buildList {
+            if (TorrentioConfig.isEnabled()) {
+                add(TorrentioSourceProvider(realDebridTokenProvider))
+            }
+            add(FakeSourceProvider())
+            add(FakeSourceProvider(adapter = HttpSourceProviderAdapter()))
+            add(FakeSourceProvider(adapter = JsonSourceProviderAdapter(remoteJsonSourceFeed::load)))
+            add(SampleTemplateSourceProvider())
+        }
+        ProviderRegistry(providers = providers)
     }
     private val sourceNormalizer by lazy { DefaultSourceNormalizer() }
     private val sourceRanker by lazy { DefaultSourceRanker() }
@@ -95,6 +98,10 @@ object AppContainer {
 
     val getTitleDetailsUseCase by lazy {
         GetTitleDetailsUseCase(metadataRepository)
+    }
+
+    val getRealDebridAuthStateUseCase by lazy {
+        GetRealDebridAuthStateUseCase(debridRepository)
     }
 
     val startRealDebridDeviceFlowUseCase by lazy {

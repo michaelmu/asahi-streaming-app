@@ -47,6 +47,8 @@ class RealDebridTokenStore(
         )
     }
 
+    fun debugFilePath(): String = file.absolutePath
+
     companion object {
         private fun defaultTokenFile(): File {
             val cwd = File("").absoluteFile

@@ -1,15 +1,18 @@
 package ai.shieldtv.app.ui
 
 import ai.shieldtv.app.feature.SettingsFeatureFactory
+import ai.shieldtv.app.integration.debrid.realdebrid.auth.RealDebridTokenStore
 import ai.shieldtv.app.integration.debrid.realdebrid.config.RealDebridConfig
 import ai.shieldtv.app.integration.debrid.realdebrid.debug.RealDebridDebugState
 
 class AuthPreviewBuilder {
     suspend fun build(): String {
         val settingsViewModel = SettingsFeatureFactory.createViewModel()
+        val tokenStore = RealDebridTokenStore()
 
+        val currentState = settingsViewModel.getAuthState()
         val existingFlow = AuthPreviewState.activeFlow
-        val startedState = if (existingFlow == null) {
+        val startedState = if (!currentState.authState.isLinked && existingFlow == null) {
             settingsViewModel.startLinking().also { state ->
                 AuthPreviewState.activeFlow = state.deviceCodeFlow
             }
@@ -18,9 +21,9 @@ class AuthPreviewBuilder {
         }
 
         val flow = existingFlow ?: startedState?.deviceCodeFlow
-        val polledState = flow?.let { settingsViewModel.pollLinking(it) }
+        val polledState = if (!currentState.authState.isLinked) flow?.let { settingsViewModel.pollLinking(it) } else null
 
-        if (polledState?.authState?.isLinked == true) {
+        if (currentState.authState.isLinked || polledState?.authState?.isLinked == true) {
             AuthPreviewState.activeFlow = null
         }
 
@@ -28,8 +31,8 @@ class AuthPreviewBuilder {
             appendLine("Real-Debrid Auth Preview:")
             appendLine("API mode: ${RealDebridDebugState.lastApiMode}")
             appendLine("Bootstrap client id: ${RealDebridConfig.clientId()}")
-            appendLine("Linked: ${polledState?.authState?.isLinked ?: startedState?.authState?.isLinked ?: false}")
-            appendLine("Auth in progress: ${polledState?.authState?.authInProgress ?: startedState?.authState?.authInProgress ?: false}")
+            appendLine("Linked: ${polledState?.authState?.isLinked ?: startedState?.authState?.isLinked ?: currentState.authState.isLinked}")
+            appendLine("Auth in progress: ${polledState?.authState?.authInProgress ?: startedState?.authState?.authInProgress ?: currentState.authState.authInProgress}")
             appendLine("Verification URL: ${flow?.verificationUrl ?: "none"}")
             appendLine("User Code: ${flow?.userCode ?: "none"}")
             appendLine("Direct Verification URL: ${RealDebridDebugState.lastDirectVerificationUrl.ifBlank { flow?.qrCodeUrl ?: "none" }}")
@@ -47,9 +50,9 @@ class AuthPreviewBuilder {
             appendLine("Source repository seen: ${RealDebridDebugState.lastSourceRepositorySeen.ifBlank { "none" }}")
             appendLine("Source repository marker present: ${RealDebridDebugState.lastSourceRepositoryMarkerPresent.ifBlank { "none" }}")
             appendLine("Token store save called: ${RealDebridDebugState.lastTokenStoreSaveCalled.ifBlank { "none" }}")
-            appendLine("Token store write path: ${RealDebridDebugState.lastTokenStoreWritePath.ifBlank { "none" }}")
-            appendLine("Token store write exists: ${RealDebridDebugState.lastTokenStoreWriteExists.ifBlank { "none" }}")
-            appendLine("Error: ${polledState?.error ?: startedState?.error ?: "none"}")
+            appendLine("Token store write path: ${RealDebridDebugState.lastTokenStoreWritePath.ifBlank { tokenStore.debugFilePath() }}")
+            appendLine("Token store write exists: ${RealDebridDebugState.lastTokenStoreWriteExists.ifBlank { if (tokenStore.get() != null) "yes" else "no" }}")
+            appendLine("Error: ${polledState?.error ?: startedState?.error ?: currentState.error ?: "none"}")
         }
     }
 }
