@@ -39,7 +39,6 @@ class RealDebridHttpApi(
                 deviceCode = json.optString("device_code"),
                 verificationUrl = json.optString("verification_url"),
                 userCode = json.optString("user_code"),
-                qrCodeUrl = json.optString("direct_verification_url").ifBlank { null },
                 expiresInSeconds = json.optInt("expires_in"),
                 pollIntervalSeconds = json.optInt("interval").takeIf { it > 0 } ?: 5
             )
