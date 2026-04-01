@@ -23,4 +23,5 @@ dependencies {
     implementation(project(":integration:debrid-realdebrid"))
     implementation(project(":integration:scrapers"))
     implementation(project(":integration:playback-media3"))
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
 }

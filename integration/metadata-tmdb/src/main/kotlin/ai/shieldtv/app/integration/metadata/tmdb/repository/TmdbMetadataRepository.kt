@@ -11,10 +11,12 @@ import ai.shieldtv.app.integration.metadata.tmdb.mapper.TmdbSearchMapper
 class TmdbMetadataRepository(
     private val tmdbApi: TmdbApi,
     private val tmdbSearchMapper: TmdbSearchMapper,
-    private val tmdbDetailsMapper: TmdbDetailsMapper
+    private val tmdbDetailsMapper: TmdbDetailsMapper,
+    private val fallbackTmdbApi: TmdbApi
 ) : MetadataRepository {
     override suspend fun search(query: String): List<SearchResult> {
-        val response = tmdbApi.searchMulti(query)
+        val response = runCatching { tmdbApi.searchMulti(query) }
+            .getOrElse { fallbackTmdbApi.searchMulti(query) }
         return tmdbSearchMapper.fromQueryEcho(response)
     }
 

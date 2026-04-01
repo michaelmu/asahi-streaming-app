@@ -9,6 +9,7 @@ import ai.shieldtv.app.domain.usecase.sources.ResolveSourceUseCase
 import ai.shieldtv.app.integration.debrid.realdebrid.api.FakeRealDebridApi
 import ai.shieldtv.app.integration.debrid.realdebrid.mapper.RealDebridAuthMapper
 import ai.shieldtv.app.integration.debrid.realdebrid.repository.RealDebridRepositoryImpl
+import ai.shieldtv.app.integration.metadata.tmdb.TmdbFactory
 import ai.shieldtv.app.integration.metadata.tmdb.api.FakeTmdbApi
 import ai.shieldtv.app.integration.metadata.tmdb.mapper.TmdbDetailsMapper
 import ai.shieldtv.app.integration.metadata.tmdb.mapper.TmdbSearchMapper
@@ -21,14 +22,16 @@ import ai.shieldtv.app.integration.scrapers.ranking.DefaultSourceRanker
 import ai.shieldtv.app.integration.scrapers.repository.SourceRepositoryImpl
 
 object AppContainer {
-    private val tmdbApi by lazy { FakeTmdbApi() }
+    private val tmdbApi by lazy { TmdbFactory.createRealApi() }
+    private val fallbackTmdbApi by lazy { FakeTmdbApi() }
     private val tmdbSearchMapper by lazy { TmdbSearchMapper() }
     private val tmdbDetailsMapper by lazy { TmdbDetailsMapper() }
     private val metadataRepository by lazy {
         TmdbMetadataRepository(
             tmdbApi = tmdbApi,
             tmdbSearchMapper = tmdbSearchMapper,
-            tmdbDetailsMapper = tmdbDetailsMapper
+            tmdbDetailsMapper = tmdbDetailsMapper,
+            fallbackTmdbApi = fallbackTmdbApi
         )
     }
 

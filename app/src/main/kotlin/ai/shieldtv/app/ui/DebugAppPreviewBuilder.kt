@@ -20,10 +20,7 @@ class DebugAppPreviewBuilder {
 
         buildString {
             appendLine("Preview Query: asahi")
-            appendLine("Search Results: ${searchState.results.size}")
-            searchState.results.forEachIndexed { index, result ->
-                appendLine("${index + 1}. ${result.mediaRef.title} (${result.subtitle ?: "no subtitle"})")
-            }
+            appendLine(MetadataPreviewFormatter.describe(searchState.results).trim())
             appendLine()
             appendLine("Selected Details:")
             appendLine(detailsState?.item?.mediaRef?.title ?: "none")
