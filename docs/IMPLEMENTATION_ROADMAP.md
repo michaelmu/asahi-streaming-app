@@ -142,7 +142,9 @@ Implementation note: the previous Android blocker for this phase was the shared 
 ## Current progress snapshot
 - device-flow start works
 - dedicated debug auth runner now works correctly as a JVM entrypoint
-- full human-completed linking/polling and polished in-app account UX still need follow-through
+- full human-completed linking/polling has now been manually verified end-to-end
+- polling was corrected to use `device_code`, and debug token persistence now survives fresh JVM runs
+- polished in-app account UX/status presentation still needs follow-through
 
 ## Risks
 - auth edge cases

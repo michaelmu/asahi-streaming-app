@@ -17,7 +17,8 @@ Current repo state:
 - current direction remains a fully in-app provider model (no custom backend required)
 - local emulator testing is now working end-to-end for install / launch / log capture
 - TMDb live metadata is working in the debug preview path
-- Real-Debrid device-flow start is working in both preview and dedicated debug runner flows
+- Real-Debrid device auth is now proven end-to-end: start, browser approval, poll, and token exchange all work
+- Real-Debrid polling was fixed to use `device_code` correctly, and debug token storage is now persisted across fresh JVM runs
 - source/provider plumbing is alive, but live provider coverage still depends on configuration and provider wiring rather than transport stability
 
 ## Current runtime/debug mode
@@ -27,6 +28,7 @@ Current behavior is:
 - the app includes both phone (`LAUNCHER`) and TV (`LEANBACK_LAUNCHER`) launcher categories for easier sideload testing
 - emulator launch has been re-verified after the networking migration
 - debug preview/auth runners remain important for probing TMDb, Real-Debrid, and source pipeline behavior while the real TV UI is still minimal
+- note: the current preview auth panel still kicks off a new device flow when invoked, so it is not yet a clean persisted-auth-status display
 
 ## CI / APK artifacts
 GitHub Actions is configured to build a debug APK on pushes to `main` and via manual workflow dispatch.

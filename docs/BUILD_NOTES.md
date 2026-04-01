@@ -20,7 +20,9 @@ Follow-up runtime finding: once the transport crash was fixed, the next Android 
 Current validation snapshot:
 - app installs and launches on the emulator with the broader graph enabled
 - TMDb live search/details work in the debug preview path
-- Real-Debrid device-flow start works in the preview path and dedicated debug runner
+- Real-Debrid device auth is proven end-to-end in manual testing: start, browser approval, poll, and token exchange all succeed
+- the RD polling path was fixed to use `device_code` instead of `user_code`
+- debug token storage now persists across fresh JVM runs for validation purposes
 - source pipeline preview runs without the old transport/runtime crash
 - current source-provider limitations are now about provider config/wiring breadth rather than Android-incompatible HTTP code
 
@@ -40,6 +42,7 @@ Current validation snapshot:
 - when real adapters are introduced, prefer minimal JSON parsing first over premature full DTO systems, so the live path can be verified quickly
 - keep app-layer wiring insulated from transport/client implementation types; expose factories or repository boundaries instead
 - use the debug shell to show whether live integrations appear to be returning real data versus fallback placeholders
+- stop conflating "preview panel starts a new auth flow" with "actual persisted RD linked state"; those are separate concerns now
 - apply the same insulation rule to source feed construction, not just TMDb/client wiring
 - scaffold real providers behind the provider template before binding to a concrete upstream, so the buildable baseline stays intact
 - apply the same live-first, fallback-safe approach to details metadata as search becomes more real
