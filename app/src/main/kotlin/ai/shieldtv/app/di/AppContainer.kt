@@ -8,6 +8,7 @@ import ai.shieldtv.app.domain.usecase.search.SearchTitlesUseCase
 import ai.shieldtv.app.domain.usecase.sources.FindSourcesUseCase
 import ai.shieldtv.app.domain.usecase.sources.ResolveSourceUseCase
 import ai.shieldtv.app.integration.debrid.realdebrid.api.RealDebridApiFactory
+import ai.shieldtv.app.integration.debrid.realdebrid.auth.RealDebridTokenProvider
 import ai.shieldtv.app.integration.debrid.realdebrid.auth.RealDebridTokenStore
 import ai.shieldtv.app.integration.debrid.realdebrid.mapper.RealDebridAuthMapper
 import ai.shieldtv.app.integration.debrid.realdebrid.repository.RealDebridCacheRepository
@@ -44,9 +45,12 @@ object AppContainer {
         )
     }
 
-    private val realDebridApi by lazy { RealDebridApiFactory.create(realDebridTokenStore) }
     private val realDebridAuthMapper by lazy { RealDebridAuthMapper() }
     private val realDebridTokenStore by lazy { RealDebridTokenStore() }
+    private val realDebridTokenProvider by lazy {
+        RealDebridTokenProvider { realDebridTokenStore.get()?.accessToken }
+    }
+    private val realDebridApi by lazy { RealDebridApiFactory.create(realDebridTokenStore) }
     private val debridRepository by lazy {
         RealDebridRepositoryImpl(
             realDebridApi = realDebridApi,
@@ -67,7 +71,7 @@ object AppContainer {
                 FakeSourceProvider(adapter = HttpSourceProviderAdapter()),
                 FakeSourceProvider(adapter = JsonSourceProviderAdapter(remoteJsonSourceFeed::load)),
                 SampleTemplateSourceProvider(),
-                TorrentioSourceProvider()
+                TorrentioSourceProvider(realDebridTokenProvider)
             )
         )
     }

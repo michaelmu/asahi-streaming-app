@@ -33,10 +33,13 @@ object RunTorrentioCacheProbe {
         )
 
         val tokenStore = RealDebridTokenStore()
+        val tokenProvider = ai.shieldtv.app.integration.debrid.realdebrid.auth.RealDebridTokenProvider {
+            tokenStore.get()?.accessToken
+        }
         val realDebridApi = RealDebridApiFactory.create(tokenStore)
         val cacheRepository = RealDebridCacheRepository(realDebridApi)
         val sourceRepository = SourceRepositoryImpl(
-            providerRegistry = ProviderRegistry(listOf(TorrentioSourceProvider())),
+            providerRegistry = ProviderRegistry(listOf(TorrentioSourceProvider(tokenProvider))),
             sourceNormalizer = DefaultSourceNormalizer(),
             sourceRanker = DefaultSourceRanker(),
             sourceCacheMarker = RealDebridSourceCacheMarker(cacheRepository)
@@ -44,11 +47,13 @@ object RunTorrentioCacheProbe {
 
         val sources = sourceRepository.findSources(request)
         val cachedCount = sources.count { it.cacheStatus.name == "CACHED" }
+        val rdCount = sources.count { it.debridService.name == "REAL_DEBRID" }
         val withHash = sources.count { !it.infoHash.isNullOrBlank() }
 
         println("Torrentio Cache Probe")
         println("Total sources: ${sources.size}")
         println("Sources with hash: $withHash")
+        println("RD-tagged sources: $rdCount")
         println("Cached sources: $cachedCount")
         println("Instant availability request: ${RealDebridDebugState.lastInstantAvailabilityRequest.ifBlank { "none" }}")
         println("Instant availability response: ${RealDebridDebugState.lastInstantAvailabilityResponse.ifBlank { "none" }}")

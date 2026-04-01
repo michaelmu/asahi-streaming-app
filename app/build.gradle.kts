@@ -91,6 +91,12 @@ tasks.register<JavaExec>("runTorrentioCacheProbe") {
     configureDebugRuntime("ai.shieldtv.app.debug.RunTorrentioCacheProbe")
 }
 
+tasks.register<JavaExec>("runTorrentioRawProbe") {
+    group = "verification"
+    description = "Prints the raw debrid-aware Torrentio response for inspection"
+    configureDebugRuntime("ai.shieldtv.app.debug.RunTorrentioRawProbe")
+}
+
 tasks.register<JavaExec>("runAuthPersistenceProbe") {
     group = "verification"
     description = "Polls the stored RD flow once and prints token persistence instrumentation"

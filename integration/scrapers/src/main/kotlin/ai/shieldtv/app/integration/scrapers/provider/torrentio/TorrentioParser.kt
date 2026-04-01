@@ -23,14 +23,21 @@ class TorrentioParser : ProviderParser {
                 val parsedRelease = ReleaseInfoParser.parse(primaryTitle)
                 if (parsedRelease.probablyPack) continue
 
-                val infoHash = item.optString("infoHash").ifBlank { null }
-                val url = item.optString("url").ifBlank {
+                val resolvedUrl = item.optString("url")
+                val infoHash = item.optString("infoHash").ifBlank {
+                    extractInfoHash(resolvedUrl)
+                }
+                val url = resolvedUrl.ifBlank {
                     infoHash?.let { "magnet:?xt=urn:btih:$it&dn=${primaryTitle.ifBlank { "torrentio" }}" } ?: ""
                 }
                 if (url.isBlank()) continue
 
                 val sizeBytes = extractSizeBytes(titleBlock)
                 val seeders = extractSeeders(titleBlock)
+
+                val name = item.optString("name")
+                val debridAware = name.contains("[RD+]", ignoreCase = true) ||
+                    name.contains("realdebrid", ignoreCase = true)
 
                 mapped += RawProviderSource(
                     providerId = "torrentio",
@@ -48,6 +55,10 @@ class TorrentioParser : ProviderParser {
                             else -> "sd"
                         })
                         put("transport", "torrentio")
+                        if (debridAware) {
+                            put("debrid", "realdebrid")
+                            put("cache_hint", "cached")
+                        }
                         if (parsedRelease.flags.isNotEmpty()) put("flags", parsedRelease.flags.joinToString(","))
                     }
                 )
@@ -76,5 +87,10 @@ class TorrentioParser : ProviderParser {
             "MB" -> (value * 1024 * 1024).toLong()
             else -> null
         }
+    }
+
+    private fun extractInfoHash(url: String): String? {
+        val match = Pattern.compile("/resolve/realdebrid/[^/]+/([0-9a-fA-F]{40})(?:/|$)").matcher(url)
+        return if (match.find()) match.group(1)?.lowercase() else null
     }
 }

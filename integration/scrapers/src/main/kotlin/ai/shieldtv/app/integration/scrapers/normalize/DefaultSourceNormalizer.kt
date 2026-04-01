@@ -23,18 +23,21 @@ class DefaultSourceNormalizer : SourceNormalizer {
             else -> Quality.UNKNOWN
         }
 
+        val debridAware = raw.extra["debrid"]?.equals("realdebrid", ignoreCase = true) == true
+        val impliedCached = raw.extra["cache_hint"]?.equals("cached", ignoreCase = true) == true
+
         return SourceResult(
             id = "${provider.id}:${raw.title}:${raw.infoHash ?: raw.url}",
             mediaRef = request.mediaRef,
             providerId = provider.id,
             providerDisplayName = provider.displayName,
             providerKind = provider.kind,
-            debridService = DebridService.NONE,
+            debridService = if (debridAware) DebridService.REAL_DEBRID else DebridService.NONE,
             sourceSite = provider.displayName,
             url = raw.url,
             displayName = raw.title,
             quality = quality,
-            cacheStatus = CacheStatus.UNCHECKED,
+            cacheStatus = if (impliedCached) CacheStatus.CACHED else CacheStatus.UNCHECKED,
             infoHash = raw.infoHash,
             sizeBytes = raw.sizeBytes,
             rawMetadata = buildMap {

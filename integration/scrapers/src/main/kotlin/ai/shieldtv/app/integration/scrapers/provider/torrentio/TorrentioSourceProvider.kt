@@ -4,12 +4,15 @@ import ai.shieldtv.app.core.model.source.ProviderKind
 import ai.shieldtv.app.core.model.source.SourceSearchRequest
 import ai.shieldtv.app.domain.provider.RawProviderSource
 import ai.shieldtv.app.domain.provider.SourceProvider
+import ai.shieldtv.app.integration.debrid.realdebrid.auth.RealDebridTokenProvider
 import ai.shieldtv.app.integration.scrapers.provider.template.TemplateBackedSourceProviderAdapter
 
-class TorrentioSourceProvider : SourceProvider {
+class TorrentioSourceProvider(
+    tokenProvider: RealDebridTokenProvider? = null
+) : SourceProvider {
     private val adapter = TemplateBackedSourceProviderAdapter(
         queryBuilder = TorrentioQueryBuilder(),
-        transport = TorrentioTransport(),
+        transport = TorrentioTransport(tokenProvider),
         parser = TorrentioParser()
     )
 
