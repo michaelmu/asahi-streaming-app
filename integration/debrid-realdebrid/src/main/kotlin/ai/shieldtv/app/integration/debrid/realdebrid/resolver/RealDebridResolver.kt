@@ -10,15 +10,24 @@ import kotlin.math.max
 class RealDebridResolver(
     private val api: RealDebridApi
 ) {
-    suspend fun resolveMagnet(magnet: String, mediaRef: MediaRef): ResolvedMagnetStream {
+    suspend fun resolveMagnet(
+        magnet: String,
+        mediaRef: MediaRef,
+        seasonNumber: Int? = null,
+        episodeNumber: Int? = null
+    ): ResolvedMagnetStream {
         val added = api.addMagnet(magnet)
             ?: throw IllegalStateException("Real-Debrid rejected magnet add request")
 
         val initialInfo = api.getTorrentInfo(added.id)
             ?: throw IllegalStateException("Real-Debrid did not return torrent info")
 
-        val selectedFileIds = selectCandidateFiles(initialInfo.files, mediaRef)
-            .ifEmpty { throw IllegalStateException("No playable files matched this torrent") }
+        val selectedFileIds = selectCandidateFiles(
+            files = initialInfo.files,
+            mediaRef = mediaRef,
+            seasonNumber = seasonNumber,
+            episodeNumber = episodeNumber
+        ).ifEmpty { throw IllegalStateException("No playable files matched this torrent") }
 
         val selectOk = api.selectTorrentFiles(added.id, selectedFileIds.joinToString(","))
         if (!selectOk) {
@@ -52,14 +61,26 @@ class RealDebridResolver(
         return api.getTorrentInfo(torrentId)
     }
 
-    private fun selectCandidateFiles(files: List<RealDebridTorrentFile>, mediaRef: MediaRef): List<Int> {
+    private fun selectCandidateFiles(
+        files: List<RealDebridTorrentFile>,
+        mediaRef: MediaRef,
+        seasonNumber: Int?,
+        episodeNumber: Int?
+    ): List<Int> {
         val playable = files.filter { isPlayableVideoFile(it.path) }
             .filterNot { looksLikeSample(it.path) }
             .filterNot { looksLikeJunk(it.path) }
         if (playable.isEmpty()) return emptyList()
 
         val ranked = playable
-            .map { file -> file to scoreFile(file, mediaRef) }
+            .map { file ->
+                file to scoreFile(
+                    file = file,
+                    mediaRef = mediaRef,
+                    seasonNumber = seasonNumber,
+                    episodeNumber = episodeNumber
+                )
+            }
             .sortedWith(
                 compareByDescending<Pair<RealDebridTorrentFile, Int>> { it.second }
                     .thenByDescending { it.first.bytes }
@@ -68,7 +89,12 @@ class RealDebridResolver(
         return ranked.take(1).map { it.first.id }
     }
 
-    private fun scoreFile(file: RealDebridTorrentFile, mediaRef: MediaRef): Int {
+    private fun scoreFile(
+        file: RealDebridTorrentFile,
+        mediaRef: MediaRef,
+        seasonNumber: Int?,
+        episodeNumber: Int?
+    ): Int {
         val path = file.path.substringAfterLast('/').ifBlank { file.path }
         val normalizedPath = normalize(path)
         val normalizedTitle = normalize(mediaRef.title)
@@ -92,9 +118,30 @@ class RealDebridResolver(
             if (normalizedPath.contains(year.toString())) score += 20
         }
 
-        if (mediaRef.mediaType == MediaType.MOVIE) {
-            if (looksLikeMovieFile(path)) score += 10
-            if (looksLikeEpisodeMarker(path)) score -= 40
+        val hasEpisodeContext = seasonNumber != null && episodeNumber != null
+        if (hasEpisodeContext) {
+            val episodeMarkers = buildEpisodeMarkers(seasonNumber!!, episodeNumber!!)
+            val seasonMarkers = buildSeasonMarkers(seasonNumber)
+
+            if (episodeMarkers.any { marker -> marker in normalizedPath }) {
+                score += 220
+            }
+            if (seasonMarkers.any { marker -> marker in normalizedPath }) {
+                score += 40
+            }
+            if (looksLikeEpisodeMarker(path)) {
+                score += 25
+            }
+        }
+
+        when (mediaRef.mediaType) {
+            MediaType.MOVIE -> {
+                if (looksLikeMovieFile(path)) score += 10
+                if (looksLikeEpisodeMarker(path)) score -= 40
+            }
+            MediaType.SHOW, MediaType.SEASON, MediaType.EPISODE -> {
+                if (looksLikeEpisodeMarker(path)) score += 20
+            }
         }
 
         if (looksLikeSample(path)) score -= 100
@@ -111,6 +158,28 @@ class RealDebridResolver(
         score += sizeScore
 
         return max(score, -999)
+    }
+
+    private fun buildEpisodeMarkers(seasonNumber: Int, episodeNumber: Int): List<String> {
+        val s = seasonNumber.toString().padStart(2, '0')
+        val e = episodeNumber.toString().padStart(2, '0')
+        return listOf(
+            "s${s}e${e}",
+            "${seasonNumber}x${episodeNumber}",
+            "season ${seasonNumber} episode ${episodeNumber}",
+            "season${seasonNumber}episode${episodeNumber}",
+            "ep ${episodeNumber}",
+            "episode ${episodeNumber}"
+        )
+    }
+
+    private fun buildSeasonMarkers(seasonNumber: Int): List<String> {
+        val s = seasonNumber.toString().padStart(2, '0')
+        return listOf(
+            "s$s",
+            "season ${seasonNumber}",
+            "season${seasonNumber}"
+        )
     }
 
     private fun chooseMatchingLink(

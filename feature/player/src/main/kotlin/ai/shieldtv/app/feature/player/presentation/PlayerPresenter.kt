@@ -11,9 +11,17 @@ class PlayerPresenter(
     private val buildPlaybackItemUseCase: BuildPlaybackItemUseCase,
     private val playbackEngine: PlaybackEngine
 ) {
-    suspend fun prepare(source: SourceResult): PlayerUiState {
+    suspend fun prepare(
+        source: SourceResult,
+        seasonNumber: Int? = source.seasonNumber,
+        episodeNumber: Int? = source.episodeNumber
+    ): PlayerUiState {
         return try {
-            val resolvedStream = resolveSourceUseCase(source)
+            val resolvedStream = resolveSourceUseCase(
+                source = source,
+                seasonNumber = seasonNumber,
+                episodeNumber = episodeNumber
+            )
             val playbackItem = buildPlaybackItemUseCase(resolvedStream)
             playbackEngine.prepare(playbackItem)
             PlayerUiState(

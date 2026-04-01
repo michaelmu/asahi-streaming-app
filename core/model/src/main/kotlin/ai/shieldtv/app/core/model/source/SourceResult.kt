@@ -14,6 +14,8 @@ data class SourceResult(
     val displayName: String,
     val quality: Quality,
     val cacheStatus: CacheStatus,
+    val seasonNumber: Int? = null,
+    val episodeNumber: Int? = null,
     val infoHash: String? = null,
     val sizeBytes: Long? = null,
     val sizeLabel: String? = null,

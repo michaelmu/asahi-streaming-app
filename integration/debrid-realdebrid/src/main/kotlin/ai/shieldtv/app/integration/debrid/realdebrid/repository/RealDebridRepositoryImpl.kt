@@ -60,14 +60,23 @@ class RealDebridRepositoryImpl(
         )
     }
 
-    override suspend fun resolve(source: SourceResult): ResolvedStream {
+    override suspend fun resolve(
+        source: SourceResult,
+        seasonNumber: Int?,
+        episodeNumber: Int?
+    ): ResolvedStream {
         val url = source.url.trim()
         return when {
             url.startsWith("http://", ignoreCase = true) || url.startsWith("https://", ignoreCase = true) -> {
                 ResolvedStream(url = url, source = source)
             }
             url.startsWith("magnet:", ignoreCase = true) -> {
-                val resolved = resolver.resolveMagnet(url, source.mediaRef)
+                val resolved = resolver.resolveMagnet(
+                    magnet = url,
+                    mediaRef = source.mediaRef,
+                    seasonNumber = seasonNumber,
+                    episodeNumber = episodeNumber
+                )
                 ResolvedStream(
                     url = resolved.streamUrl,
                     mimeType = resolved.mimeType,

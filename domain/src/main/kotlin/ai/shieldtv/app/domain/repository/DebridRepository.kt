@@ -9,5 +9,9 @@ interface DebridRepository {
     suspend fun getAuthState(): RealDebridAuthState
     suspend fun startDeviceFlow(): DeviceCodeFlow
     suspend fun pollDeviceFlow(flow: DeviceCodeFlow): RealDebridAuthState
-    suspend fun resolve(source: SourceResult): ResolvedStream
+    suspend fun resolve(
+        source: SourceResult,
+        seasonNumber: Int? = null,
+        episodeNumber: Int? = null
+    ): ResolvedStream
 }

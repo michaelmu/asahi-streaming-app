@@ -38,6 +38,8 @@ class DefaultSourceNormalizer : SourceNormalizer {
             displayName = raw.title,
             quality = quality,
             cacheStatus = if (impliedCached) CacheStatus.CACHED else CacheStatus.UNCHECKED,
+            seasonNumber = request.seasonNumber,
+            episodeNumber = request.episodeNumber,
             infoHash = raw.infoHash,
             sizeBytes = raw.sizeBytes,
             rawMetadata = buildMap {
