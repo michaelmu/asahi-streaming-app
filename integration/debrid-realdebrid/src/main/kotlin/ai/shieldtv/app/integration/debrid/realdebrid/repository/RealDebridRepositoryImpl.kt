@@ -59,6 +59,19 @@ class RealDebridRepositoryImpl(
     }
 
     override suspend fun resolve(source: SourceResult): ResolvedStream {
-        return ResolvedStream(url = source.url, source = source)
+        val url = source.url.trim()
+        return when {
+            url.startsWith("http://", ignoreCase = true) || url.startsWith("https://", ignoreCase = true) -> {
+                ResolvedStream(url = url, source = source)
+            }
+            url.startsWith("magnet:", ignoreCase = true) -> {
+                throw IllegalStateException(
+                    "Magnet source selected, but Real-Debrid stream resolution is not implemented yet for playback."
+                )
+            }
+            else -> {
+                throw IllegalStateException("Unsupported source URL for playback: $url")
+            }
+        }
     }
 }

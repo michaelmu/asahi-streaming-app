@@ -338,11 +338,14 @@ class MainActivity : ComponentActivity() {
                             buildString {
                                 appendLine("Playback preparation succeeded.")
                                 appendLine("Current item: ${AppContainer.playbackEngine.getCurrentItem()?.title ?: source.displayName}")
-                                appendLine("Stream URL: ${AppContainer.playbackEngine.getCurrentUrl() ?: source.url}")
-                                append("Player surface is attached below.")
+                                appendLine("Stream URL: ${state.playbackUrl ?: AppContainer.playbackEngine.getCurrentUrl() ?: source.url}")
+                                append("Player surface is attached below for direct HTTP playback.")
                             }
                         } else {
-                            "Playback preparation failed: ${state.error ?: "unknown error"}"
+                            buildString {
+                                appendLine("Playback preparation failed.")
+                                append(state.error ?: "unknown error")
+                            }
                         }
                     )
                 }
