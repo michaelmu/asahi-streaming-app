@@ -11,6 +11,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.media3.ui.PlayerView
 import ai.shieldtv.app.core.model.media.MediaRef
 import ai.shieldtv.app.core.model.media.SearchResult
 import ai.shieldtv.app.core.model.media.TitleDetails
@@ -25,6 +26,7 @@ import ai.shieldtv.app.feature.search.presentation.SearchPresenter
 import ai.shieldtv.app.feature.search.presentation.SearchViewModel
 import ai.shieldtv.app.feature.sources.presentation.SourcesPresenter
 import ai.shieldtv.app.feature.sources.presentation.SourcesViewModel
+import ai.shieldtv.app.integration.playback.media3.engine.Media3PlaybackEngine
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -55,11 +57,18 @@ class MainActivity : ComponentActivity() {
     private lateinit var sourcesContainer: LinearLayout
     private lateinit var playbackContainer: LinearLayout
     private lateinit var playbackControlsContainer: LinearLayout
+    private lateinit var playerView: PlayerView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(buildContentView())
+        attachPlayerView()
         runInitialSearch()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        AppContainer.playbackEngine.release()
     }
 
     private fun buildContentView(): View {
@@ -109,6 +118,14 @@ class MainActivity : ComponentActivity() {
         playbackControlsContainer = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
         }
+        playerView = PlayerView(this).apply {
+            useController = true
+            visibility = View.GONE
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                720
+            )
+        }
 
         searchRow.addView(queryInput)
         searchRow.addView(searchButton)
@@ -133,6 +150,8 @@ class MainActivity : ComponentActivity() {
             addView(playbackContainer)
             addView(space())
             addView(playbackControlsContainer)
+            addView(space())
+            addView(playerView)
         }
 
         val scrollView = ScrollView(this).apply {
@@ -149,6 +168,11 @@ class MainActivity : ComponentActivity() {
         )
 
         return root
+    }
+
+    private fun attachPlayerView() {
+        val engine = AppContainer.playbackEngine as? Media3PlaybackEngine ?: return
+        playerView.player = engine.attach(this)
     }
 
     private fun verticalSection(title: String): LinearLayout {
@@ -173,6 +197,7 @@ class MainActivity : ComponentActivity() {
         clearSection(sourcesContainer)
         clearSection(playbackContainer)
         clearButtons(playbackControlsContainer)
+        playerView.visibility = View.GONE
         setLoading(true, "Searching for \"$query\"…")
 
         lifecycleScope.launch {
@@ -213,6 +238,7 @@ class MainActivity : ComponentActivity() {
         clearSection(sourcesContainer)
         clearSection(playbackContainer)
         clearButtons(playbackControlsContainer)
+        playerView.visibility = View.GONE
         setLoading(true, "Loading details for ${mediaRef.title}…")
 
         lifecycleScope.launch {
@@ -249,6 +275,7 @@ class MainActivity : ComponentActivity() {
         clearSection(sourcesContainer)
         clearSection(playbackContainer)
         clearButtons(playbackControlsContainer)
+        playerView.visibility = View.GONE
         setLoading(true, "Finding sources for ${mediaRef.title}…")
 
         lifecycleScope.launch {
@@ -292,6 +319,7 @@ class MainActivity : ComponentActivity() {
     private fun preparePlayback(source: SourceResult) {
         clearSection(playbackContainer)
         clearButtons(playbackControlsContainer)
+        playerView.visibility = View.GONE
         setLoading(true, "Resolving ${source.displayName}…")
 
         lifecycleScope.launch {
@@ -307,12 +335,11 @@ class MainActivity : ComponentActivity() {
                     appendLine()
                     append(
                         if (state.prepared) {
-                            val currentItem = AppContainer.playbackEngine.getCurrentItem()
                             buildString {
                                 appendLine("Playback preparation succeeded.")
-                                appendLine("Current item: ${currentItem?.title ?: source.displayName}")
-                                appendLine("Stream URL: ${currentItem?.stream?.url ?: source.url}")
-                                append("Next step: actual Android-hosted Media3 player UI.")
+                                appendLine("Current item: ${AppContainer.playbackEngine.getCurrentItem()?.title ?: source.displayName}")
+                                appendLine("Stream URL: ${AppContainer.playbackEngine.getCurrentUrl() ?: source.url}")
+                                append("Player surface is attached below.")
                             }
                         } else {
                             "Playback preparation failed: ${state.error ?: "unknown error"}"
@@ -321,6 +348,7 @@ class MainActivity : ComponentActivity() {
                 }
             )
             if (state.prepared) {
+                playerView.visibility = View.VISIBLE
                 renderPlaybackControls()
             }
         }
