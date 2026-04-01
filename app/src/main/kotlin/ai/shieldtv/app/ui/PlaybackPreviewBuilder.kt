@@ -28,7 +28,9 @@ class PlaybackPreviewBuilder {
             appendLine("Playback Preview:")
             appendLine("Prepared source: ${topRankedSource.displayName}")
             appendLine("Prepared provider: ${topRankedSource.providerId}")
+            appendLine("Prepared debrid service: ${topRankedSource.debridService}")
             appendLine("Prepared cache status: ${topRankedSource.cacheStatus}")
+            appendLine("Prepared hash: ${topRankedSource.infoHash ?: "none"}")
             appendLine("Player error: ${playerState.error ?: "none"}")
         }
     }

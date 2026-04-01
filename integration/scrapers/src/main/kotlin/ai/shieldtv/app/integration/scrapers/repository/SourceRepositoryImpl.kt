@@ -8,6 +8,7 @@ import ai.shieldtv.app.domain.repository.SourceRepository
 import ai.shieldtv.app.domain.source.ranking.SourceCacheMarker
 import ai.shieldtv.app.domain.source.ranking.SourceRanker
 import ai.shieldtv.app.integration.debrid.realdebrid.debug.RealDebridDebugState
+import ai.shieldtv.app.integration.scrapers.provider.ProviderModeDecider
 import ai.shieldtv.app.integration.scrapers.provider.ProviderRegistry
 
 class SourceRepositoryImpl(
@@ -25,6 +26,7 @@ class SourceRepositoryImpl(
             }
         }
         val cacheMarked = sourceCacheMarker?.markCached(rawResults) ?: rawResults
-        return sourceRanker.rank(cacheMarked, SourceFilters())
+        val shaped = ProviderModeDecider.shapeSources(cacheMarked)
+        return sourceRanker.rank(shaped, SourceFilters())
     }
 }
