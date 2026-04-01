@@ -365,7 +365,7 @@ These are the business actions the app should center around.
 
 This is one of the most important decisions.
 
-Implementation note: even while the repo still uses fake source providers, the provider side should move toward an explicit adapter boundary so query-building, transport, and normalization remain separable.
+Implementation note: even while the repo still uses fake source providers, the provider side should move toward an explicit adapter boundary so query-building, transport, and normalization remain separable. A transitional JSON-backed adapter is a good first step before wiring a live remote provider.
 
 ## Goal
 Replicate the *benefit* of CocoScrapers without reproducing Python/Kodi plugin mechanics.

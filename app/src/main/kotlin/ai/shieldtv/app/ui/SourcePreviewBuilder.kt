@@ -19,7 +19,8 @@ class SourcePreviewBuilder {
             appendLine("Total sources: ${sourcesState.sources.size}")
             sourcesState.sources.forEachIndexed { index, source ->
                 val transport = source.rawMetadata["transport"] ?: "in-memory"
-                appendLine("${index + 1}. ${source.displayName} [${source.providerDisplayName}] ${source.quality} transport=$transport")
+                val query = source.rawMetadata["query"] ?: "n/a"
+                appendLine("${index + 1}. ${source.displayName} [${source.providerDisplayName}] ${source.quality} transport=$transport query=$query")
             }
         }
     }
