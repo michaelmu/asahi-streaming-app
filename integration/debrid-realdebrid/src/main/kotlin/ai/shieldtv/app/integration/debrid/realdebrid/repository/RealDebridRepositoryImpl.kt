@@ -75,7 +75,8 @@ class RealDebridRepositoryImpl(
                     magnet = url,
                     mediaRef = source.mediaRef,
                     seasonNumber = seasonNumber,
-                    episodeNumber = episodeNumber
+                    episodeNumber = episodeNumber,
+                    source = source
                 )
                 ResolvedStream(
                     url = resolved.streamUrl,

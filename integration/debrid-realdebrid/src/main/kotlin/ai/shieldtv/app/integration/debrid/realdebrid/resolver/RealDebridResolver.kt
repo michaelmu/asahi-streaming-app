@@ -2,6 +2,8 @@ package ai.shieldtv.app.integration.debrid.realdebrid.resolver
 
 import ai.shieldtv.app.core.model.media.MediaRef
 import ai.shieldtv.app.core.model.media.MediaType
+import ai.shieldtv.app.core.model.source.Quality
+import ai.shieldtv.app.core.model.source.SourceResult
 import ai.shieldtv.app.integration.debrid.realdebrid.api.RealDebridApi
 import ai.shieldtv.app.integration.debrid.realdebrid.api.RealDebridTorrentFile
 import kotlinx.coroutines.delay
@@ -14,7 +16,8 @@ class RealDebridResolver(
         magnet: String,
         mediaRef: MediaRef,
         seasonNumber: Int? = null,
-        episodeNumber: Int? = null
+        episodeNumber: Int? = null,
+        source: SourceResult? = null
     ): ResolvedMagnetStream {
         val added = api.addMagnet(magnet)
             ?: throw IllegalStateException("Real-Debrid rejected magnet add request")
@@ -26,7 +29,8 @@ class RealDebridResolver(
             files = initialInfo.files,
             mediaRef = mediaRef,
             seasonNumber = seasonNumber,
-            episodeNumber = episodeNumber
+            episodeNumber = episodeNumber,
+            quality = source?.quality ?: Quality.UNKNOWN
         ).ifEmpty { throw IllegalStateException("No playable files matched this torrent") }
 
         val selectOk = api.selectTorrentFiles(added.id, selectedFileIds.joinToString(","))
@@ -65,7 +69,8 @@ class RealDebridResolver(
         files: List<RealDebridTorrentFile>,
         mediaRef: MediaRef,
         seasonNumber: Int?,
-        episodeNumber: Int?
+        episodeNumber: Int?,
+        quality: Quality
     ): List<Int> {
         val playable = files.filter { isPlayableVideoFile(it.path) }
             .filterNot { looksLikeSample(it.path) }
@@ -78,7 +83,8 @@ class RealDebridResolver(
                     file = file,
                     mediaRef = mediaRef,
                     seasonNumber = seasonNumber,
-                    episodeNumber = episodeNumber
+                    episodeNumber = episodeNumber,
+                    quality = quality
                 )
             }
             .sortedWith(
@@ -93,7 +99,8 @@ class RealDebridResolver(
         file: RealDebridTorrentFile,
         mediaRef: MediaRef,
         seasonNumber: Int?,
-        episodeNumber: Int?
+        episodeNumber: Int?,
+        quality: Quality
     ): Int {
         val path = file.path.substringAfterLast('/').ifBlank { file.path }
         val normalizedPath = normalize(path)
@@ -148,16 +155,127 @@ class RealDebridResolver(
         if (looksLikeJunk(path)) score -= 100
         if (isSubtitleOrNfo(path)) score -= 200
 
-        val sizeScore = when {
-            file.bytes >= 40L * 1024 * 1024 * 1024 -> 18
-            file.bytes >= 15L * 1024 * 1024 * 1024 -> 14
-            file.bytes >= 4L * 1024 * 1024 * 1024 -> 10
-            file.bytes >= 700L * 1024 * 1024 -> 6
-            else -> 0
-        }
-        score += sizeScore
+        score += sizeHeuristicScore(
+            bytes = file.bytes,
+            mediaType = mediaRef.mediaType,
+            hasEpisodeContext = hasEpisodeContext,
+            quality = quality
+        )
 
         return max(score, -999)
+    }
+
+    private fun sizeHeuristicScore(
+        bytes: Long,
+        mediaType: MediaType,
+        hasEpisodeContext: Boolean,
+        quality: Quality
+    ): Int {
+        if (bytes <= 0L) return 0
+
+        val profile = expectedSizeProfile(
+            mediaType = mediaType,
+            hasEpisodeContext = hasEpisodeContext,
+            quality = quality
+        ) ?: return genericSizeScore(bytes)
+
+        return when {
+            bytes < profile.hardMin -> -85
+            bytes < profile.softMin -> -35
+            bytes in profile.idealMin..profile.idealMax -> 18
+            bytes <= profile.softMax -> 6
+            bytes <= profile.hardMax -> -20
+            else -> -55
+        }
+    }
+
+    private fun expectedSizeProfile(
+        mediaType: MediaType,
+        hasEpisodeContext: Boolean,
+        quality: Quality
+    ): SizeProfile? {
+        val episodeLike = hasEpisodeContext || mediaType == MediaType.EPISODE
+        return if (episodeLike) {
+            when (quality) {
+                Quality.UHD_4K -> SizeProfile(
+                    hardMin = gb(1),
+                    softMin = gb(2),
+                    idealMin = gb(3),
+                    idealMax = gb(12),
+                    softMax = gb(16),
+                    hardMax = gb(25)
+                )
+                Quality.FHD_1080P -> SizeProfile(
+                    hardMin = mb(250),
+                    softMin = mb(400),
+                    idealMin = mb(700),
+                    idealMax = gb(4),
+                    softMax = gb(6),
+                    hardMax = gb(10)
+                )
+                Quality.HD_720P -> SizeProfile(
+                    hardMin = mb(150),
+                    softMin = mb(250),
+                    idealMin = mb(450),
+                    idealMax = gb(2),
+                    softMax = gb(3),
+                    hardMax = gb(6)
+                )
+                Quality.SD, Quality.SCR, Quality.CAM, Quality.TELE, Quality.UNKNOWN -> SizeProfile(
+                    hardMin = mb(100),
+                    softMin = mb(180),
+                    idealMin = mb(250),
+                    idealMax = gb(2),
+                    softMax = gb(3),
+                    hardMax = gb(5)
+                )
+            }
+        } else {
+            when (quality) {
+                Quality.UHD_4K -> SizeProfile(
+                    hardMin = gb(4),
+                    softMin = gb(8),
+                    idealMin = gb(12),
+                    idealMax = gb(40),
+                    softMax = gb(60),
+                    hardMax = gb(100)
+                )
+                Quality.FHD_1080P -> SizeProfile(
+                    hardMin = mb(900),
+                    softMin = gb(1) + mb(500),
+                    idealMin = gb(3),
+                    idealMax = gb(10),
+                    softMax = gb(18),
+                    hardMax = gb(30)
+                )
+                Quality.HD_720P -> SizeProfile(
+                    hardMin = mb(450),
+                    softMin = mb(700),
+                    idealMin = gb(1),
+                    idealMax = gb(4),
+                    softMax = gb(8),
+                    hardMax = gb(15)
+                )
+                Quality.SD, Quality.SCR, Quality.CAM, Quality.TELE, Quality.UNKNOWN -> SizeProfile(
+                    hardMin = mb(300),
+                    softMin = mb(500),
+                    idealMin = mb(700),
+                    idealMax = gb(3),
+                    softMax = gb(6),
+                    hardMax = gb(12)
+                )
+            }
+        }
+    }
+
+    private fun genericSizeScore(bytes: Long): Int {
+        return when {
+            bytes >= 40L * 1024 * 1024 * 1024 -> 8
+            bytes >= 15L * 1024 * 1024 * 1024 -> 12
+            bytes >= 4L * 1024 * 1024 * 1024 -> 10
+            bytes >= 700L * 1024 * 1024 -> 6
+            else -> 0
+        }
     }
 
     private fun buildEpisodeMarkers(seasonNumber: Int, episodeNumber: Int): List<String> {
@@ -247,9 +365,21 @@ class RealDebridResolver(
             .trim()
             .replace(Regex("\\s+"), " ")
     }
+
+    private fun mb(value: Long): Long = value * 1024L * 1024L
+    private fun gb(value: Long): Long = value * 1024L * 1024L * 1024L
 }
 
 data class ResolvedMagnetStream(
     val streamUrl: String,
     val mimeType: String? = null
+)
+
+data class SizeProfile(
+    val hardMin: Long,
+    val softMin: Long,
+    val idealMin: Long,
+    val idealMax: Long,
+    val softMax: Long,
+    val hardMax: Long
 )
