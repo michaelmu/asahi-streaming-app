@@ -1,26 +1,13 @@
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
+    id("asahi.android-app")
 }
 
 android {
     namespace = "ai.shieldtv.app"
-    compileSdk = 34
 
     defaultConfig {
         applicationId = "ai.shieldtv.app"
-        minSdk = 26
-        targetSdk = 34
-        versionCode = 1
         versionName = "0.1.0-asahi"
-    }
-
-    buildFeatures {
-        compose = true
-    }
-
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.15"
     }
 }
 
@@ -32,4 +19,8 @@ dependencies {
     implementation(project(":feature:sources"))
     implementation(project(":feature:player"))
     implementation(project(":feature:settings"))
+    implementation(project(":integration:metadata-tmdb"))
+    implementation(project(":integration:debrid-realdebrid"))
+    implementation(project(":integration:scrapers"))
+    implementation(project(":integration:playback-media3"))
 }

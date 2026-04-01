@@ -5,19 +5,19 @@ import ai.shieldtv.app.core.model.auth.RealDebridAuthState
 import ai.shieldtv.app.core.model.source.ResolvedStream
 import ai.shieldtv.app.core.model.source.SourceResult
 import ai.shieldtv.app.domain.repository.DebridRepository
+import ai.shieldtv.app.integration.debrid.realdebrid.api.RealDebridApi
+import ai.shieldtv.app.integration.debrid.realdebrid.mapper.RealDebridAuthMapper
 
-class RealDebridRepositoryImpl : DebridRepository {
+class RealDebridRepositoryImpl(
+    private val realDebridApi: RealDebridApi,
+    private val realDebridAuthMapper: RealDebridAuthMapper
+) : DebridRepository {
     override suspend fun getAuthState(): RealDebridAuthState {
         return RealDebridAuthState(isLinked = false)
     }
 
     override suspend fun startDeviceFlow(): DeviceCodeFlow {
-        return DeviceCodeFlow(
-            verificationUrl = "",
-            userCode = "",
-            expiresInSeconds = 0,
-            pollIntervalSeconds = 0
-        )
+        return realDebridAuthMapper.toDeviceCodeFlow(realDebridApi.startDeviceFlow())
     }
 
     override suspend fun pollDeviceFlow(flow: DeviceCodeFlow): RealDebridAuthState {

@@ -80,6 +80,8 @@ Do not let it become a week of build-system philosophy.
 ## Goal
 Get the app visible and navigable quickly.
 
+Implementation note: it is acceptable to start this slice with a fake/local TMDb adapter path first, as long as the repository boundary, mapper boundary, and use-case flow match the eventual real integration.
+
 ## Tasks
 - scaffold modules from `SCAFFOLDING_PLAN.md`
 - add navigation host
@@ -184,6 +186,8 @@ Do not chase breadth before quality.
 ## Goal
 Turn a selected source into actual video playback.
 
+Implementation note: before full playback integration, the sources slice should already exist as a proper pipeline of provider -> normalizer -> ranker -> repository -> use case -> presenter/viewmodel.
+
 ## Tasks
 - implement source resolution flow
 - implement RD magnet resolve / link unrestrict logic
@@ -259,6 +263,8 @@ If I were executing this in order, I’d do:
 13. polish errors/settings/provider toggles
 
 That ordering minimizes fake architecture and maximizes working-product feedback.
+
+Implementation note: the current repo is following this in a scaffold-first way by wiring search and details through fake/local TMDb adapters before introducing live network integration.
 
 ---
 

@@ -669,5 +669,7 @@ As implementation begins, the preferred approach is **incremental scaffold-first
 - add contracts before concrete feature logic
 - prefer stub implementations over premature complexity
 - update docs when implementation uncovers a structural adjustment
+- centralize build conventions early so module growth does not create repetitive Gradle drift
+- keep each major product slice (metadata, debrid auth, sources, playback) following the same wiring pattern where possible
 
 This reduces thrash while the project is still becoming real.
