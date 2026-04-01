@@ -11,6 +11,7 @@ class AppScreenRenderer {
             AppDestination.SOURCES -> "Sources Screen"
             AppDestination.PLAYER -> "Player Screen"
             AppDestination.SETTINGS -> "Settings Screen"
+            AppDestination.AUTH_DEBUG -> "Auth Debug Screen"
         }
     }
 }

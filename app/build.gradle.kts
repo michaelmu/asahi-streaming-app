@@ -38,3 +38,48 @@ tasks.register<JavaExec>("runPreview") {
     )
     mainClass.set("ai.shieldtv.app.debug.PreviewRunner")
 }
+
+tasks.register<JavaExec>("startAuthPreview") {
+    group = "verification"
+    description = "Starts RD device auth and persists the active flow for later polling"
+    dependsOn("compileDebugKotlin")
+    classpath = files(
+        "$buildDir/tmp/kotlin-classes/debug",
+        configurations.getByName("debugRuntimeClasspath")
+    )
+    mainClass.set("ai.shieldtv.app.debug.StartAuthRunner")
+}
+
+tasks.register<JavaExec>("pollAuthPreview") {
+    group = "verification"
+    description = "Polls a previously started RD device auth flow from local debug storage"
+    dependsOn("compileDebugKotlin")
+    classpath = files(
+        "$buildDir/tmp/kotlin-classes/debug",
+        configurations.getByName("debugRuntimeClasspath")
+    )
+    mainClass.set("ai.shieldtv.app.debug.PollAuthRunner")
+}
+
+tasks.register<JavaExec>("pollAuthPreviewLong") {
+    group = "verification"
+    description = "Polls a previously started RD device auth flow repeatedly using the stored interval"
+    dependsOn("compileDebugKotlin")
+    classpath = files(
+        "$buildDir/tmp/kotlin-classes/debug",
+        configurations.getByName("debugRuntimeClasspath")
+    )
+    mainClass.set("ai.shieldtv.app.debug.PollAuthRunner")
+    args("24")
+}
+
+tasks.register<JavaExec>("runAuthFlowPreview") {
+    group = "verification"
+    description = "Starts RD device auth and polls in the same live process"
+    dependsOn("compileDebugKotlin")
+    classpath = files(
+        "$buildDir/tmp/kotlin-classes/debug",
+        configurations.getByName("debugRuntimeClasspath")
+    )
+    mainClass.set("ai.shieldtv.app.debug.RunAuthFlowRunner")
+}

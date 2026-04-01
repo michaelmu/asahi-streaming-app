@@ -381,7 +381,7 @@ Implementation note: in-app providers should converge on a standard internal sha
 
 Current first real-provider direction: a Torrentio-style JSON stream provider is a sensible first implementation target because it is structured, source-oriented, and close to the CocoScrapers references already studied.
 
-Current auth direction: Real-Debrid should follow a Fenlight-like device-code flow, with local token persistence and downstream reuse for cache checks, resolution, and playback-related debrid actions.
+Current auth direction: Real-Debrid should follow a Fenlight-like device-code flow, with local token persistence and downstream reuse for cache checks, resolution, and playback-related debrid actions. Environment token overrides can exist for development, but stored device-flow tokens should be the primary runtime source. The initial device-flow bootstrap client id can follow Fenlight’s default (`X245A4XAIBGVM`) unless explicitly overridden.
 
 ## Goal
 Replicate the *benefit* of CocoScrapers without reproducing Python/Kodi plugin mechanics.
@@ -522,7 +522,7 @@ Even if v1 only uses Media3, this separation keeps:
 
 Borrowing from Stremio Web’s product structure, but adapted for TV:
 
-Implementation note: a thin app-level coordinator/navigation spine is useful even before a full UI layer exists, so the feature slices can connect through explicit app state instead of ad-hoc jumps.
+Implementation note: a thin app-level coordinator/navigation spine is useful even before a full UI layer exists, so the feature slices can connect through explicit app state instead of ad-hoc jumps. For tricky live flows like Real-Debrid device auth, a minimal in-app debug screen is preferable to a CLI harness because it keeps state inside one running app session.
 
 ## Screens
 - Home / Board

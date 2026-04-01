@@ -5,5 +5,6 @@ enum class AppDestination {
     DETAILS,
     SOURCES,
     PLAYER,
-    SETTINGS
+    SETTINGS,
+    AUTH_DEBUG
 }

@@ -5,6 +5,7 @@ import ai.shieldtv.app.feature.SearchFeatureFactory
 import kotlinx.coroutines.runBlocking
 
 class DebugAppPreviewBuilder {
+    private val authPreviewBuilder = AuthPreviewBuilder()
     private val sourcePreviewBuilder = SourcePreviewBuilder()
     private val playbackPreviewBuilder = PlaybackPreviewBuilder()
     private val previewQuery = "Dune"
@@ -16,10 +17,13 @@ class DebugAppPreviewBuilder {
         val searchState = searchViewModel.search(previewQuery)
         val firstResult = searchState.results.firstOrNull()
         val detailsState = firstResult?.let { detailsViewModel.load(it.mediaRef) }
+        val authPreview = authPreviewBuilder.build()
         val sourcePreview = sourcePreviewBuilder.build(searchViewModel, previewQuery)
         val playbackPreview = playbackPreviewBuilder.build(searchViewModel, previewQuery)
 
         buildString {
+            appendLine(authPreview.trim())
+            appendLine()
             appendLine("Preview Query: $previewQuery")
             appendLine(MetadataPreviewFormatter.describe(searchState.results).trim())
             appendLine()

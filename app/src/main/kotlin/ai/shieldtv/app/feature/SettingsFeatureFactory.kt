@@ -6,7 +6,10 @@ import ai.shieldtv.app.feature.settings.presentation.SettingsViewModel
 
 object SettingsFeatureFactory {
     fun createViewModel(): SettingsViewModel {
-        val presenter = AccountPresenter(AppContainer.startRealDebridDeviceFlowUseCase)
+        val presenter = AccountPresenter(
+            startRealDebridDeviceFlowUseCase = AppContainer.startRealDebridDeviceFlowUseCase,
+            pollRealDebridDeviceFlowUseCase = AppContainer.pollRealDebridDeviceFlowUseCase
+        )
         return SettingsViewModel(presenter)
     }
 }
