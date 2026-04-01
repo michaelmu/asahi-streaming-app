@@ -27,5 +27,6 @@ Update: the real Gradle wrapper has now been generated successfully. The next st
 - apply the same live-first, fallback-safe approach to details metadata as search becomes more real
 - keep the debug preview rich enough to show whether search/details are genuinely surfacing live metadata characteristics
 - evolve the sources side toward explicit provider adapters before swapping in real transports/providers
+- introduce transitional transport-shaped adapters before binding to real scraper/provider infrastructure
 - decide when to switch from placeholder text UI to real Android TV UI host
 - avoid adding more feature complexity until bootstrap gaps are reduced

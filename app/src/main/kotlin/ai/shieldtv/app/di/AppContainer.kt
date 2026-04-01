@@ -17,6 +17,7 @@ import ai.shieldtv.app.integration.metadata.tmdb.repository.TmdbMetadataReposito
 import ai.shieldtv.app.integration.playback.media3.engine.Media3PlaybackEngine
 import ai.shieldtv.app.integration.scrapers.normalize.DefaultSourceNormalizer
 import ai.shieldtv.app.integration.scrapers.provider.FakeSourceProvider
+import ai.shieldtv.app.integration.scrapers.provider.HttpSourceProviderAdapter
 import ai.shieldtv.app.integration.scrapers.provider.ProviderRegistry
 import ai.shieldtv.app.integration.scrapers.ranking.DefaultSourceRanker
 import ai.shieldtv.app.integration.scrapers.repository.SourceRepositoryImpl
@@ -45,7 +46,12 @@ object AppContainer {
     }
 
     private val providerRegistry by lazy {
-        ProviderRegistry(providers = listOf(FakeSourceProvider()))
+        ProviderRegistry(
+            providers = listOf(
+                FakeSourceProvider(),
+                FakeSourceProvider(adapter = HttpSourceProviderAdapter())
+            )
+        )
     }
     private val sourceNormalizer by lazy { DefaultSourceNormalizer() }
     private val sourceRanker by lazy { DefaultSourceRanker() }
