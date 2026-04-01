@@ -24,5 +24,6 @@ Update: the real Gradle wrapper has now been generated successfully. The next st
 - when real adapters are introduced, prefer minimal JSON parsing first over premature full DTO systems, so the live path can be verified quickly
 - keep app-layer wiring insulated from transport/client implementation types; expose factories or repository boundaries instead
 - use the debug shell to show whether live integrations appear to be returning real data versus fallback placeholders
+- apply the same live-first, fallback-safe approach to details metadata as search becomes more real
 - decide when to switch from placeholder text UI to real Android TV UI host
 - avoid adding more feature complexity until bootstrap gaps are reduced

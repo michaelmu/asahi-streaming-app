@@ -1,6 +1,7 @@
 package ai.shieldtv.app.integration.metadata.tmdb.repository
 
 import ai.shieldtv.app.core.model.media.MediaRef
+import ai.shieldtv.app.core.model.media.MediaType
 import ai.shieldtv.app.core.model.media.SearchResult
 import ai.shieldtv.app.core.model.media.TitleDetails
 import ai.shieldtv.app.domain.repository.MetadataRepository
@@ -21,6 +22,14 @@ class TmdbMetadataRepository(
     }
 
     override suspend fun getTitleDetails(mediaRef: MediaRef): TitleDetails {
-        return tmdbDetailsMapper.fromMediaRef(mediaRef)
+        val tmdbId = mediaRef.ids.tmdbId ?: return tmdbDetailsMapper.fromMediaRef(mediaRef)
+        val mediaType = when (mediaRef.mediaType) {
+            MediaType.MOVIE -> "movie"
+            MediaType.SHOW -> "tv"
+            else -> return tmdbDetailsMapper.fromMediaRef(mediaRef)
+        }
+        val response = runCatching { tmdbApi.getDetails(tmdbId, mediaType) }
+            .getOrElse { fallbackTmdbApi.getDetails(tmdbId, mediaType) }
+        return tmdbDetailsMapper.fromJson(response, mediaRef)
     }
 }
