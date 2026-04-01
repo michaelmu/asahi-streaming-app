@@ -12,7 +12,7 @@ Current repo state:
 - temporary UI shell placeholder exists at the app layer
 - the app activity now renders a minimal debug text view instead of doing nothing
 - bootstrap gaps are tracked in `docs/BOOTSTRAP_GAPS.md`
-- placeholder wrapper/bootstrap files now exist to make the remaining setup explicit
+- a real Gradle wrapper is now present in the repo
 
 ## Planning docs
 See `docs/` for the current planning set:
