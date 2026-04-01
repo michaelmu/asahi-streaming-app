@@ -64,6 +64,7 @@ class MainActivity : ComponentActivity() {
     private var selectedMediaRef: MediaRef? = null
     private var selectedSeasonNumber: Int? = null
     private var selectedEpisodeNumber: Int? = null
+    private var selectedTitleDetails: TitleDetails? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -205,6 +206,7 @@ class MainActivity : ComponentActivity() {
         selectedMediaRef = null
         selectedSeasonNumber = null
         selectedEpisodeNumber = null
+        selectedTitleDetails = null
         clearSection(resultsContainer)
         clearSection(detailsContainer)
         clearSection(episodeSelectionContainer)
@@ -270,9 +272,10 @@ class MainActivity : ComponentActivity() {
                 return@launch
             }
 
+            selectedTitleDetails = details
             setLoading(false, "Loaded details for ${details.mediaRef.title}.")
             renderDetails(details)
-            renderEpisodeSelection(details.mediaRef)
+            renderEpisodeSelection(details)
             loadSourcesFor(
                 mediaRef = details.mediaRef,
                 seasonNumber = selectedSeasonNumber,
@@ -290,14 +293,17 @@ class MainActivity : ComponentActivity() {
                 details.mediaRef.year?.let { appendLine("Year: $it") }
                 if (details.genres.isNotEmpty()) appendLine("Genres: ${details.genres.joinToString()}")
                 details.runtimeMinutes?.let { appendLine("Runtime: ${it}m") }
+                details.seasonCount?.let { appendLine("Seasons: $it") }
+                details.episodeCount?.let { appendLine("Episodes: $it") }
                 appendLine()
                 append(details.overview ?: "No overview yet.")
             }
         )
     }
 
-    private fun renderEpisodeSelection(mediaRef: MediaRef) {
+    private fun renderEpisodeSelection(details: TitleDetails) {
         clearSection(episodeSelectionContainer)
+        val mediaRef = details.mediaRef
         if (mediaRef.mediaType != MediaType.SHOW) {
             episodeSelectionContainer.visibility = View.GONE
             return
@@ -305,9 +311,64 @@ class MainActivity : ComponentActivity() {
 
         episodeSelectionContainer.visibility = View.VISIBLE
 
+        val knownSeasonCount = details.seasonCount ?: 3
+        val seasonRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val episodeRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+
+        episodeSelectionContainer.addView(TextView(this).apply {
+            text = "Pick a season and episode for source lookup and RD resolution."
+            textSize = 16f
+        })
+
+        episodeSelectionContainer.addView(TextView(this).apply {
+            text = "Seasons"
+            textSize = 18f
+        })
+
+        (1..knownSeasonCount.coerceAtMost(8)).forEach { season ->
+            seasonRow.addView(Button(this).apply {
+                text = "S${season.toString().padStart(2, '0')}"
+                setOnClickListener {
+                    selectedSeasonNumber = season
+                    renderEpisodeSelection(details)
+                }
+            })
+        }
+
+        val activeSeason = selectedSeasonNumber ?: 1
+        episodeSelectionContainer.addView(seasonRow)
+        episodeSelectionContainer.addView(TextView(this).apply {
+            text = "Episodes for season ${activeSeason.toString().padStart(2, '0')}"
+            textSize = 18f
+        })
+
+        val displayedEpisodes = 12
+        (1..displayedEpisodes).forEach { episode ->
+            episodeRow.addView(Button(this).apply {
+                text = "E${episode.toString().padStart(2, '0')}"
+                setOnClickListener {
+                    selectedSeasonNumber = activeSeason
+                    selectedEpisodeNumber = episode
+                    loadSourcesFor(
+                        mediaRef = mediaRef,
+                        seasonNumber = activeSeason,
+                        episodeNumber = episode
+                    )
+                }
+            })
+        }
+
+        episodeSelectionContainer.addView(episodeRow)
+
         val seasonInput = EditText(this).apply {
             hint = "Season"
-            setText((selectedSeasonNumber ?: 1).toString())
+            setText(activeSeason.toString())
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
         val episodeInput = EditText(this).apply {
@@ -316,7 +377,7 @@ class MainActivity : ComponentActivity() {
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
         val loadButton = Button(this).apply {
-            text = "Load Episode Sources"
+            text = "Load Exact Episode"
             setOnClickListener {
                 val season = seasonInput.text.toString().toIntOrNull()?.coerceAtLeast(1) ?: 1
                 val episode = episodeInput.text.toString().toIntOrNull()?.coerceAtLeast(1) ?: 1
@@ -330,19 +391,13 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        val row = LinearLayout(this).apply {
+        episodeSelectionContainer.addView(LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             addView(seasonInput)
             addView(episodeInput)
             addView(loadButton)
-        }
-
-        episodeSelectionContainer.addView(TextView(this).apply {
-            text = "Pick a season/episode for source lookup and RD resolution."
-            textSize = 16f
         })
-        episodeSelectionContainer.addView(row)
     }
 
     private fun loadSourcesFor(

@@ -6,5 +6,7 @@ data class TitleDetails(
     val posterUrl: String? = null,
     val backdropUrl: String? = null,
     val genres: List<String> = emptyList(),
-    val runtimeMinutes: Int? = null
+    val runtimeMinutes: Int? = null,
+    val seasonCount: Int? = null,
+    val episodeCount: Int? = null
 )
