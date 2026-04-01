@@ -1,15 +1,12 @@
 package ai.shieldtv.app.integration.debrid.realdebrid.api
 
+import ai.shieldtv.app.core.network.http.HttpClient
 import ai.shieldtv.app.integration.debrid.realdebrid.auth.RealDebridCredentialResponse
 import ai.shieldtv.app.integration.debrid.realdebrid.auth.RealDebridTokenResponse
 import ai.shieldtv.app.integration.debrid.realdebrid.auth.RealDebridTokenStore
 import ai.shieldtv.app.integration.debrid.realdebrid.config.RealDebridConfig
 import ai.shieldtv.app.integration.debrid.realdebrid.debug.RealDebridDebugState
-import java.net.URI
 import java.net.URLEncoder
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
 import java.nio.charset.StandardCharsets
 import org.json.JSONObject
 
@@ -20,17 +17,12 @@ class RealDebridHttpApi(
     override suspend fun startDeviceFlow(): DeviceFlowResponse {
         return runCatching {
             val clientId = RealDebridConfig.clientId()
-            val request = HttpRequest.newBuilder()
-                .uri(
-                    URI.create(
-                        "https://api.real-debrid.com/oauth/v2/device/code?client_id=" +
-                            URLEncoder.encode(clientId, StandardCharsets.UTF_8) +
-                            "&new_credentials=yes"
-                    )
-                )
-                .GET()
-                .build()
-            val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body()
+            val response = httpClient.get(
+                url =
+                    "https://api.real-debrid.com/oauth/v2/device/code?client_id=" +
+                        URLEncoder.encode(clientId, StandardCharsets.UTF_8) +
+                        "&new_credentials=yes"
+            )
             RealDebridDebugState.lastStartDeviceFlowResponse = response
             RealDebridDebugState.lastStartDeviceFlowError = ""
             val json = JSONObject(response)
@@ -58,18 +50,13 @@ class RealDebridHttpApi(
         if (deviceCode.isBlank()) return null
         return runCatching {
             val clientId = RealDebridConfig.clientId()
-            val request = HttpRequest.newBuilder()
-                .uri(
-                    URI.create(
-                        "https://api.real-debrid.com/oauth/v2/device/credentials?client_id=" +
-                            URLEncoder.encode(clientId, StandardCharsets.UTF_8) +
-                            "&code=" +
-                            URLEncoder.encode(deviceCode, StandardCharsets.UTF_8)
-                    )
-                )
-                .GET()
-                .build()
-            val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body()
+            val response = httpClient.get(
+                url =
+                    "https://api.real-debrid.com/oauth/v2/device/credentials?client_id=" +
+                        URLEncoder.encode(clientId, StandardCharsets.UTF_8) +
+                        "&code=" +
+                        URLEncoder.encode(deviceCode, StandardCharsets.UTF_8)
+            )
             RealDebridDebugState.lastCredentialsResponse = response
             RealDebridDebugState.lastCredentialsError = ""
             val json = JSONObject(response)
@@ -99,12 +86,11 @@ class RealDebridHttpApi(
                 append(URLEncoder.encode(deviceCode, StandardCharsets.UTF_8))
                 append("&grant_type=http://oauth.net/grant_type/device/1.0")
             }
-            val request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api.real-debrid.com/oauth/v2/token"))
-                .header("Content-Type", "application/x-www-form-urlencoded")
-                .POST(HttpRequest.BodyPublishers.ofString(body))
-                .build()
-            val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body()
+            val response = httpClient.post(
+                url = "https://api.real-debrid.com/oauth/v2/token",
+                body = body,
+                headers = mapOf("Content-Type" to "application/x-www-form-urlencoded")
+            )
             RealDebridDebugState.lastTokenResponse = response
             RealDebridDebugState.lastTokenError = ""
             val json = JSONObject(response)
@@ -125,13 +111,11 @@ class RealDebridHttpApi(
         if (infoHashes.isEmpty()) return "{}"
         val accessToken = tokenStore.get()?.accessToken ?: RealDebridConfig.accessToken() ?: return "{}"
         val joined = infoHashes.joinToString("/") { it.lowercase() }
-        val request = HttpRequest.newBuilder()
-            .uri(URI.create("https://api.real-debrid.com/rest/1.0/torrents/instantAvailability/$joined"))
-            .header("Authorization", "Bearer $accessToken")
-            .GET()
-            .build()
         return runCatching {
-            httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body()
+            httpClient.get(
+                url = "https://api.real-debrid.com/rest/1.0/torrents/instantAvailability/$joined",
+                headers = mapOf("Authorization" to "Bearer $accessToken")
+            )
         }.getOrElse { "{}" }
     }
 }

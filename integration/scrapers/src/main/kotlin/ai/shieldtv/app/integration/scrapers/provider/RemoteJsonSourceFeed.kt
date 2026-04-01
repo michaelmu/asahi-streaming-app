@@ -1,11 +1,8 @@
 package ai.shieldtv.app.integration.scrapers.provider
 
 import ai.shieldtv.app.core.model.source.SourceSearchRequest
-import java.net.URI
+import ai.shieldtv.app.core.network.http.HttpClient
 import java.net.URLEncoder
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
 import java.nio.charset.StandardCharsets
 
 class RemoteJsonSourceFeed(
@@ -16,12 +13,8 @@ class RemoteJsonSourceFeed(
         val baseUrl = baseUrlProvider()?.trim()?.trimEnd('/') ?: return DebugJsonSourceFeed.load(query, request)
         val encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8)
         val requestUrl = "$baseUrl?query=$encodedQuery"
-        val httpRequest = HttpRequest.newBuilder()
-            .uri(URI.create(requestUrl))
-            .GET()
-            .build()
         return runCatching {
-            httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString()).body()
+            httpClient.get(requestUrl)
         }.getOrElse {
             DebugJsonSourceFeed.load(query, request)
         }
