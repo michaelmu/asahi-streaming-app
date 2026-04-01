@@ -22,6 +22,7 @@ import ai.shieldtv.app.integration.scrapers.provider.JsonSourceProviderAdapter
 import ai.shieldtv.app.integration.scrapers.provider.ProviderRegistry
 import ai.shieldtv.app.integration.scrapers.provider.SourcesFeedFactory
 import ai.shieldtv.app.integration.scrapers.provider.sample.SampleTemplateSourceProvider
+import ai.shieldtv.app.integration.scrapers.provider.torrentio.TorrentioSourceProvider
 import ai.shieldtv.app.integration.scrapers.ranking.DefaultSourceRanker
 import ai.shieldtv.app.integration.scrapers.repository.SourceRepositoryImpl
 
@@ -58,7 +59,8 @@ object AppContainer {
                 FakeSourceProvider(),
                 FakeSourceProvider(adapter = HttpSourceProviderAdapter()),
                 FakeSourceProvider(adapter = JsonSourceProviderAdapter(remoteJsonSourceFeed::load)),
-                SampleTemplateSourceProvider()
+                SampleTemplateSourceProvider(),
+                TorrentioSourceProvider()
             )
         )
     }

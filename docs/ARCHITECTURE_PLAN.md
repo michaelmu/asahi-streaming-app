@@ -377,7 +377,9 @@ That means:
 
 Transitional transport-shaped and JSON-backed adapters are still useful during development, but they should now be treated as scaffolding toward **real in-app provider integrations**, not as the long-term architecture.
 
-Implementation note: in-app providers should converge on a standard internal shape of query builder -> transport -> parser -> source provider so new providers do not each reinvent the whole integration stack.
+Implementation note: in-app providers should converge on a standard internal shape of query builder -> transport -> parser -> source provider so new providers do not each reinvent the whole integration stack. Real providers can be scaffolded against this shape before binding them to a specific upstream.
+
+Current first real-provider direction: a Torrentio-style JSON stream provider is a sensible first implementation target because it is structured, source-oriented, and close to the CocoScrapers references already studied.
 
 ## Goal
 Replicate the *benefit* of CocoScrapers without reproducing Python/Kodi plugin mechanics.

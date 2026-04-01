@@ -25,6 +25,7 @@ Update: the real Gradle wrapper has now been generated successfully. The next st
 - keep app-layer wiring insulated from transport/client implementation types; expose factories or repository boundaries instead
 - use the debug shell to show whether live integrations appear to be returning real data versus fallback placeholders
 - apply the same insulation rule to source feed construction, not just TMDb/client wiring
+- scaffold real providers behind the provider template before binding to a concrete upstream, so the buildable baseline stays intact
 - apply the same live-first, fallback-safe approach to details metadata as search becomes more real
 - keep the debug preview rich enough to show whether search/details are genuinely surfacing live metadata characteristics
 - evolve the sources side toward explicit provider adapters before swapping in real transports/providers
