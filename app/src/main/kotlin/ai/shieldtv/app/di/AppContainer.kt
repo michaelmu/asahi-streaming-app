@@ -2,8 +2,10 @@ package ai.shieldtv.app.di
 
 import ai.shieldtv.app.domain.usecase.auth.StartRealDebridDeviceFlowUseCase
 import ai.shieldtv.app.domain.usecase.details.GetTitleDetailsUseCase
+import ai.shieldtv.app.domain.usecase.playback.BuildPlaybackItemUseCase
 import ai.shieldtv.app.domain.usecase.search.SearchTitlesUseCase
 import ai.shieldtv.app.domain.usecase.sources.FindSourcesUseCase
+import ai.shieldtv.app.domain.usecase.sources.ResolveSourceUseCase
 import ai.shieldtv.app.integration.debrid.realdebrid.api.FakeRealDebridApi
 import ai.shieldtv.app.integration.debrid.realdebrid.mapper.RealDebridAuthMapper
 import ai.shieldtv.app.integration.debrid.realdebrid.repository.RealDebridRepositoryImpl
@@ -11,6 +13,7 @@ import ai.shieldtv.app.integration.metadata.tmdb.api.FakeTmdbApi
 import ai.shieldtv.app.integration.metadata.tmdb.mapper.TmdbDetailsMapper
 import ai.shieldtv.app.integration.metadata.tmdb.mapper.TmdbSearchMapper
 import ai.shieldtv.app.integration.metadata.tmdb.repository.TmdbMetadataRepository
+import ai.shieldtv.app.integration.playback.media3.engine.Media3PlaybackEngine
 import ai.shieldtv.app.integration.scrapers.normalize.DefaultSourceNormalizer
 import ai.shieldtv.app.integration.scrapers.provider.FakeSourceProvider
 import ai.shieldtv.app.integration.scrapers.provider.ProviderRegistry
@@ -51,6 +54,8 @@ object AppContainer {
         )
     }
 
+    val playbackEngine by lazy { Media3PlaybackEngine() }
+
     val searchTitlesUseCase by lazy {
         SearchTitlesUseCase(metadataRepository)
     }
@@ -65,5 +70,13 @@ object AppContainer {
 
     val findSourcesUseCase by lazy {
         FindSourcesUseCase(sourceRepository)
+    }
+
+    val resolveSourceUseCase by lazy {
+        ResolveSourceUseCase(debridRepository)
+    }
+
+    val buildPlaybackItemUseCase by lazy {
+        BuildPlaybackItemUseCase()
     }
 }
