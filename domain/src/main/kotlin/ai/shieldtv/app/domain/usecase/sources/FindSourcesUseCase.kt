@@ -1,0 +1,13 @@
+package ai.shieldtv.app.domain.usecase.sources
+
+import ai.shieldtv.app.core.model.source.SourceResult
+import ai.shieldtv.app.core.model.source.SourceSearchRequest
+import ai.shieldtv.app.domain.repository.SourceRepository
+
+class FindSourcesUseCase(
+    private val sourceRepository: SourceRepository
+) {
+    suspend operator fun invoke(request: SourceSearchRequest): List<SourceResult> {
+        return sourceRepository.findSources(request)
+    }
+}
