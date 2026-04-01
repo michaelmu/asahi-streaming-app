@@ -6,14 +6,22 @@ import ai.shieldtv.app.core.model.source.ResolvedStream
 import ai.shieldtv.app.core.model.source.SourceResult
 import ai.shieldtv.app.domain.repository.DebridRepository
 import ai.shieldtv.app.integration.debrid.realdebrid.api.RealDebridApi
+import ai.shieldtv.app.integration.debrid.realdebrid.auth.RealDebridTokenStore
 import ai.shieldtv.app.integration.debrid.realdebrid.mapper.RealDebridAuthMapper
 
 class RealDebridRepositoryImpl(
     private val realDebridApi: RealDebridApi,
-    private val realDebridAuthMapper: RealDebridAuthMapper
+    private val realDebridAuthMapper: RealDebridAuthMapper,
+    private val tokenStore: RealDebridTokenStore
 ) : DebridRepository {
     override suspend fun getAuthState(): RealDebridAuthState {
-        return RealDebridAuthState(isLinked = false)
+        val tokens = tokenStore.get()
+        return RealDebridAuthState(
+            isLinked = tokens != null,
+            username = if (tokens != null) "linked" else null,
+            authInProgress = false,
+            lastError = null
+        )
     }
 
     override suspend fun startDeviceFlow(): DeviceCodeFlow {
@@ -21,7 +29,33 @@ class RealDebridRepositoryImpl(
     }
 
     override suspend fun pollDeviceFlow(flow: DeviceCodeFlow): RealDebridAuthState {
-        return RealDebridAuthState(isLinked = false, authInProgress = true)
+        val credentials = realDebridApi.getDeviceCredentials(flow.userCode) ?: return RealDebridAuthState(
+            isLinked = false,
+            authInProgress = true,
+            lastError = null
+        )
+        val tokenResponse = realDebridApi.exchangeDeviceCredentialsForToken(
+            deviceCode = flow.userCode,
+            clientId = credentials.clientId,
+            clientSecret = credentials.clientSecret
+        ) ?: return RealDebridAuthState(
+            isLinked = false,
+            authInProgress = true,
+            lastError = null
+        )
+        tokenStore.save(
+            ai.shieldtv.app.integration.debrid.realdebrid.auth.RealDebridTokens(
+                accessToken = tokenResponse.accessToken,
+                refreshToken = tokenResponse.refreshToken,
+                expiresInSeconds = tokenResponse.expiresInSeconds
+            )
+        )
+        return RealDebridAuthState(
+            isLinked = true,
+            username = "linked",
+            authInProgress = false,
+            lastError = null
+        )
     }
 
     override suspend fun resolve(source: SourceResult): ResolvedStream {

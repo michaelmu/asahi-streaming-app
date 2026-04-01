@@ -2,6 +2,8 @@ plugins {
     id("asahi.android-app")
 }
 
+import org.gradle.api.tasks.JavaExec
+
 android {
     namespace = "ai.shieldtv.app"
 
@@ -24,4 +26,15 @@ dependencies {
     implementation(project(":integration:scrapers"))
     implementation(project(":integration:playback-media3"))
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
+}
+
+tasks.register<JavaExec>("runPreview") {
+    group = "verification"
+    description = "Runs the Asahi debug preview flow on the JVM-ish app classpath"
+    dependsOn("compileDebugKotlin")
+    classpath = files(
+        "$buildDir/tmp/kotlin-classes/debug",
+        configurations.getByName("debugRuntimeClasspath")
+    )
+    mainClass.set("ai.shieldtv.app.debug.PreviewRunner")
 }

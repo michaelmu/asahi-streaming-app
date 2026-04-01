@@ -5,13 +5,15 @@ import ai.shieldtv.app.core.model.source.SourceResult
 import ai.shieldtv.app.core.model.source.SourceSearchRequest
 import ai.shieldtv.app.domain.provider.SourceNormalizer
 import ai.shieldtv.app.domain.repository.SourceRepository
+import ai.shieldtv.app.domain.source.ranking.SourceCacheMarker
 import ai.shieldtv.app.domain.source.ranking.SourceRanker
 import ai.shieldtv.app.integration.scrapers.provider.ProviderRegistry
 
 class SourceRepositoryImpl(
     private val providerRegistry: ProviderRegistry,
     private val sourceNormalizer: SourceNormalizer,
-    private val sourceRanker: SourceRanker
+    private val sourceRanker: SourceRanker,
+    private val sourceCacheMarker: SourceCacheMarker? = null
 ) : SourceRepository {
     override suspend fun findSources(request: SourceSearchRequest): List<SourceResult> {
         val rawResults = providerRegistry.providers.flatMap { provider ->
@@ -19,6 +21,7 @@ class SourceRepositoryImpl(
                 sourceNormalizer.normalize(request, provider, raw)
             }
         }
-        return sourceRanker.rank(rawResults, SourceFilters())
+        val cacheMarked = sourceCacheMarker?.markCached(rawResults) ?: rawResults
+        return sourceRanker.rank(cacheMarked, SourceFilters())
     }
 }

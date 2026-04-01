@@ -27,8 +27,12 @@ class TmdbDetailsMapper {
                     if (name.isNotBlank()) add(name)
                 }
             }
+            val externalIds = root.optJSONObject("external_ids")
             TitleDetails(
                 mediaRef = fallback.copy(
+                    ids = fallback.ids.copy(
+                        imdbId = externalIds?.optString("imdb_id")?.takeIf { it.isNotBlank() } ?: fallback.ids.imdbId
+                    ),
                     title = root.optString("title").ifBlank { root.optString("name").ifBlank { fallback.title } },
                     year = root.optString("release_date").takeIf { it.isNotBlank() }?.take(4)?.toIntOrNull()
                         ?: root.optString("first_air_date").takeIf { it.isNotBlank() }?.take(4)?.toIntOrNull()

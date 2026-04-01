@@ -7,7 +7,9 @@ import ai.shieldtv.app.domain.usecase.search.SearchTitlesUseCase
 import ai.shieldtv.app.domain.usecase.sources.FindSourcesUseCase
 import ai.shieldtv.app.domain.usecase.sources.ResolveSourceUseCase
 import ai.shieldtv.app.integration.debrid.realdebrid.api.FakeRealDebridApi
+import ai.shieldtv.app.integration.debrid.realdebrid.auth.RealDebridTokenStore
 import ai.shieldtv.app.integration.debrid.realdebrid.mapper.RealDebridAuthMapper
+import ai.shieldtv.app.integration.debrid.realdebrid.repository.RealDebridCacheRepository
 import ai.shieldtv.app.integration.debrid.realdebrid.repository.RealDebridRepositoryImpl
 import ai.shieldtv.app.integration.metadata.tmdb.TmdbFactory
 import ai.shieldtv.app.integration.metadata.tmdb.api.FakeTmdbApi
@@ -24,6 +26,7 @@ import ai.shieldtv.app.integration.scrapers.provider.SourcesFeedFactory
 import ai.shieldtv.app.integration.scrapers.provider.sample.SampleTemplateSourceProvider
 import ai.shieldtv.app.integration.scrapers.provider.torrentio.TorrentioSourceProvider
 import ai.shieldtv.app.integration.scrapers.ranking.DefaultSourceRanker
+import ai.shieldtv.app.integration.scrapers.ranking.RealDebridSourceCacheMarker
 import ai.shieldtv.app.integration.scrapers.repository.SourceRepositoryImpl
 
 object AppContainer {
@@ -42,12 +45,15 @@ object AppContainer {
 
     private val realDebridApi by lazy { FakeRealDebridApi() }
     private val realDebridAuthMapper by lazy { RealDebridAuthMapper() }
+    private val realDebridTokenStore by lazy { RealDebridTokenStore() }
     private val debridRepository by lazy {
         RealDebridRepositoryImpl(
             realDebridApi = realDebridApi,
-            realDebridAuthMapper = realDebridAuthMapper
+            realDebridAuthMapper = realDebridAuthMapper,
+            tokenStore = realDebridTokenStore
         )
     }
+    private val debridCacheRepository by lazy { RealDebridCacheRepository(realDebridApi) }
 
     private val remoteJsonSourceFeed by lazy {
         SourcesFeedFactory.createRemoteJsonSourceFeed()
@@ -66,11 +72,13 @@ object AppContainer {
     }
     private val sourceNormalizer by lazy { DefaultSourceNormalizer() }
     private val sourceRanker by lazy { DefaultSourceRanker() }
+    private val sourceCacheMarker by lazy { RealDebridSourceCacheMarker(debridCacheRepository) }
     private val sourceRepository by lazy {
         SourceRepositoryImpl(
             providerRegistry = providerRegistry,
             sourceNormalizer = sourceNormalizer,
-            sourceRanker = sourceRanker
+            sourceRanker = sourceRanker,
+            sourceCacheMarker = sourceCacheMarker
         )
     }
 

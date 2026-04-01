@@ -1,6 +1,7 @@
 package ai.shieldtv.app.integration.scrapers.provider.torrentio
 
 import ai.shieldtv.app.domain.provider.RawProviderSource
+import ai.shieldtv.app.integration.scrapers.normalize.ReleaseInfoParser
 import ai.shieldtv.app.integration.scrapers.provider.template.ProviderParser
 import org.json.JSONArray
 import org.json.JSONObject
@@ -17,20 +18,19 @@ class TorrentioParser : ProviderParser {
                 val titleBlock = item.optString("title")
                 val titleLines = titleBlock.split("\n")
                 val primaryTitle = titleLines.firstOrNull()?.trim().orEmpty()
+                if (primaryTitle.isBlank() || looksLikeJunk(primaryTitle)) continue
+
+                val parsedRelease = ReleaseInfoParser.parse(primaryTitle)
+                if (parsedRelease.probablyPack) continue
+
                 val infoHash = item.optString("infoHash").ifBlank { null }
                 val url = item.optString("url").ifBlank {
                     infoHash?.let { "magnet:?xt=urn:btih:$it&dn=${primaryTitle.ifBlank { "torrentio" }}" } ?: ""
                 }
-                if (primaryTitle.isBlank() || url.isBlank()) continue
+                if (url.isBlank()) continue
 
                 val sizeBytes = extractSizeBytes(titleBlock)
                 val seeders = extractSeeders(titleBlock)
-                val qualityHint = when {
-                    primaryTitle.contains("2160", ignoreCase = true) || primaryTitle.contains("4k", ignoreCase = true) -> "4k"
-                    primaryTitle.contains("1080", ignoreCase = true) -> "1080p"
-                    primaryTitle.contains("720", ignoreCase = true) -> "720p"
-                    else -> "sd"
-                }
 
                 mapped += RawProviderSource(
                     providerId = "torrentio",
@@ -40,13 +40,25 @@ class TorrentioParser : ProviderParser {
                     sizeBytes = sizeBytes,
                     seeders = seeders,
                     extra = buildMap {
-                        put("quality_hint", qualityHint)
+                        put("quality_hint", when (parsedRelease.quality) {
+                            ai.shieldtv.app.core.model.source.Quality.UHD_4K -> "4k"
+                            ai.shieldtv.app.core.model.source.Quality.FHD_1080P -> "1080p"
+                            ai.shieldtv.app.core.model.source.Quality.HD_720P -> "720p"
+                            ai.shieldtv.app.core.model.source.Quality.CAM -> "cam"
+                            else -> "sd"
+                        })
                         put("transport", "torrentio")
+                        if (parsedRelease.flags.isNotEmpty()) put("flags", parsedRelease.flags.joinToString(","))
                     }
                 )
             }
             mapped
         }.getOrElse { emptyList() }
+    }
+
+    private fun looksLikeJunk(title: String): Boolean {
+        val lower = title.lowercase()
+        return listOf("pokemon", "pack part", "amazing films", "paczka", "full series", "bonus content").any { it in lower }
     }
 
     private fun extractSeeders(text: String): Int? {

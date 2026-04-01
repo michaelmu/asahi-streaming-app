@@ -4,6 +4,9 @@ Current state: the repo is still early and may not build cleanly yet, but the go
 
 Update: the real Gradle wrapper has now been generated successfully. The next step is verifying actual project/module build behavior.
 
+A debug preview runner is now also being used as a lightweight way to inspect runtime provider/metadata flow without needing the full Android UI path.
+Use mainstream/high-confidence test titles for provider probing so identifier/provider failures are easier to interpret.
+
 ## Immediate priorities
 - keep Android app resources/manifest sane
 - keep module conventions centralized
@@ -28,6 +31,11 @@ Update: the real Gradle wrapper has now been generated successfully. The next st
 - scaffold real providers behind the provider template before binding to a concrete upstream, so the buildable baseline stays intact
 - apply the same live-first, fallback-safe approach to details metadata as search becomes more real
 - keep the debug preview rich enough to show whether search/details are genuinely surfacing live metadata characteristics
+- surface identifier fidelity (especially IMDb vs TMDb) when source providers depend on specific IDs like Torrentio does
+- once a real provider is returning results, tighten parsing and ranking before chasing provider breadth
+- introduce cache-awareness into the source pipeline early, even if the first pass is placeholder-only, so ranking and preview surfaces can adapt to the right product shape
+- replace placeholder cache marking with a real instant-availability-style path as soon as the pipeline shape is proven
+- make preview playback use the actual top-ranked source so debug output reflects the real source-selection behavior
 - evolve the sources side toward explicit provider adapters before swapping in real transports/providers
 - transitional transport-shaped adapters are still useful, but the target architecture is now fully in-app provider logic rather than dependence on remote addon endpoints
 - decide when to switch from placeholder text UI to real Android TV UI host

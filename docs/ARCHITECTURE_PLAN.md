@@ -381,6 +381,8 @@ Implementation note: in-app providers should converge on a standard internal sha
 
 Current first real-provider direction: a Torrentio-style JSON stream provider is a sensible first implementation target because it is structured, source-oriented, and close to the CocoScrapers references already studied.
 
+Current auth direction: Real-Debrid should follow a Fenlight-like device-code flow, with local token persistence and downstream reuse for cache checks, resolution, and playback-related debrid actions.
+
 ## Goal
 Replicate the *benefit* of CocoScrapers without reproducing Python/Kodi plugin mechanics.
 

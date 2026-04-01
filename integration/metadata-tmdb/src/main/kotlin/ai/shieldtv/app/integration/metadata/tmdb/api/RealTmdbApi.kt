@@ -29,7 +29,7 @@ class RealTmdbApi(
             else -> return "{}"
         }
         val request = HttpRequest.newBuilder()
-            .uri(URI.create("https://api.themoviedb.org/3/$path/$tmdbId?api_key=$apiKey"))
+            .uri(URI.create("https://api.themoviedb.org/3/$path/$tmdbId?api_key=$apiKey&append_to_response=external_ids"))
             .GET()
             .build()
         return httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body()

@@ -37,7 +37,10 @@ class DefaultSourceNormalizer : SourceNormalizer {
             cacheStatus = CacheStatus.UNCHECKED,
             infoHash = raw.infoHash,
             sizeBytes = raw.sizeBytes,
-            rawMetadata = raw.extra
+            rawMetadata = buildMap {
+                putAll(raw.extra)
+                raw.seeders?.let { put("seeders", it.toString()) }
+            }
         )
     }
 }
