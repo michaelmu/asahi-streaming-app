@@ -15,5 +15,8 @@ Update: the real Gradle wrapper has now been generated successfully. The next st
 - add Gradle wrapper / verify build bootstrap
 - make module/plugin setup internally consistent
 - fix buildSrc/root plugin resolution and versioning issues surfaced by first bootstrap attempts
+- fix first compile-time dependency gaps exposed by real builds (currently coroutine/Flow dependencies in domain and playback integration)
+- align Android/JVM target settings when Gradle surfaces toolchain mismatches
+- avoid enabling Compose in the app convention until the app actually carries Compose runtime dependencies and a real Compose UI host
 - decide when to switch from placeholder text UI to real Android TV UI host
 - avoid adding more feature complexity until bootstrap gaps are reduced

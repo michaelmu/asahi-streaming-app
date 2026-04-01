@@ -674,5 +674,6 @@ As implementation begins, the preferred approach is **incremental scaffold-first
 - centralize build conventions early so module growth does not create repetitive Gradle drift
 - keep each major product slice (metadata, debrid auth, sources, playback) following the same wiring pattern where possible
 - let playback sit on top of resolution and source selection rather than shortcutting directly from UI to player internals
+- do not enable Compose at the build layer until the repo actually includes Compose runtime dependencies and a real Compose UI host
 
 This reduces thrash while the project is still becoming real.

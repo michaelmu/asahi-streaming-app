@@ -18,8 +18,8 @@ Current snapshot of what still blocks the repo from feeling like a real Android 
 - first real bootstrap attempt exposed `buildSrc` and root plugin-resolution/versioning issues, which is useful because it identifies the next concrete cleanup target
 
 ## Recommended next bootstrap tasks
-1. add Gradle wrapper
+1. keep the real Gradle wrapper committed and healthy
 2. decide whether to keep the app on plain Activity temporarily or move immediately to Compose/View host
-3. add real Android dependencies intentionally
-4. run first build/bootstrap verification
-5. fix whatever breaks before adding more product logic
+3. add real Android and Kotlin dependencies intentionally
+4. run real build/bootstrap verification
+5. fix compile/resource/config issues as they surface before adding more product logic
