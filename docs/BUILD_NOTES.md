@@ -13,7 +13,16 @@ Use a dedicated polling task for device auth so the app can wait and retry inste
 For the most reliable manual testing, prefer a single live auth-flow runner that starts and polls in the same process.
 The in-app auth debug surface should follow the same rule: start and poll inside one running session rather than relying on disconnected manual steps.
 
-Android runtime update: local emulator testing now works for install/launch/log capture. That testing exposed a real Android incompatibility in the current networking layer: the app graph still reaches `java.net.http.HttpClient`, which is JVM-only and crashes on Android with `NoClassDefFoundError`. Until the HTTP stack is migrated to an Android-compatible client, keep startup isolated from the broader app graph so the APK remains launchable for runtime validation.
+Android runtime update: local emulator testing now works for install/launch/log capture. That testing exposed a real Android incompatibility in the networking layer: `java.net.http.HttpClient` was crashing Android with `NoClassDefFoundError`. That transport path has now been replaced with an OkHttp-backed client in `core:network`, the broader startup path has been reconnected, and emulator launch succeeds again.
+
+Follow-up runtime finding: once the transport crash was fixed, the next Android failure was a missing `INTERNET` permission. That has now also been fixed in the manifest, so live network code can run on-device.
+
+Current validation snapshot:
+- app installs and launches on the emulator with the broader graph enabled
+- TMDb live search/details work in the debug preview path
+- Real-Debrid device-flow start works in the preview path and dedicated debug runner
+- source pipeline preview runs without the old transport/runtime crash
+- current source-provider limitations are now about provider config/wiring breadth rather than Android-incompatible HTTP code
 
 ## Immediate priorities
 - keep Android app resources/manifest sane
@@ -23,13 +32,11 @@ Android runtime update: local emulator testing now works for install/launch/log 
 - make bootstrap expectations explicit even before the real wrapper/build verification exists
 
 ## Near-term next steps
-- replace the current JVM-only HTTP layer with an Android-compatible client (preferably OkHttp)
 - keep module/plugin setup internally consistent
 - align Android/JVM target settings when Gradle surfaces toolchain mismatches
 - avoid enabling Compose in the app convention until the app actually carries Compose runtime dependencies and a real Compose UI host
 - use the debug shell to expose small end-to-end preview paths for real slices while the full TV UI is still pending
-- reintroduce live RD auth only after the startup path no longer touches JVM-only networking classes
-- introduce real network integrations behind existing repository/api/mapper boundaries, with graceful fallback to fake adapters while the buildable baseline is protected
+- continue introducing real network integrations behind existing repository/api/mapper boundaries, with graceful fallback to fake adapters while the buildable baseline is protected
 - when real adapters are introduced, prefer minimal JSON parsing first over premature full DTO systems, so the live path can be verified quickly
 - keep app-layer wiring insulated from transport/client implementation types; expose factories or repository boundaries instead
 - use the debug shell to show whether live integrations appear to be returning real data versus fallback placeholders
@@ -38,6 +45,7 @@ Android runtime update: local emulator testing now works for install/launch/log 
 - apply the same live-first, fallback-safe approach to details metadata as search becomes more real
 - keep the debug preview rich enough to show whether search/details are genuinely surfacing live metadata characteristics
 - surface identifier fidelity (especially IMDb vs TMDb) when source providers depend on specific IDs like Torrentio does
+- explicitly enable and validate Torrentio/live source providers rather than assuming provider presence implies active results
 - once a real provider is returning results, tighten parsing and ranking before chasing provider breadth
 - introduce cache-awareness into the source pipeline early, even if the first pass is placeholder-only, so ranking and preview surfaces can adapt to the right product shape
 - replace placeholder cache marking with a real instant-availability-style path as soon as the pipeline shape is proven
@@ -46,4 +54,4 @@ Android runtime update: local emulator testing now works for install/launch/log 
 - evolve the sources side toward explicit provider adapters before swapping in real transports/providers
 - transitional transport-shaped adapters are still useful, but the target architecture is now fully in-app provider logic rather than dependence on remote addon endpoints
 - decide when to switch from placeholder text UI to real Android TV UI host
-- avoid adding more feature complexity until the Android runtime path is clean
+- now that the Android runtime path is clean enough to launch, focus on deeper feature-flow validation rather than more startup isolation work

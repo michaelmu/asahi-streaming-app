@@ -80,7 +80,7 @@ Do not let it become a week of build-system philosophy.
 ## Goal
 Get the app visible and navigable quickly.
 
-Implementation note: it is acceptable to start this slice with a fake/local TMDb adapter path first, as long as the repository boundary, mapper boundary, and use-case flow match the eventual real integration.
+Implementation note: it was acceptable to start this slice with a fake/local TMDb adapter path first, and the project has now moved beyond that baseline. Live TMDb search/details are working in the current debug preview flow, so the next work in this phase is less about transport viability and more about exposing the same capability through a better in-app TV UI.
 
 ## Tasks
 - scaffold modules from `SCAFFOLDING_PLAN.md`
@@ -104,6 +104,11 @@ Implementation note: it is acceptable to start this slice with a fake/local TMDb
 - details works
 - basic navigation works
 
+## Current progress snapshot
+- emulator launch is verified again after reconnecting the broader startup path
+- TMDb live metadata works in the debug preview/runtime shell
+- UI depth still lags behind backend/debug-flow capability
+
 ## Risks
 - spending too much time on design polish before flow works
 
@@ -117,7 +122,7 @@ Ugly but functional beats polished and fake.
 ## Goal
 Make account linking and core debrid capabilities real.
 
-Implementation note: before Phase 2 can be considered truly active on Android, the shared networking layer must stop depending on JVM-only `java.net.http.HttpClient`. Local emulator testing has already shown that this crashes the Android runtime during app startup when the broader graph is initialized.
+Implementation note: the previous Android blocker for this phase was the shared dependency on JVM-only `java.net.http.HttpClient`. That transport issue has now been removed via an OkHttp-backed client, and emulator launch holds with the broader graph enabled. Real-Debrid device-flow start is now working in both the preview shell and the dedicated debug auth runner.
 
 ## Tasks
 - implement Real-Debrid API client
@@ -134,6 +139,11 @@ Implementation note: before Phase 2 can be considered truly active on Android, t
 - linked state survives app restart
 - account screen shows useful status
 
+## Current progress snapshot
+- device-flow start works
+- dedicated debug auth runner now works correctly as a JVM entrypoint
+- full human-completed linking/polling and polished in-app account UX still need follow-through
+
 ## Risks
 - auth edge cases
 - token refresh bugs
@@ -148,6 +158,8 @@ Build auth flows with explicit state handling, not ad-hoc booleans all over the 
 
 ## Goal
 Produce a source list from a clean, extensible provider pipeline.
+
+Implementation note: the transport/runtime blocker that used to affect provider fetches on Android is now gone. The current risk has shifted to provider enablement, identifier fidelity, parsing quality, and how much of the provider surface is still fake/sample versus genuinely live.
 
 ## Tasks
 - implement provider contract
@@ -171,6 +183,11 @@ Produce a source list from a clean, extensible provider pipeline.
 - source search returns structured results
 - cached results are surfaced well
 - source picker is usable on TV
+
+## Current progress snapshot
+- source pipeline preview runs and returns structured results
+- current preview output is still dominated by fake/sample providers unless live providers are explicitly enabled/configured
+- Torrentio/live-provider validation is the next meaningful checkpoint here
 
 ## Risks
 - provider instability

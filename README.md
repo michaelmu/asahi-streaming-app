@@ -8,20 +8,25 @@ Early implementation / Android runtime validation phase.
 Current repo state:
 - architecture/docs are in place
 - feature slices for metadata, auth, sources, and playback are scaffolded
-- app-level coordinator/navigation spine exists, but app startup is currently isolated from the broader graph for Android runtime safety
-- the app activity currently defaults to a standalone auth debug/test surface
+- the broader app graph is reconnected on Android startup and the app now launches on the emulator again
+- the shared networking layer has been migrated away from JVM-only `java.net.http.HttpClient` to an OkHttp-backed transport in `core:network`
+- `android.permission.INTERNET` is now declared so live network paths can actually run on device
 - bootstrap gaps are tracked in `docs/BOOTSTRAP_GAPS.md`
 - a real Gradle wrapper is present in the repo
 - GitHub Actions builds a debug APK artifact successfully
 - current direction remains a fully in-app provider model (no custom backend required)
 - local emulator testing is now working end-to-end for install / launch / log capture
+- TMDb live metadata is working in the debug preview path
+- Real-Debrid device-flow start is working in both preview and dedicated debug runner flows
+- source/provider plumbing is alive, but live provider coverage still depends on configuration and provider wiring rather than transport stability
 
-## Current auth test mode
-The app is currently set up as an RD auth test build:
-- launches directly into a standalone auth debug screen
-- includes both phone (`LAUNCHER`) and TV (`LEANBACK_LAUNCHER`) launcher categories for easier sideload testing
-- currently avoids initializing the broader app graph on startup so it can run on Android while JVM-only networking code is still being replaced
-- is intentionally in a startup-safe mode after emulator testing showed the broader graph was crashing on Android due to `java.net.http.HttpClient`
+## Current runtime/debug mode
+The app is no longer in the temporary startup-safe auth-only mode.
+Current behavior is:
+- the normal startup path is re-enabled
+- the app includes both phone (`LAUNCHER`) and TV (`LEANBACK_LAUNCHER`) launcher categories for easier sideload testing
+- emulator launch has been re-verified after the networking migration
+- debug preview/auth runners remain important for probing TMDb, Real-Debrid, and source pipeline behavior while the real TV UI is still minimal
 
 ## CI / APK artifacts
 GitHub Actions is configured to build a debug APK on pushes to `main` and via manual workflow dispatch.
