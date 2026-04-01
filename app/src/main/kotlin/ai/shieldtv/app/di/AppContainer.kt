@@ -1,5 +1,6 @@
 package ai.shieldtv.app.di
 
+import android.content.Context
 import ai.shieldtv.app.domain.usecase.auth.GetRealDebridAuthStateUseCase
 import ai.shieldtv.app.domain.usecase.auth.PollRealDebridDeviceFlowUseCase
 import ai.shieldtv.app.domain.usecase.auth.StartRealDebridDeviceFlowUseCase
@@ -33,8 +34,19 @@ import ai.shieldtv.app.integration.scrapers.provider.torrentio.TorrentioSourcePr
 import ai.shieldtv.app.integration.scrapers.ranking.DefaultSourceRanker
 import ai.shieldtv.app.integration.scrapers.ranking.RealDebridSourceCacheMarker
 import ai.shieldtv.app.integration.scrapers.repository.SourceRepositoryImpl
+import java.io.File
 
 object AppContainer {
+    private var appContext: Context? = null
+
+    fun initialize(context: Context) {
+        appContext = context.applicationContext
+    }
+
+    private fun requireContext(): Context {
+        return checkNotNull(appContext) { "AppContainer not initialized" }
+    }
+
     private val tmdbApi by lazy { TmdbFactory.createRealApi() }
     private val fallbackTmdbApi by lazy { FakeTmdbApi() }
     private val tmdbSearchMapper by lazy { TmdbSearchMapper() }
@@ -51,7 +63,11 @@ object AppContainer {
     }
 
     private val realDebridAuthMapper by lazy { RealDebridAuthMapper() }
-    private val realDebridTokenStore by lazy { RealDebridTokenStore() }
+    private val realDebridTokenStore by lazy {
+        RealDebridTokenStore {
+            File(requireContext().filesDir, "realdebrid/rd-tokens.txt")
+        }
+    }
     private val realDebridTokenProvider by lazy {
         RealDebridTokenProvider { realDebridTokenStore.get()?.accessToken }
     }
@@ -126,4 +142,6 @@ object AppContainer {
     val buildPlaybackItemUseCase by lazy {
         BuildPlaybackItemUseCase()
     }
+
+    fun realDebridTokenStoreDebugPath(): String = realDebridTokenStore.debugFilePath()
 }

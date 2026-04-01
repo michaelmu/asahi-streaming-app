@@ -10,12 +10,13 @@ data class RealDebridTokens(
 )
 
 class RealDebridTokenStore(
-    private val file: File = defaultTokenFile()
+    private val fileProvider: () -> File = { defaultTokenFile() }
 ) {
-    private var tokens: RealDebridTokens? = loadFromDisk()
+    private var tokens: RealDebridTokens? = null
 
     fun save(tokens: RealDebridTokens) {
         this.tokens = tokens
+        val file = fileProvider()
         RealDebridDebugState.lastTokenStoreSaveCalled = "yes"
         RealDebridDebugState.lastTokenStoreWritePath = file.absolutePath
         file.parentFile?.mkdirs()
@@ -33,10 +34,12 @@ class RealDebridTokenStore(
 
     fun clear() {
         tokens = null
+        val file = fileProvider()
         if (file.exists()) file.delete()
     }
 
     private fun loadFromDisk(): RealDebridTokens? {
+        val file = fileProvider()
         if (!file.exists()) return null
         val lines = file.readLines()
         if (lines.isEmpty() || lines[0].isBlank()) return null
@@ -47,7 +50,7 @@ class RealDebridTokenStore(
         )
     }
 
-    fun debugFilePath(): String = file.absolutePath
+    fun debugFilePath(): String = fileProvider().absolutePath
 
     companion object {
         private fun defaultTokenFile(): File {

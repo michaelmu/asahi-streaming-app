@@ -242,7 +242,7 @@ class MainActivity : ComponentActivity() {
             authContainer,
             buildString {
                 append("Token store path: ")
-                append(ai.shieldtv.app.integration.debrid.realdebrid.auth.RealDebridTokenStore().debugFilePath())
+                append(AppContainer.realDebridTokenStoreDebugPath())
             }
         )
 
