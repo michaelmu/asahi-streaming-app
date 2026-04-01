@@ -25,5 +25,6 @@ Update: the real Gradle wrapper has now been generated successfully. The next st
 - keep app-layer wiring insulated from transport/client implementation types; expose factories or repository boundaries instead
 - use the debug shell to show whether live integrations appear to be returning real data versus fallback placeholders
 - apply the same live-first, fallback-safe approach to details metadata as search becomes more real
+- keep the debug preview rich enough to show whether search/details are genuinely surfacing live metadata characteristics
 - decide when to switch from placeholder text UI to real Android TV UI host
 - avoid adding more feature complexity until bootstrap gaps are reduced
