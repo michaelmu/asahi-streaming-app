@@ -8,7 +8,11 @@ object ProviderModeDecider {
         if (!TorrentioConfig.isEnabled()) return sources
 
         val liveSources = sources.filter { isLiveProvider(it) }
-        return if (liveSources.isNotEmpty()) liveSources else sources
+        return if (liveSources.isNotEmpty()) {
+            liveSources
+        } else {
+            sources.map { it.copy(rawMetadata = it.rawMetadata + ("fallbackMode" to "true")) }
+        }
     }
 
     private fun isLiveProvider(source: SourceResult): Boolean {

@@ -5,7 +5,12 @@ object TorrentioConfig {
     private const val BASE_URL_ENV = "ASAHI_TORRENTIO_BASE_URL"
 
     fun isEnabled(): Boolean {
-        return System.getenv(ENABLED_ENV)?.equals("true", ignoreCase = true) == true
+        val explicit = System.getenv(ENABLED_ENV)
+        return when {
+            explicit.equals("true", ignoreCase = true) -> true
+            explicit.equals("false", ignoreCase = true) -> false
+            else -> true
+        }
     }
 
     fun baseUrl(): String {

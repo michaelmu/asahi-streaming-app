@@ -637,19 +637,35 @@ class MainActivity : ComponentActivity() {
         }
         if (sources.isEmpty()) {
             appendBody(sourcesContainer, "No sources.")
+            appendBody(sourcesContainer, "Diagnostics: Torrentio enabled, but no live provider results returned for this title/request.")
             return
         }
+
+        val fallbackMode = sources.any { it.rawMetadata["fallbackMode"] == "true" }
+        appendBody(
+            sourcesContainer,
+            if (fallbackMode) {
+                "Diagnostics: no live Torrentio results came back, so fallback/demo providers are being shown."
+            } else {
+                "Diagnostics: showing live provider results."
+            }
+        )
 
         sources.take(12).forEach { source ->
             val button = Button(this).apply {
                 text = buildString {
                     append(source.displayName)
-                    append(" · ")
-                    append(source.quality)
-                    append(" · ")
+                    append("\n")
+                    append("provider=")
+                    append(source.providerId)
+                    append("/")
                     append(source.providerDisplayName)
-                    append(" · ")
+                    append(" · quality=")
+                    append(source.quality)
+                    append(" · cache=")
                     append(source.cacheStatus)
+                    append(" · debrid=")
+                    append(source.debridService)
                     if (source.seasonNumber != null && source.episodeNumber != null) {
                         append(" · S")
                         append(source.seasonNumber.toString().padStart(2, '0'))
@@ -657,7 +673,7 @@ class MainActivity : ComponentActivity() {
                         append(source.episodeNumber.toString().padStart(2, '0'))
                     }
                     source.sizeLabel?.let {
-                        append(" · ")
+                        append(" · size=")
                         append(it)
                     }
                 }
