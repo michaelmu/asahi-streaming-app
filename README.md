@@ -18,10 +18,8 @@ Current repo state:
 ## Current auth test mode
 The app is currently set up as an RD auth test build:
 - launches directly into the auth debug screen
-- starts device auth immediately
-- polls in-session for longer
-- shows final linked/auth-in-progress/error state clearly
 - includes both phone (`LAUNCHER`) and TV (`LEANBACK_LAUNCHER`) launcher categories for easier sideload testing
+- currently favors safe startup on phones over starting live auth directly in `onCreate`
 
 ## CI / APK artifacts
 GitHub Actions is configured to build a debug APK on pushes to `main` and via manual workflow dispatch.

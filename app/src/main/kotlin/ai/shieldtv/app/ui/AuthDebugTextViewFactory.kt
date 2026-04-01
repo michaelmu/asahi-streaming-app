@@ -2,48 +2,21 @@ package ai.shieldtv.app.ui
 
 import android.content.Context
 import android.widget.TextView
-import ai.shieldtv.app.feature.SettingsFeatureFactory
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
 
 class AuthDebugTextViewFactory {
     fun create(context: Context): TextView {
-        val text = runBlocking {
-            val settingsViewModel = SettingsFeatureFactory.createViewModel()
-            val startedState = settingsViewModel.startLinking()
-            val flow = startedState.deviceCodeFlow
-
-            val pollAttempts = 24
-            val polledState = if (flow != null) {
-                var latest = startedState
-                repeat(pollAttempts) {
-                    delay(flow.pollIntervalSeconds.coerceAtLeast(1).toLong() * 1000L)
-                    latest = settingsViewModel.pollLinking(flow)
-                    if (latest.authState.isLinked) return@repeat
-                }
-                latest
-            } else {
-                startedState
-            }
-
-            buildString {
-                appendLine("Asahi Real-Debrid Auth Test")
-                appendLine()
-                appendLine("FINAL STATE")
-                appendLine("Linked: ${polledState.authState.isLinked}")
-                appendLine("Auth in progress: ${polledState.authState.authInProgress}")
-                appendLine("Error: ${polledState.error ?: startedState.error ?: "none"}")
-                appendLine()
-                appendLine("AUTH CODE")
-                appendLine("Verification URL: ${flow?.verificationUrl ?: "none"}")
-                appendLine("User Code: ${flow?.userCode ?: "none"}")
-                appendLine()
-                appendLine("TEST NOTES")
-                appendLine("- This build starts RD auth immediately.")
-                appendLine("- It then polls for up to $pollAttempts attempts in the same app session.")
-                appendLine("- Complete the auth in your browser as fast as possible after launch.")
-                appendLine("- Relaunch if the code expires before authorization completes.")
-            }
+        val text = buildString {
+            appendLine("Asahi Real-Debrid Auth Test")
+            appendLine()
+            appendLine("This build is opening successfully on phones now.")
+            appendLine()
+            appendLine("The previous version tried to start live RD auth directly during app startup,")
+            appendLine("which is likely why it closed immediately on your phone.")
+            appendLine()
+            appendLine("Next safer step:")
+            appendLine("- move RD auth start/poll off the activity startup path")
+            appendLine("- trigger auth from a button or delayed background action")
+            appendLine("- keep the app open while showing live state updates")
         }
 
         return TextView(context).apply {
