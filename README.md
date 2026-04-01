@@ -17,11 +17,13 @@ Current repo state:
 - current direction remains a fully in-app provider model (no custom backend required)
 - local emulator testing is now working end-to-end for install / launch / log capture
 - TMDb live metadata is working in the debug preview path
-- Real-Debrid device auth is now proven end-to-end: start, browser approval, poll, and token exchange all work
+- Real-Debrid device auth is now proven end-to-end: start, browser approval, poll, token exchange, and persisted token reuse all work
 - Real-Debrid polling was fixed to use `device_code` correctly
+- RD token persistence now lands at the expected app debug path and survives fresh JVM runs used by the preview/debug tasks
 - Torrentio live source fetching works and returns real hashed results
-- current next blocker is reliable RD token persistence for downstream cache-checking/debug flows
-- source/provider plumbing is alive, but live provider coverage still depends on configuration, provider wiring, and RD cache-state persistence rather than transport stability
+- a debrid-aware Torrentio path is now wired using the persisted RD token, so cached RD-usable results can surface even when RD `instantAvailability` returns `disabled_endpoint`
+- the live source flow now prefers real Torrentio results when enabled instead of mixing fake/sample providers into the same preview slice
+- source/provider plumbing is alive and cache-aware in preview; the main next gap is moving from debug-heavy preview flows into a real TV sources/playback UI
 
 ## Current runtime/debug mode
 The app is no longer in the temporary startup-safe auth-only mode.
@@ -30,7 +32,8 @@ Current behavior is:
 - the app includes both phone (`LAUNCHER`) and TV (`LEANBACK_LAUNCHER`) launcher categories for easier sideload testing
 - emulator launch has been re-verified after the networking migration
 - debug preview/auth runners remain important for probing TMDb, Real-Debrid, and source pipeline behavior while the real TV UI is still minimal
-- note: the current preview auth panel still kicks off a new device flow when invoked, so it is not yet a clean persisted-auth-status display
+- the preview auth panel now reports persisted linked-state correctly when a token file is present instead of always implying a fresh device-flow start
+- the preview source panel can now show live Torrentio-only results plus RD-tagged/cached counts when Torrentio is enabled and linked state exists
 
 ## CI / APK artifacts
 GitHub Actions is configured to build a debug APK on pushes to `main` and via manual workflow dispatch.

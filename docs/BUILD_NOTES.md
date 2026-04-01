@@ -20,17 +20,20 @@ Follow-up runtime finding: once the transport crash was fixed, the next Android 
 Current validation snapshot:
 - app installs and launches on the emulator with the broader graph enabled
 - TMDb live search/details work in the debug preview path
-- Real-Debrid device auth is proven end-to-end in manual testing: start, browser approval, poll, and token exchange all succeed
+- Real-Debrid device auth is proven end-to-end in manual testing: start, browser approval, poll, token exchange, and persisted token reuse all succeed
 - the RD polling path was fixed to use `device_code` instead of `user_code`
-- Torrentio live results are working and return real hashed sources in a direct probe
+- RD token persistence now writes to `app/debug/rd-tokens.txt` and is visible to fresh preview/debug JVM runs
+- Torrentio live results are working and return real hashed sources in direct probes and preview
+- the source pipeline can now prefer live Torrentio-only results when enabled instead of mixing fake/sample providers into the same slice
+- a debrid-aware Torrentio path now produces RD-tagged/cached results in preview when linked token state exists
 - source pipeline preview runs without the old transport/runtime crash
-- current highest-priority blocker is now RD auth persistence into reusable local token state for cache-checking, not transport compatibility
+- the main remaining gap is no longer RD auth persistence; it is turning the validated debug/preview slice into a real TV sources/playback UX
 
-Current RD cache-check blocker:
-- the direct Torrentio cache probe proves the real repository/cache-marker path runs and sees hashed sources
-- however, `instantAvailability` still short-circuits because the expected persisted RD token state is not landing where the cache path can use it
-- multiple debug runs showed fresh auth success (`Linked: true`) without a corresponding `app/debug/rd-tokens.txt` file appearing afterward
-- conclusion: the next debugging step should focus specifically on auth persistence side effects, using the dedicated auth persistence probe immediately after a fresh device approval
+Current RD cache-awareness note:
+- the direct Torrentio cache probe still shows RD `instantAvailability` returning `HTTP 403` with `disabled_endpoint`
+- instead of depending solely on that endpoint, the app now also uses a debrid-aware Torrentio path backed by the persisted RD token
+- that path successfully surfaces RD-tagged cached results and preserves info hashes for ranking/debugging
+- conclusion: RD cache-awareness is now functionally working for the Torrentio slice, even though direct RD instant-availability remains unreliable for this account/endpoint combination
 
 ## Immediate priorities
 - keep Android app resources/manifest sane

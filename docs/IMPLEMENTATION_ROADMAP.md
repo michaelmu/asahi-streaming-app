@@ -144,6 +144,7 @@ Implementation note: the previous Android blocker for this phase was the shared 
 - dedicated debug auth runner now works correctly as a JVM entrypoint
 - full human-completed linking/polling has now been manually verified end-to-end
 - polling was corrected to use `device_code`, and debug token persistence now survives fresh JVM runs
+- preview/runtime now reuse persisted linked state when the token file exists
 - polished in-app account UX/status presentation still needs follow-through
 
 ## Risks
@@ -188,8 +189,9 @@ Implementation note: the transport/runtime blocker that used to affect provider 
 
 ## Current progress snapshot
 - source pipeline preview runs and returns structured results
-- current preview output is still dominated by fake/sample providers unless live providers are explicitly enabled/configured
-- Torrentio/live-provider validation is the next meaningful checkpoint here
+- live mode now prefers Torrentio-only results instead of mixing fake/sample providers into the same slice
+- debrid-aware Torrentio now surfaces RD-tagged/cached results when linked token state exists
+- the next meaningful checkpoint here is a real TV source picker UI, not proving provider viability again
 
 ## Risks
 - provider instability
@@ -343,11 +345,11 @@ These are all tempting. Most are not early blockers.
 
 The roadmap is now clear enough that the next practical move is:
 
-## Make the networking layer Android-safe
+## Turn the validated preview slice into a real TV sources/playback flow
 Meaning:
-- replace `java.net.http.HttpClient` usage with an Android-compatible client
-- reconnect TMDb / RD / provider integrations through that shared stack
-- keep the app launchable on emulator/device while the migration happens
-- then re-enable live auth and broader end-to-end app flows
+- build a real sources screen that exposes the now-working live/cached Torrentio results
+- allow source selection instead of only debug-preview ranking
+- connect selected sources into the existing playback preparation path
+- keep emulator/device validation in the loop while replacing debug-text proof with actual app UX
 
-That is the current highest-leverage implementation task because emulator testing has already proven it is a real runtime blocker.
+That is the current highest-leverage implementation task because transport/auth/provider viability has now been proven well enough to move on.
