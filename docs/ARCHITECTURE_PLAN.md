@@ -365,7 +365,19 @@ These are the business actions the app should center around.
 
 This is one of the most important decisions.
 
-Implementation note: even while the repo still uses fake source providers, the provider side should move toward an explicit adapter boundary so query-building, transport, and normalization remain separable. A transitional JSON-backed adapter is a good first step before wiring a live remote provider.
+Implementation note: even while the repo still uses fake source providers, the provider side should move toward an explicit adapter boundary so query-building, transport, and normalization remain separable.
+
+### Updated direction
+Asahi is now targeting a **fully in-app provider model**.
+That means:
+- no custom Asahi source backend
+- no dependence on addon-style endpoints as the primary architecture
+- provider transport/parsing logic lives in the app itself
+- the app still uses clean provider adapters so source logic does not leak into UI/domain presentation layers
+
+Transitional transport-shaped and JSON-backed adapters are still useful during development, but they should now be treated as scaffolding toward **real in-app provider integrations**, not as the long-term architecture.
+
+Implementation note: in-app providers should converge on a standard internal shape of query builder -> transport -> parser -> source provider so new providers do not each reinvent the whole integration stack.
 
 ## Goal
 Replicate the *benefit* of CocoScrapers without reproducing Python/Kodi plugin mechanics.

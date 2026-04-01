@@ -39,7 +39,8 @@ class JsonSourceProviderAdapter(
                     seeders = item.optInt("seeders").takeIf { it > 0 },
                     extra = buildMap {
                         item.optString("qualityHint").takeIf { it.isNotBlank() }?.let { put("quality_hint", it) }
-                        put("transport", "json")
+                        item.optString("transport").takeIf { it.isNotBlank() }?.let { put("transport", it) } ?: put("transport", "json")
+                        item.optString("query").takeIf { it.isNotBlank() }?.let { put("query", it) }
                     }
                 )
             }

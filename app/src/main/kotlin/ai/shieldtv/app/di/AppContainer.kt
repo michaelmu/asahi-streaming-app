@@ -16,11 +16,12 @@ import ai.shieldtv.app.integration.metadata.tmdb.mapper.TmdbSearchMapper
 import ai.shieldtv.app.integration.metadata.tmdb.repository.TmdbMetadataRepository
 import ai.shieldtv.app.integration.playback.media3.engine.Media3PlaybackEngine
 import ai.shieldtv.app.integration.scrapers.normalize.DefaultSourceNormalizer
-import ai.shieldtv.app.integration.scrapers.provider.DebugJsonSourceFeed
 import ai.shieldtv.app.integration.scrapers.provider.FakeSourceProvider
 import ai.shieldtv.app.integration.scrapers.provider.HttpSourceProviderAdapter
 import ai.shieldtv.app.integration.scrapers.provider.JsonSourceProviderAdapter
 import ai.shieldtv.app.integration.scrapers.provider.ProviderRegistry
+import ai.shieldtv.app.integration.scrapers.provider.SourcesFeedFactory
+import ai.shieldtv.app.integration.scrapers.provider.sample.SampleTemplateSourceProvider
 import ai.shieldtv.app.integration.scrapers.ranking.DefaultSourceRanker
 import ai.shieldtv.app.integration.scrapers.repository.SourceRepositoryImpl
 
@@ -47,12 +48,17 @@ object AppContainer {
         )
     }
 
+    private val remoteJsonSourceFeed by lazy {
+        SourcesFeedFactory.createRemoteJsonSourceFeed()
+    }
+
     private val providerRegistry by lazy {
         ProviderRegistry(
             providers = listOf(
                 FakeSourceProvider(),
                 FakeSourceProvider(adapter = HttpSourceProviderAdapter()),
-                FakeSourceProvider(adapter = JsonSourceProviderAdapter(DebugJsonSourceFeed::load))
+                FakeSourceProvider(adapter = JsonSourceProviderAdapter(remoteJsonSourceFeed::load)),
+                SampleTemplateSourceProvider()
             )
         )
     }

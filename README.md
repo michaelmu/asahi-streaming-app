@@ -13,6 +13,7 @@ Current repo state:
 - the app activity now renders a minimal debug text view instead of doing nothing
 - bootstrap gaps are tracked in `docs/BOOTSTRAP_GAPS.md`
 - a real Gradle wrapper is now present in the repo
+- current direction: fully in-app provider model (no custom backend required)
 
 ## Planning docs
 See `docs/` for the current planning set:

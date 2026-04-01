@@ -24,9 +24,10 @@ Update: the real Gradle wrapper has now been generated successfully. The next st
 - when real adapters are introduced, prefer minimal JSON parsing first over premature full DTO systems, so the live path can be verified quickly
 - keep app-layer wiring insulated from transport/client implementation types; expose factories or repository boundaries instead
 - use the debug shell to show whether live integrations appear to be returning real data versus fallback placeholders
+- apply the same insulation rule to source feed construction, not just TMDb/client wiring
 - apply the same live-first, fallback-safe approach to details metadata as search becomes more real
 - keep the debug preview rich enough to show whether search/details are genuinely surfacing live metadata characteristics
 - evolve the sources side toward explicit provider adapters before swapping in real transports/providers
-- introduce transitional transport-shaped adapters before binding to real scraper/provider infrastructure
+- transitional transport-shaped adapters are still useful, but the target architecture is now fully in-app provider logic rather than dependence on remote addon endpoints
 - decide when to switch from placeholder text UI to real Android TV UI host
 - avoid adding more feature complexity until bootstrap gaps are reduced

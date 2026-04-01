@@ -20,7 +20,10 @@ class SourcePreviewBuilder {
             sourcesState.sources.forEachIndexed { index, source ->
                 val transport = source.rawMetadata["transport"] ?: "in-memory"
                 val query = source.rawMetadata["query"] ?: "n/a"
-                appendLine("${index + 1}. ${source.displayName} [${source.providerDisplayName}] ${source.quality} transport=$transport query=$query")
+                appendLine(
+                    "${index + 1}. ${source.displayName} [${source.providerDisplayName}] ${source.quality} " +
+                        "transport=$transport query=$query"
+                )
             }
         }
     }
