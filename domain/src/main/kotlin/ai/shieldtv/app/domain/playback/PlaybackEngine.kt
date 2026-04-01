@@ -9,5 +9,6 @@ interface PlaybackEngine {
     fun play()
     fun pause()
     fun stop()
+    fun getCurrentItem(): PlaybackItem?
     fun observeState(): Flow<PlaybackState>
 }

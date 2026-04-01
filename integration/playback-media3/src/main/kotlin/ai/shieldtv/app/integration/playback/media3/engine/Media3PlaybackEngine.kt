@@ -17,21 +17,39 @@ class Media3PlaybackEngine : PlaybackEngine {
         )
     )
 
+    private var currentItem: PlaybackItem? = null
+
     override suspend fun prepare(item: PlaybackItem) {
-        // TODO: wire Media3 player preparation.
+        currentItem = item
+        playbackState.value = PlaybackState(
+            isBuffering = false,
+            isPlaying = false,
+            positionMs = 0,
+            durationMs = 0,
+            errorMessage = null
+        )
     }
 
     override fun play() {
-        // TODO: wire Media3 play.
+        playbackState.value = playbackState.value.copy(
+            isPlaying = true,
+            errorMessage = null
+        )
     }
 
     override fun pause() {
-        // TODO: wire Media3 pause.
+        playbackState.value = playbackState.value.copy(isPlaying = false)
     }
 
     override fun stop() {
-        // TODO: wire Media3 stop.
+        playbackState.value = playbackState.value.copy(
+            isPlaying = false,
+            positionMs = 0,
+            durationMs = 0
+        )
     }
+
+    override fun getCurrentItem(): PlaybackItem? = currentItem
 
     override fun observeState(): Flow<PlaybackState> = playbackState
 }

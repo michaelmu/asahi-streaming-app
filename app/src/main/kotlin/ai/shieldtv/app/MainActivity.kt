@@ -5,7 +5,6 @@ import android.view.Gravity
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
-import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.ScrollView
@@ -55,6 +54,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var detailsContainer: LinearLayout
     private lateinit var sourcesContainer: LinearLayout
     private lateinit var playbackContainer: LinearLayout
+    private lateinit var playbackControlsContainer: LinearLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -106,6 +106,9 @@ class MainActivity : ComponentActivity() {
         detailsContainer = verticalSection("Details")
         sourcesContainer = verticalSection("Sources")
         playbackContainer = verticalSection("Playback")
+        playbackControlsContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+        }
 
         searchRow.addView(queryInput)
         searchRow.addView(searchButton)
@@ -128,17 +131,22 @@ class MainActivity : ComponentActivity() {
             addView(sourcesContainer)
             addView(space())
             addView(playbackContainer)
+            addView(space())
+            addView(playbackControlsContainer)
         }
 
         val scrollView = ScrollView(this).apply {
             addView(scrollContent)
         }
 
-        root.addView(scrollView, LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            0,
-            1f
-        ))
+        root.addView(
+            scrollView,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f
+            )
+        )
 
         return root
     }
@@ -164,6 +172,7 @@ class MainActivity : ComponentActivity() {
         clearSection(detailsContainer)
         clearSection(sourcesContainer)
         clearSection(playbackContainer)
+        clearButtons(playbackControlsContainer)
         setLoading(true, "Searching for \"$query\"…")
 
         lifecycleScope.launch {
@@ -203,6 +212,7 @@ class MainActivity : ComponentActivity() {
         clearSection(detailsContainer)
         clearSection(sourcesContainer)
         clearSection(playbackContainer)
+        clearButtons(playbackControlsContainer)
         setLoading(true, "Loading details for ${mediaRef.title}…")
 
         lifecycleScope.launch {
@@ -238,6 +248,7 @@ class MainActivity : ComponentActivity() {
     private fun loadSourcesFor(mediaRef: MediaRef) {
         clearSection(sourcesContainer)
         clearSection(playbackContainer)
+        clearButtons(playbackControlsContainer)
         setLoading(true, "Finding sources for ${mediaRef.title}…")
 
         lifecycleScope.launch {
@@ -280,6 +291,7 @@ class MainActivity : ComponentActivity() {
 
     private fun preparePlayback(source: SourceResult) {
         clearSection(playbackContainer)
+        clearButtons(playbackControlsContainer)
         setLoading(true, "Resolving ${source.displayName}…")
 
         lifecycleScope.launch {
@@ -295,13 +307,22 @@ class MainActivity : ComponentActivity() {
                     appendLine()
                     append(
                         if (state.prepared) {
-                            "Playback preparation succeeded. Media3 playback engine is still a stub, so this confirms resolution/prep flow rather than real video output."
+                            val currentItem = AppContainer.playbackEngine.getCurrentItem()
+                            buildString {
+                                appendLine("Playback preparation succeeded.")
+                                appendLine("Current item: ${currentItem?.title ?: source.displayName}")
+                                appendLine("Stream URL: ${currentItem?.stream?.url ?: source.url}")
+                                append("Next step: actual Android-hosted Media3 player UI.")
+                            }
                         } else {
                             "Playback preparation failed: ${state.error ?: "unknown error"}"
                         }
                     )
                 }
             )
+            if (state.prepared) {
+                renderPlaybackControls()
+            }
         }
     }
 
@@ -310,10 +331,39 @@ class MainActivity : ComponentActivity() {
         statusText.text = message
     }
 
+    private fun renderPlaybackControls() {
+        clearButtons(playbackControlsContainer)
+        playbackControlsContainer.addView(Button(this).apply {
+            text = "Play"
+            setOnClickListener {
+                AppContainer.playbackEngine.play()
+                statusText.text = "Playback state: playing"
+            }
+        })
+        playbackControlsContainer.addView(Button(this).apply {
+            text = "Pause"
+            setOnClickListener {
+                AppContainer.playbackEngine.pause()
+                statusText.text = "Playback state: paused"
+            }
+        })
+        playbackControlsContainer.addView(Button(this).apply {
+            text = "Stop"
+            setOnClickListener {
+                AppContainer.playbackEngine.stop()
+                statusText.text = "Playback state: stopped"
+            }
+        })
+    }
+
     private fun clearSection(section: LinearLayout) {
         while (section.childCount > 1) {
             section.removeViewAt(1)
         }
+    }
+
+    private fun clearButtons(section: LinearLayout) {
+        section.removeAllViews()
     }
 
     private fun appendBody(section: LinearLayout, text: String) {
