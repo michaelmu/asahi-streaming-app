@@ -39,6 +39,16 @@ class AuthPreviewBuilder {
             appendLine("Credentials error: ${RealDebridDebugState.lastCredentialsError.ifBlank { "none" }}")
             appendLine("Token response: ${RealDebridDebugState.lastTokenResponse.ifBlank { "none" }}")
             appendLine("Token error: ${RealDebridDebugState.lastTokenError.ifBlank { "none" }}")
+            appendLine("Instant availability request: ${RealDebridDebugState.lastInstantAvailabilityRequest.ifBlank { "none" }}")
+            appendLine("Instant availability response: ${RealDebridDebugState.lastInstantAvailabilityResponse.ifBlank { "none" }}")
+            appendLine("Instant availability error: ${RealDebridDebugState.lastInstantAvailabilityError.ifBlank { "none" }}")
+            appendLine("Cache marker hash count: ${RealDebridDebugState.lastCacheMarkerHashCount.ifBlank { "none" }}")
+            appendLine("Cache marker cached count: ${RealDebridDebugState.lastCacheMarkerCachedCount.ifBlank { "none" }}")
+            appendLine("Source repository seen: ${RealDebridDebugState.lastSourceRepositorySeen.ifBlank { "none" }}")
+            appendLine("Source repository marker present: ${RealDebridDebugState.lastSourceRepositoryMarkerPresent.ifBlank { "none" }}")
+            appendLine("Token store save called: ${RealDebridDebugState.lastTokenStoreSaveCalled.ifBlank { "none" }}")
+            appendLine("Token store write path: ${RealDebridDebugState.lastTokenStoreWritePath.ifBlank { "none" }}")
+            appendLine("Token store write exists: ${RealDebridDebugState.lastTokenStoreWriteExists.ifBlank { "none" }}")
             appendLine("Error: ${polledState?.error ?: startedState?.error ?: "none"}")
         }
     }

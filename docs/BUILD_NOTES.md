@@ -22,9 +22,15 @@ Current validation snapshot:
 - TMDb live search/details work in the debug preview path
 - Real-Debrid device auth is proven end-to-end in manual testing: start, browser approval, poll, and token exchange all succeed
 - the RD polling path was fixed to use `device_code` instead of `user_code`
-- debug token storage now persists across fresh JVM runs for validation purposes
+- Torrentio live results are working and return real hashed sources in a direct probe
 - source pipeline preview runs without the old transport/runtime crash
-- current source-provider limitations are now about provider config/wiring breadth rather than Android-incompatible HTTP code
+- current highest-priority blocker is now RD auth persistence into reusable local token state for cache-checking, not transport compatibility
+
+Current RD cache-check blocker:
+- the direct Torrentio cache probe proves the real repository/cache-marker path runs and sees hashed sources
+- however, `instantAvailability` still short-circuits because the expected persisted RD token state is not landing where the cache path can use it
+- multiple debug runs showed fresh auth success (`Linked: true`) without a corresponding `app/debug/rd-tokens.txt` file appearing afterward
+- conclusion: the next debugging step should focus specifically on auth persistence side effects, using the dedicated auth persistence probe immediately after a fresh device approval
 
 ## Immediate priorities
 - keep Android app resources/manifest sane
@@ -43,6 +49,7 @@ Current validation snapshot:
 - keep app-layer wiring insulated from transport/client implementation types; expose factories or repository boundaries instead
 - use the debug shell to show whether live integrations appear to be returning real data versus fallback placeholders
 - stop conflating "preview panel starts a new auth flow" with "actual persisted RD linked state"; those are separate concerns now
+- prefer the dedicated Torrentio cache probe and auth persistence probe over the older preview shell when debugging RD cache-awareness
 - apply the same insulation rule to source feed construction, not just TMDb/client wiring
 - scaffold real providers behind the provider template before binding to a concrete upstream, so the buildable baseline stays intact
 - apply the same live-first, fallback-safe approach to details metadata as search becomes more real

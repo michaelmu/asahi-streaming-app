@@ -1,5 +1,6 @@
 package ai.shieldtv.app.integration.debrid.realdebrid.auth
 
+import ai.shieldtv.app.integration.debrid.realdebrid.debug.RealDebridDebugState
 import java.io.File
 
 data class RealDebridTokens(
@@ -9,12 +10,14 @@ data class RealDebridTokens(
 )
 
 class RealDebridTokenStore(
-    private val file: File = File("debug/rd-tokens.txt")
+    private val file: File = File("app/debug/rd-tokens.txt")
 ) {
     private var tokens: RealDebridTokens? = loadFromDisk()
 
     fun save(tokens: RealDebridTokens) {
         this.tokens = tokens
+        RealDebridDebugState.lastTokenStoreSaveCalled = "yes"
+        RealDebridDebugState.lastTokenStoreWritePath = file.absolutePath
         file.parentFile?.mkdirs()
         file.writeText(
             listOf(
@@ -23,6 +26,7 @@ class RealDebridTokenStore(
                 tokens.expiresInSeconds?.toString().orEmpty()
             ).joinToString("\n")
         )
+        RealDebridDebugState.lastTokenStoreWriteExists = if (file.exists()) "yes" else "no"
     }
 
     fun get(): RealDebridTokens? = tokens ?: loadFromDisk()?.also { tokens = it }

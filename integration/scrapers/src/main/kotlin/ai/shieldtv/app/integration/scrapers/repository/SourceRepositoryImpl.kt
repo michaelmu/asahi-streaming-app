@@ -7,6 +7,7 @@ import ai.shieldtv.app.domain.provider.SourceNormalizer
 import ai.shieldtv.app.domain.repository.SourceRepository
 import ai.shieldtv.app.domain.source.ranking.SourceCacheMarker
 import ai.shieldtv.app.domain.source.ranking.SourceRanker
+import ai.shieldtv.app.integration.debrid.realdebrid.debug.RealDebridDebugState
 import ai.shieldtv.app.integration.scrapers.provider.ProviderRegistry
 
 class SourceRepositoryImpl(
@@ -16,6 +17,8 @@ class SourceRepositoryImpl(
     private val sourceCacheMarker: SourceCacheMarker? = null
 ) : SourceRepository {
     override suspend fun findSources(request: SourceSearchRequest): List<SourceResult> {
+        RealDebridDebugState.lastSourceRepositorySeen = "yes"
+        RealDebridDebugState.lastSourceRepositoryMarkerPresent = if (sourceCacheMarker == null) "no" else "yes"
         val rawResults = providerRegistry.providers.flatMap { provider ->
             provider.search(request).map { raw ->
                 sourceNormalizer.normalize(request, provider, raw)

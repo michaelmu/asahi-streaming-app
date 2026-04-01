@@ -18,8 +18,10 @@ Current repo state:
 - local emulator testing is now working end-to-end for install / launch / log capture
 - TMDb live metadata is working in the debug preview path
 - Real-Debrid device auth is now proven end-to-end: start, browser approval, poll, and token exchange all work
-- Real-Debrid polling was fixed to use `device_code` correctly, and debug token storage is now persisted across fresh JVM runs
-- source/provider plumbing is alive, but live provider coverage still depends on configuration and provider wiring rather than transport stability
+- Real-Debrid polling was fixed to use `device_code` correctly
+- Torrentio live source fetching works and returns real hashed results
+- current next blocker is reliable RD token persistence for downstream cache-checking/debug flows
+- source/provider plumbing is alive, but live provider coverage still depends on configuration, provider wiring, and RD cache-state persistence rather than transport stability
 
 ## Current runtime/debug mode
 The app is no longer in the temporary startup-safe auth-only mode.

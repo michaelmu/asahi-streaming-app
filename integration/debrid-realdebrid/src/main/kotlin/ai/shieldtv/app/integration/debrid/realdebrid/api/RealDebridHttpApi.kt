@@ -111,11 +111,20 @@ class RealDebridHttpApi(
         if (infoHashes.isEmpty()) return "{}"
         val accessToken = tokenStore.get()?.accessToken ?: RealDebridConfig.accessToken() ?: return "{}"
         val joined = infoHashes.joinToString("/") { it.lowercase() }
+        val url = "https://api.real-debrid.com/rest/1.0/torrents/instantAvailability/$joined"
+        RealDebridDebugState.lastInstantAvailabilityRequest = joined
         return runCatching {
             httpClient.get(
-                url = "https://api.real-debrid.com/rest/1.0/torrents/instantAvailability/$joined",
+                url = url,
                 headers = mapOf("Authorization" to "Bearer $accessToken")
-            )
-        }.getOrElse { "{}" }
+            ).also {
+                RealDebridDebugState.lastInstantAvailabilityResponse = it
+                RealDebridDebugState.lastInstantAvailabilityError = ""
+            }
+        }.getOrElse { error ->
+            RealDebridDebugState.lastInstantAvailabilityResponse = ""
+            RealDebridDebugState.lastInstantAvailabilityError = error.message ?: error::class.java.simpleName
+            "{}"
+        }
     }
 }

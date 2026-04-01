@@ -34,6 +34,18 @@ dependencies {
 val debugKotlinClasses = layout.buildDirectory.dir("tmp/kotlin-classes/debug")
 
 fun JavaExec.configureDebugRuntime(mainClassName: String) {
+    dependsOn(":integration:metadata-tmdb:jar")
+    dependsOn(":integration:debrid-realdebrid:jar")
+    dependsOn(":integration:scrapers:jar")
+    dependsOn(":integration:playback-media3:jar")
+    dependsOn(":feature:search:jar")
+    dependsOn(":feature:details:jar")
+    dependsOn(":feature:sources:jar")
+    dependsOn(":feature:player:jar")
+    dependsOn(":feature:settings:jar")
+    dependsOn(":domain:jar")
+    dependsOn(":core:model:jar")
+    dependsOn(":core:network:jar")
     dependsOn("compileDebugKotlin")
     classpath = files(
         debugKotlinClasses,
@@ -71,4 +83,16 @@ tasks.register<JavaExec>("runAuthFlowPreview") {
     group = "verification"
     description = "Starts RD device auth and polls in the same live process"
     configureDebugRuntime("ai.shieldtv.app.debug.RunAuthFlowRunner")
+}
+
+tasks.register<JavaExec>("runTorrentioCacheProbe") {
+    group = "verification"
+    description = "Runs a direct Torrentio + Real-Debrid cache probe without the preview shell"
+    configureDebugRuntime("ai.shieldtv.app.debug.RunTorrentioCacheProbe")
+}
+
+tasks.register<JavaExec>("runAuthPersistenceProbe") {
+    group = "verification"
+    description = "Polls the stored RD flow once and prints token persistence instrumentation"
+    configureDebugRuntime("ai.shieldtv.app.debug.RunAuthPersistenceProbe")
 }
