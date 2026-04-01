@@ -22,6 +22,10 @@ The app is currently set up as an RD auth test build:
 - polls in-session for longer
 - shows final linked/auth-in-progress/error state clearly
 
+## CI / APK artifacts
+GitHub Actions is configured to build a debug APK on pushes to `main` and via manual workflow dispatch.
+The workflow uploads the APK as a downloadable artifact named `asahi-debug-apk`.
+
 ## Planning docs
 See `docs/` for the current planning set:
 - `docs/RESEARCH.md`
