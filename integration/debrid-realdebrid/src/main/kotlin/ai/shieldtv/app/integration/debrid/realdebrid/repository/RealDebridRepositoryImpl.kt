@@ -29,13 +29,13 @@ class RealDebridRepositoryImpl(
     }
 
     override suspend fun pollDeviceFlow(flow: DeviceCodeFlow): RealDebridAuthState {
-        val credentials = realDebridApi.getDeviceCredentials(flow.userCode) ?: return RealDebridAuthState(
+        val credentials = realDebridApi.getDeviceCredentials(flow.deviceCode) ?: return RealDebridAuthState(
             isLinked = false,
             authInProgress = true,
             lastError = null
         )
         val tokenResponse = realDebridApi.exchangeDeviceCredentialsForToken(
-            deviceCode = flow.userCode,
+            deviceCode = flow.deviceCode,
             clientId = credentials.clientId,
             clientSecret = credentials.clientSecret
         ) ?: return RealDebridAuthState(

@@ -10,6 +10,7 @@ object AuthDebugStore {
         file.parentFile?.mkdirs()
         file.writeText(
             listOf(
+                flow.deviceCode,
                 flow.verificationUrl,
                 flow.userCode,
                 flow.qrCodeUrl.orEmpty(),
@@ -22,14 +23,25 @@ object AuthDebugStore {
     fun load(): DeviceCodeFlow? {
         if (!file.exists()) return null
         val lines = file.readLines()
-        if (lines.size < 5) return null
-        return DeviceCodeFlow(
-            verificationUrl = lines[0],
-            userCode = lines[1],
-            qrCodeUrl = lines[2].ifBlank { null },
-            expiresInSeconds = lines[3].toIntOrNull() ?: return null,
-            pollIntervalSeconds = lines[4].toIntOrNull() ?: return null
-        )
+        return when (lines.size) {
+            6 -> DeviceCodeFlow(
+                deviceCode = lines[0],
+                verificationUrl = lines[1],
+                userCode = lines[2],
+                qrCodeUrl = lines[3].ifBlank { null },
+                expiresInSeconds = lines[4].toIntOrNull() ?: return null,
+                pollIntervalSeconds = lines[5].toIntOrNull() ?: return null
+            )
+            5 -> DeviceCodeFlow(
+                deviceCode = "",
+                verificationUrl = lines[0],
+                userCode = lines[1],
+                qrCodeUrl = lines[2].ifBlank { null },
+                expiresInSeconds = lines[3].toIntOrNull() ?: return null,
+                pollIntervalSeconds = lines[4].toIntOrNull() ?: return null
+            )
+            else -> null
+        }
     }
 
     fun clear() {
