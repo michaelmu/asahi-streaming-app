@@ -5,6 +5,7 @@ import android.view.Gravity
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
+import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.ScrollView
@@ -12,6 +13,7 @@ import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.ui.PlayerView
+import ai.shieldtv.app.core.model.media.EpisodeSummary
 import ai.shieldtv.app.core.model.media.MediaRef
 import ai.shieldtv.app.core.model.media.MediaType
 import ai.shieldtv.app.core.model.media.SearchResult
@@ -312,11 +314,7 @@ class MainActivity : ComponentActivity() {
         episodeSelectionContainer.visibility = View.VISIBLE
 
         val knownSeasonCount = details.seasonCount ?: 3
-        val seasonRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        val episodeRow = LinearLayout(this).apply {
+        val seasonStrip = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
@@ -326,14 +324,17 @@ class MainActivity : ComponentActivity() {
             textSize = 16f
         })
 
-        episodeSelectionContainer.addView(TextView(this).apply {
-            text = "Seasons"
-            textSize = 18f
-        })
+        val seasonScroll = HorizontalScrollView(this).apply {
+            addView(seasonStrip)
+        }
 
-        (1..knownSeasonCount.coerceAtMost(8)).forEach { season ->
-            seasonRow.addView(Button(this).apply {
-                text = "S${season.toString().padStart(2, '0')}"
+        (1..knownSeasonCount.coerceAtMost(12)).forEach { season ->
+            seasonStrip.addView(Button(this).apply {
+                text = if (season == selectedSeasonNumber) {
+                    "• S${season.toString().padStart(2, '0')}"
+                } else {
+                    "S${season.toString().padStart(2, '0')}"
+                }
                 setOnClickListener {
                     selectedSeasonNumber = season
                     renderEpisodeSelection(details)
@@ -341,8 +342,13 @@ class MainActivity : ComponentActivity() {
             })
         }
 
+        episodeSelectionContainer.addView(TextView(this).apply {
+            text = "Seasons"
+            textSize = 18f
+        })
+        episodeSelectionContainer.addView(seasonScroll)
+
         val activeSeason = selectedSeasonNumber ?: 1
-        episodeSelectionContainer.addView(seasonRow)
         episodeSelectionContainer.addView(TextView(this).apply {
             text = "Episodes for season ${activeSeason.toString().padStart(2, '0')}"
             textSize = 18f
@@ -350,39 +356,26 @@ class MainActivity : ComponentActivity() {
 
         val realEpisodes = details.episodesBySeason[activeSeason].orEmpty()
         val episodeChoices = if (realEpisodes.isNotEmpty()) {
-            realEpisodes.take(16)
+            realEpisodes.take(20)
         } else {
             (1..12).map { episode ->
-                ai.shieldtv.app.core.model.media.EpisodeSummary(
+                EpisodeSummary(
                     seasonNumber = activeSeason,
                     episodeNumber = episode,
                     title = "Episode $episode"
                 )
             }
         }
-        episodeChoices.forEach { episode ->
-            episodeRow.addView(Button(this).apply {
-                text = buildString {
-                    append("E")
-                    append(episode.episodeNumber.toString().padStart(2, '0'))
-                    episode.title?.takeIf { it.isNotBlank() }?.let {
-                        append(" ")
-                        append(it.take(18))
-                    }
-                }
-                setOnClickListener {
-                    selectedSeasonNumber = activeSeason
-                    selectedEpisodeNumber = episode.episodeNumber
-                    loadSourcesFor(
-                        mediaRef = mediaRef,
-                        seasonNumber = activeSeason,
-                        episodeNumber = episode.episodeNumber
-                    )
-                }
-            })
+
+        val episodeList = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
         }
 
-        episodeSelectionContainer.addView(episodeRow)
+        episodeChoices.forEach { episode ->
+            episodeList.addView(buildEpisodeButton(mediaRef, activeSeason, episode))
+        }
+
+        episodeSelectionContainer.addView(episodeList)
 
         val seasonInput = EditText(this).apply {
             hint = "Season"
@@ -416,6 +409,45 @@ class MainActivity : ComponentActivity() {
             addView(episodeInput)
             addView(loadButton)
         })
+    }
+
+    private fun buildEpisodeButton(
+        mediaRef: MediaRef,
+        activeSeason: Int,
+        episode: EpisodeSummary
+    ): Button {
+        val isSelected = selectedEpisodeNumber == episode.episodeNumber && selectedSeasonNumber == activeSeason
+        return Button(this).apply {
+            text = buildString {
+                if (isSelected) append("• ")
+                append("E")
+                append(episode.episodeNumber.toString().padStart(2, '0'))
+                episode.title?.takeIf { it.isNotBlank() }?.let {
+                    append(" — ")
+                    append(it.take(36))
+                }
+                episode.airDate?.let {
+                    append("  [")
+                    append(it)
+                    append("]")
+                }
+                episode.overview?.takeIf { it.isNotBlank() }?.let {
+                    append("\n")
+                    append(it.take(120))
+                    if (it.length > 120) append("…")
+                }
+            }
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
+            setOnClickListener {
+                selectedSeasonNumber = activeSeason
+                selectedEpisodeNumber = episode.episodeNumber
+                loadSourcesFor(
+                    mediaRef = mediaRef,
+                    seasonNumber = activeSeason,
+                    episodeNumber = episode.episodeNumber
+                )
+            }
+        }
     }
 
     private fun loadSourcesFor(
