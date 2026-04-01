@@ -1,14 +1,14 @@
 package ai.shieldtv.app
 
-import android.app.Activity
 import android.os.Bundle
+import androidx.activity.ComponentActivity
 import ai.shieldtv.app.navigation.AppDestination
 import ai.shieldtv.app.navigation.AppNavigator
 import ai.shieldtv.app.ui.AppScreenRenderer
 import ai.shieldtv.app.ui.AuthDebugTextViewFactory
 import ai.shieldtv.app.ui.DebugTextViewFactory
 
-class MainActivity : Activity() {
+class MainActivity : ComponentActivity() {
     private val appNavigator = AppNavigator(AppDestination.AUTH_DEBUG)
     private val appCoordinator = AppCoordinator(appNavigator)
     private val appScreenRenderer = AppScreenRenderer()

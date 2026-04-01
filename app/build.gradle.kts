@@ -25,6 +25,9 @@ dependencies {
     implementation(project(":integration:debrid-realdebrid"))
     implementation(project(":integration:scrapers"))
     implementation(project(":integration:playback-media3"))
+    implementation("androidx.activity:activity-ktx:1.9.2")
+    implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("com.google.android.material:material:1.12.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
 }
 
