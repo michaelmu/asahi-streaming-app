@@ -47,6 +47,15 @@ object RealDebridDebugState {
     var lastSourceRepositoryMarkerPresent: String = ""
 
     @Volatile
+    var lastSourceProviderSummary: String = ""
+
+    @Volatile
+    var lastSourceLiveCount: String = ""
+
+    @Volatile
+    var lastSourceFallbackCount: String = ""
+
+    @Volatile
     var lastTokenStoreSaveCalled: String = ""
 
     @Volatile

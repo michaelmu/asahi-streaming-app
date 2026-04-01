@@ -626,15 +626,19 @@ class MainActivity : ComponentActivity() {
                 )
             )
             setLoading(false, state.error ?: "Found ${state.sources.size} source(s) for $searchLabel.")
-            renderSources(state.sources, state.error)
+            renderSources(state.sources, state.error, buildSourceDiagnostics(state.sources))
         }
     }
 
-    private fun renderSources(sources: List<SourceResult>, error: String?) {
+    private fun renderSources(sources: List<SourceResult>, error: String?, diagnostics: String?) {
         if (error != null) {
             appendBody(sourcesContainer, "Source lookup failed: $error")
             return
         }
+        diagnostics?.let {
+            appendBody(sourcesContainer, "Diagnostics: $it")
+        }
+
         if (sources.isEmpty()) {
             appendBody(sourcesContainer, "No sources.")
             appendBody(sourcesContainer, "Diagnostics: Torrentio enabled, but no live provider results returned for this title/request.")
@@ -749,6 +753,18 @@ class MainActivity : ComponentActivity() {
                 renderPlaybackControls()
             }
         }
+    }
+
+    private fun buildSourceDiagnostics(sources: List<SourceResult>): String {
+        if (sources.isEmpty()) return "providers=none | live=0 | fallback=0"
+        val providerSummary = sources.groupBy { it.providerId }
+            .entries
+            .joinToString(",") { (providerId, items) -> "$providerId:${items.size}" }
+        val liveCount = sources.count {
+            it.providerId == "torrentio" || it.rawMetadata["transport"] == "torrentio"
+        }
+        val fallbackCount = sources.count { it.rawMetadata["fallbackMode"] == "true" }
+        return "providers=$providerSummary | live=$liveCount | fallback=$fallbackCount"
     }
 
     private fun setLoading(isLoading: Boolean, message: String) {

@@ -20,13 +20,23 @@ class SourceRepositoryImpl(
     override suspend fun findSources(request: SourceSearchRequest): List<SourceResult> {
         RealDebridDebugState.lastSourceRepositorySeen = "yes"
         RealDebridDebugState.lastSourceRepositoryMarkerPresent = if (sourceCacheMarker == null) "no" else "yes"
+        val providerSummaries = mutableListOf<String>()
         val rawResults = providerRegistry.providers.flatMap { provider ->
-            provider.search(request).map { raw ->
+            val normalized = provider.search(request).map { raw ->
                 sourceNormalizer.normalize(request, provider, raw)
             }
+            providerSummaries += "${provider.id}:${normalized.size}"
+            normalized
         }
+        RealDebridDebugState.lastSourceProviderSummary = providerSummaries.joinToString(",")
         val cacheMarked = sourceCacheMarker?.markCached(rawResults) ?: rawResults
         val shaped = ProviderModeDecider.shapeSources(cacheMarked)
+        val liveCount = shaped.count {
+            it.providerId == "torrentio" || it.rawMetadata["transport"] == "torrentio"
+        }
+        val fallbackCount = shaped.count { it.rawMetadata["fallbackMode"] == "true" }
+        RealDebridDebugState.lastSourceLiveCount = liveCount.toString()
+        RealDebridDebugState.lastSourceFallbackCount = fallbackCount.toString()
         return sourceRanker.rank(shaped, SourceFilters())
     }
 }
