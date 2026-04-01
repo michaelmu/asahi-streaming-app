@@ -277,6 +277,7 @@ A realistic first-week target:
 - TMDb search works
 - details screen works
 - settings/account placeholder exists
+- a thin app-level UI shell/coordinator path exists, even if it is still placeholder-only
 
 A strong second-week target:
 - RD auth works
