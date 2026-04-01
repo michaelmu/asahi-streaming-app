@@ -504,6 +504,8 @@ Even if v1 only uses Media3, this separation keeps:
 
 Borrowing from Stremio Web’s product structure, but adapted for TV:
 
+Implementation note: a thin app-level coordinator/navigation spine is useful even before a full UI layer exists, so the feature slices can connect through explicit app state instead of ad-hoc jumps.
+
 ## Screens
 - Home / Board
 - Search

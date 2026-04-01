@@ -73,6 +73,7 @@ Responsibilities:
 - DI bootstrapping
 - app theme
 - TV-specific app wiring
+- thin app-level orchestration/coordinator layer connecting feature slices
 
 Should contain:
 - `MainActivity`
