@@ -10,7 +10,7 @@ data class RealDebridTokens(
 )
 
 class RealDebridTokenStore(
-    private val file: File = File("app/debug/rd-tokens.txt")
+    private val file: File = defaultTokenFile()
 ) {
     private var tokens: RealDebridTokens? = loadFromDisk()
 
@@ -45,5 +45,16 @@ class RealDebridTokenStore(
             refreshToken = lines.getOrNull(1)?.ifBlank { null },
             expiresInSeconds = lines.getOrNull(2)?.toIntOrNull()
         )
+    }
+
+    companion object {
+        private fun defaultTokenFile(): File {
+            val cwd = File("").absoluteFile
+            return when {
+                cwd.name == "app" -> File(cwd, "debug/rd-tokens.txt")
+                File(cwd, "app").isDirectory -> File(cwd, "app/debug/rd-tokens.txt")
+                else -> File(cwd, "debug/rd-tokens.txt")
+            }
+        }
     }
 }
