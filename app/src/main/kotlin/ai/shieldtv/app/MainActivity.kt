@@ -13,11 +13,14 @@ import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.ui.PlayerView
+import ai.shieldtv.app.core.model.auth.DeviceCodeFlow
+import ai.shieldtv.app.core.model.auth.RealDebridAuthState
 import ai.shieldtv.app.core.model.media.EpisodeSummary
 import ai.shieldtv.app.core.model.media.MediaRef
 import ai.shieldtv.app.core.model.media.MediaType
 import ai.shieldtv.app.core.model.media.SearchResult
 import ai.shieldtv.app.core.model.media.TitleDetails
+import ai.shieldtv.app.core.model.source.DebridService
 import ai.shieldtv.app.core.model.source.SourceResult
 import ai.shieldtv.app.core.model.source.SourceSearchRequest
 import ai.shieldtv.app.di.AppContainer
@@ -55,6 +58,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var statusText: TextView
     private lateinit var loadingView: ProgressBar
     private lateinit var queryInput: EditText
+    private lateinit var authContainer: LinearLayout
     private lateinit var resultsContainer: LinearLayout
     private lateinit var detailsContainer: LinearLayout
     private lateinit var episodeSelectionContainer: LinearLayout
@@ -67,11 +71,14 @@ class MainActivity : ComponentActivity() {
     private var selectedSeasonNumber: Int? = null
     private var selectedEpisodeNumber: Int? = null
     private var selectedTitleDetails: TitleDetails? = null
+    private var authState: RealDebridAuthState = RealDebridAuthState(isLinked = false)
+    private var activeDeviceFlow: DeviceCodeFlow? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(buildContentView())
         attachPlayerView()
+        refreshAuthPanel()
         runInitialSearch()
     }
 
@@ -120,6 +127,7 @@ class MainActivity : ComponentActivity() {
             textSize = 15f
         }
 
+        authContainer = verticalSection("Real-Debrid")
         resultsContainer = verticalSection("Search Results")
         detailsContainer = verticalSection("Details")
         episodeSelectionContainer = verticalSection("Episode Selection")
@@ -152,6 +160,8 @@ class MainActivity : ComponentActivity() {
 
         val scrollContent = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
+            addView(authContainer)
+            addView(space())
             addView(resultsContainer)
             addView(space())
             addView(detailsContainer)
@@ -195,6 +205,92 @@ class MainActivity : ComponentActivity() {
                 text = title
                 textSize = 20f
             })
+        }
+    }
+
+    private fun refreshAuthPanel() {
+        lifecycleScope.launch {
+            authState = AppContainer.getRealDebridAuthStateUseCase()
+            renderAuthPanel()
+        }
+    }
+
+    private fun renderAuthPanel() {
+        clearSection(authContainer)
+
+        appendBody(
+            authContainer,
+            if (authState.isLinked) {
+                "Real-Debrid linked${authState.username?.let { " as $it" } ?: ""}."
+            } else {
+                "Real-Debrid not linked. Magnet/debrid playback will fail until you link it."
+            }
+        )
+
+        if (!authState.isLinked) {
+            authContainer.addView(Button(this).apply {
+                text = "Start Real-Debrid Link"
+                setOnClickListener { startRealDebridLink() }
+            })
+        }
+
+        activeDeviceFlow?.let { flow ->
+            appendBody(
+                authContainer,
+                buildString {
+                    appendLine("Open: ${flow.verificationUrl}")
+                    appendLine("Code: ${flow.userCode}")
+                    append("After authorizing, tap Poll Link Status.")
+                }
+            )
+            authContainer.addView(Button(this).apply {
+                text = "Poll Link Status"
+                setOnClickListener { pollRealDebridLink(flow) }
+            })
+        }
+
+        authState.lastError?.takeIf { it.isNotBlank() }?.let {
+            appendBody(authContainer, "Auth error: $it")
+        }
+    }
+
+    private fun startRealDebridLink() {
+        setLoading(true, "Starting Real-Debrid link flow…")
+        lifecycleScope.launch {
+            runCatching {
+                AppContainer.startRealDebridDeviceFlowUseCase()
+            }.onSuccess { flow ->
+                activeDeviceFlow = flow
+                authState = RealDebridAuthState(isLinked = false, authInProgress = true, lastError = null)
+                setLoading(false, "Real-Debrid device flow started.")
+                renderAuthPanel()
+            }.onFailure { error ->
+                authState = RealDebridAuthState(isLinked = false, authInProgress = false, lastError = error.message)
+                setLoading(false, "Failed to start Real-Debrid link flow.")
+                renderAuthPanel()
+            }
+        }
+    }
+
+    private fun pollRealDebridLink(flow: DeviceCodeFlow) {
+        setLoading(true, "Polling Real-Debrid link status…")
+        lifecycleScope.launch {
+            runCatching {
+                AppContainer.pollRealDebridDeviceFlowUseCase(flow)
+            }.onSuccess { state ->
+                authState = state
+                if (state.isLinked) {
+                    activeDeviceFlow = null
+                    setLoading(false, "Real-Debrid linked successfully.")
+                } else {
+                    setLoading(false, "Real-Debrid still waiting for authorization.")
+                }
+                renderAuthPanel()
+            }.onFailure { error ->
+                authState = RealDebridAuthState(isLinked = false, authInProgress = true, lastError = error.message)
+                setLoading(false, "Polling Real-Debrid link failed.")
+                renderAuthPanel()
+            }
         }
     }
 
@@ -532,6 +628,16 @@ class MainActivity : ComponentActivity() {
         clearSection(playbackContainer)
         clearButtons(playbackControlsContainer)
         playerView.visibility = View.GONE
+
+        if (source.debridService == DebridService.REAL_DEBRID && !authState.isLinked) {
+            appendBody(
+                playbackContainer,
+                "This source needs Real-Debrid. Link your account in the Real-Debrid section above, then try again."
+            )
+            statusText.text = "Real-Debrid link required before playback."
+            return
+        }
+
         setLoading(true, "Resolving ${source.displayName}…")
 
         lifecycleScope.launch {
