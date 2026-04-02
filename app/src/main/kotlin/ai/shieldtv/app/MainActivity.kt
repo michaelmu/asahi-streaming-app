@@ -1,5 +1,7 @@
 package ai.shieldtv.app
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
@@ -260,6 +262,12 @@ class MainActivity : ComponentActivity() {
                     append("Polling starts automatically for up to 2 minutes after you begin linking.")
                 }
             )
+            authContainer.addView(Button(this).apply {
+                text = "Open Real-Debrid Link Page"
+                setOnClickListener {
+                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(flow.verificationUrl)))
+                }
+            })
             authContainer.addView(Button(this).apply {
                 text = "Poll Link Status"
                 setOnClickListener { pollRealDebridLink(flow) }
