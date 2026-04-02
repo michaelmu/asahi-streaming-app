@@ -17,27 +17,30 @@ import ai.shieldtv.app.core.model.media.EpisodeSummary
 import ai.shieldtv.app.core.model.media.MediaType
 import ai.shieldtv.app.core.model.source.SourceResult
 
-class HomeScreenRenderer(
+class NavigationRailRenderer(
     private val host: LinearLayout,
     private val viewFactory: ScreenViewFactory
 ) {
     fun render(
-        settingsLabel: String,
+        selectedMode: SearchMode,
+        inSettings: Boolean,
         onMovies: () -> Unit,
         onShows: () -> Unit,
         onSettings: () -> Unit,
         onFirstFocusTarget: (View) -> Unit = {}
     ) {
-        host.addView(viewFactory.title("Home"))
-        host.addView(viewFactory.body("Start with a content mode, or open settings/accounts."))
+        host.addView(viewFactory.body("Browse"))
         host.addView(Button(host.context).apply {
-            text = "Movies"
+            text = if (!inSettings && selectedMode == SearchMode.MOVIES) "• Movies" else "Movies"
             gravity = Gravity.START or Gravity.CENTER_VERTICAL
             setOnClickListener { onMovies() }
             post { onFirstFocusTarget(this) }
         })
-        host.addView(viewFactory.button("TV Shows", onShows))
-        host.addView(viewFactory.button(settingsLabel, onSettings))
+        host.addView(viewFactory.button(
+            if (!inSettings && selectedMode == SearchMode.SHOWS) "• TV Shows" else "TV Shows",
+            onShows
+        ))
+        host.addView(viewFactory.button(if (inSettings) "• Settings" else "Settings", onSettings))
     }
 }
 
@@ -76,8 +79,10 @@ class SearchScreenRenderer(
         searchRow.addView(searchButton)
 
         host.addView(searchRow)
-        host.addView(viewFactory.spacer())
-        host.addView(viewFactory.button("Back to Home", onBack))
+        if (onBack !== {}) {
+            host.addView(viewFactory.spacer())
+            host.addView(viewFactory.button("Back", onBack))
+        }
     }
 }
 
@@ -225,6 +230,7 @@ class EpisodePickerScreenRenderer(
                 )
             }
         }
+        val episodeNumbers = episodeChoices.map { it.episodeNumber }
 
         episodeChoices.forEachIndexed { index, episode ->
             val isSelected = selectedEpisode == episode.episodeNumber
@@ -253,7 +259,7 @@ class EpisodePickerScreenRenderer(
                     onEpisodeSelected(episode.episodeNumber)
                     onEpisodePlay(episode.episodeNumber)
                 }
-                if (isSelected || (selectedEpisode !in episodeChoices.map { it.episodeNumber } && index == 0)) {
+                if (isSelected || (selectedEpisode !in episodeNumbers && index == 0)) {
                     post { onFirstFocusTarget(this) }
                 }
             })
@@ -351,11 +357,9 @@ class PlayerScreenRenderer(
         }
         playerView.layoutParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
-            0,
-            1f
+            LinearLayout.LayoutParams.MATCH_PARENT
         )
         host.addView(playerView)
-        host.addView(playbackControls)
     }
 }
 
@@ -428,6 +432,6 @@ class SettingsScreenRenderer(
             host.addView(viewFactory.button("Toggle Playback Mode", onTogglePlaybackMode))
         }
         host.addView(viewFactory.button("Copy Debug Info", onCopyDebugInfo))
-        host.addView(viewFactory.button("Back to Home", onBackToHome))
+        host.addView(viewFactory.button("Back to Browse", onBackToHome))
     }
 }

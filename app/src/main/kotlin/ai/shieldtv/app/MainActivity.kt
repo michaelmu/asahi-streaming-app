@@ -5,7 +5,6 @@ import android.content.ClipboardManager
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.View
-import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.ScrollView
@@ -33,7 +32,7 @@ import ai.shieldtv.app.integration.playback.media3.engine.Media3PlaybackEngine.R
 import ai.shieldtv.app.navigation.AppDestination
 import ai.shieldtv.app.ui.DetailsScreenRenderer
 import ai.shieldtv.app.ui.EpisodePickerScreenRenderer
-import ai.shieldtv.app.ui.HomeScreenRenderer
+import ai.shieldtv.app.ui.NavigationRailRenderer
 import ai.shieldtv.app.ui.PlayerScreenRenderer
 import ai.shieldtv.app.ui.ResultsScreenRenderer
 import ai.shieldtv.app.ui.ScreenViewFactory
@@ -67,7 +66,7 @@ class MainActivity : ComponentActivity() {
 
     private val coordinator = AppCoordinator()
     private lateinit var viewFactory: ScreenViewFactory
-    private lateinit var homeRenderer: HomeScreenRenderer
+    private lateinit var navigationRailRenderer: NavigationRailRenderer
     private lateinit var searchRenderer: SearchScreenRenderer
     private lateinit var resultsRenderer: ResultsScreenRenderer
     private lateinit var detailsRenderer: DetailsScreenRenderer
@@ -79,6 +78,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var root: LinearLayout
     private lateinit var sidebar: LinearLayout
     private lateinit var contentPane: LinearLayout
+    private lateinit var railHost: LinearLayout
     private lateinit var statusText: android.widget.TextView
     private lateinit var loadingView: ProgressBar
     private lateinit var screenHost: LinearLayout
@@ -106,6 +106,7 @@ class MainActivity : ComponentActivity() {
         attachPlayerView()
         observePlaybackState()
         refreshAuthState()
+        coordinator.openSearch(SearchMode.MOVIES)
         renderCurrentScreen()
     }
 
@@ -130,18 +131,22 @@ class MainActivity : ComponentActivity() {
 
         sidebar = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.34f)
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.28f)
             setPadding(0, 0, 32, 0)
         }
 
         contentPane = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.66f)
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.72f)
         }
 
         val title = viewFactory.title("Asahi")
-        val subtitle = viewFactory.body("TV-first search → details → sources → playback")
+        val subtitle = viewFactory.body("TV-first streaming browser")
         val buildInfo = viewFactory.body("${BuildConfig.VERSION_NAME} · ${BuildConfig.GIT_SHA}")
+
+        railHost = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
 
         loadingView = ProgressBar(this).apply {
             visibility = View.GONE
@@ -159,6 +164,8 @@ class MainActivity : ComponentActivity() {
         sidebar.addView(title)
         sidebar.addView(subtitle)
         sidebar.addView(buildInfo)
+        sidebar.addView(viewFactory.spacer())
+        sidebar.addView(railHost)
         sidebar.addView(viewFactory.spacer())
         sidebar.addView(loadingView)
         sidebar.addView(statusText)
@@ -181,7 +188,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun initializeRenderers() {
-        homeRenderer = HomeScreenRenderer(screenHost, viewFactory)
+        navigationRailRenderer = NavigationRailRenderer(railHost, viewFactory)
         searchRenderer = SearchScreenRenderer(this, screenHost, viewFactory)
         resultsRenderer = ResultsScreenRenderer(this, screenHost, viewFactory)
         detailsRenderer = DetailsScreenRenderer(screenHost, viewFactory)
@@ -211,14 +218,14 @@ class MainActivity : ComponentActivity() {
 
     private fun handleBackPress(): Boolean {
         return when (coordinator.currentState().destination) {
-            AppDestination.HOME -> false
-            AppDestination.SEARCH,
-            AppDestination.RESULTS,
-            AppDestination.SETTINGS -> {
-                coordinator.openHome()
+            AppDestination.HOME -> {
+                coordinator.openSearch(coordinator.currentState().searchMode)
                 renderCurrentScreen()
                 true
             }
+            AppDestination.SEARCH,
+            AppDestination.RESULTS,
+            AppDestination.SETTINGS -> false
             AppDestination.DETAILS -> {
                 coordinator.showResults(
                     query = coordinator.currentState().query,
@@ -275,15 +282,18 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun renderCurrentScreen() {
-        if (coordinator.currentState().destination == AppDestination.PLAYER) {
+        val destination = coordinator.currentState().destination
+        if (destination == AppDestination.PLAYER) {
             showPlayerFullscreenShell()
         } else {
             showStandardShell()
         }
-        screenHost.removeAllViews()
-        when (coordinator.currentState().destination) {
-            AppDestination.HOME -> homeRenderer.render(
-                settingsLabel = settingsLabel(),
+
+        railHost.removeAllViews()
+        if (destination != AppDestination.PLAYER) {
+            navigationRailRenderer.render(
+                selectedMode = coordinator.currentState().searchMode,
+                inSettings = destination == AppDestination.SETTINGS,
                 onMovies = {
                     coordinator.openSearch(SearchMode.MOVIES)
                     renderCurrentScreen()
@@ -298,13 +308,15 @@ class MainActivity : ComponentActivity() {
                 },
                 onFirstFocusTarget = ::focusView
             )
+        }
+
+        screenHost.removeAllViews()
+        when (destination) {
+            AppDestination.HOME,
             AppDestination.SEARCH -> searchRenderer.render(
                 state = coordinator.currentState(),
                 onSearch = ::runSearch,
-                onBack = {
-                    coordinator.openHome()
-                    renderCurrentScreen()
-                },
+                onBack = {},
                 onFirstFocusTarget = ::focusView
             )
             AppDestination.RESULTS -> resultsRenderer.render(
@@ -386,7 +398,6 @@ class MainActivity : ComponentActivity() {
                 onFirstFocusTarget = ::focusView
             )
             AppDestination.PLAYER -> {
-                showPlayerFullscreenShell()
                 playerView.visibility = View.VISIBLE
                 detachPlayerFromParent()
                 playerRenderer.render(
@@ -394,7 +405,7 @@ class MainActivity : ComponentActivity() {
                     playbackMessage = latestPlaybackMessage,
                     playbackError = latestPlaybackError,
                     playerView = playerView,
-                    playbackControls = buildPlaybackControls()
+                    playbackControls = View(this)
                 )
             }
             AppDestination.SETTINGS -> settingsRenderer.render(
@@ -407,19 +418,11 @@ class MainActivity : ComponentActivity() {
                 onTogglePlaybackMode = ::toggleRenderMode,
                 onCopyDebugInfo = ::copyDebugInfoToClipboard,
                 onBackToHome = {
-                    coordinator.openHome()
+                    coordinator.openSearch(coordinator.currentState().searchMode)
                     renderCurrentScreen()
                 },
                 onFirstFocusTarget = ::focusView
             )
-        }
-    }
-
-    private fun settingsLabel(): String {
-        return if (authState.isLinked) {
-            "Settings / Accounts (RD linked)"
-        } else {
-            "Settings / Accounts (RD not linked)"
         }
     }
 
@@ -695,35 +698,8 @@ class MainActivity : ComponentActivity() {
     private fun showStandardShell() {
         root.orientation = LinearLayout.HORIZONTAL
         sidebar.visibility = View.VISIBLE
-        sidebar.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.34f)
-        contentPane.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.66f)
-    }
-
-    private fun buildPlaybackControls(): View {
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            addView(Button(this@MainActivity).apply {
-                text = "Play"
-                setOnClickListener {
-                    AppContainer.playbackEngine.play()
-                    statusText.text = "Playback state: playing"
-                }
-            })
-            addView(Button(this@MainActivity).apply {
-                text = "Pause"
-                setOnClickListener {
-                    AppContainer.playbackEngine.pause()
-                    statusText.text = "Playback state: paused"
-                }
-            })
-            addView(Button(this@MainActivity).apply {
-                text = "Stop"
-                setOnClickListener {
-                    AppContainer.playbackEngine.stop()
-                    statusText.text = "Playback state: stopped"
-                }
-            })
-        }
+        sidebar.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.28f)
+        contentPane.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.72f)
     }
 
     private fun copyDebugInfoToClipboard() {
