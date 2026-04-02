@@ -14,6 +14,11 @@ class AppCoordinator(
 
     fun currentState(): AppState = state
 
+    fun restoreState(restoredState: AppState) {
+        state = restoredState
+        navigator.goTo(restoredState.destination)
+    }
+
     fun openHome() {
         state = state.copy(destination = AppDestination.HOME)
         navigator.goTo(AppDestination.HOME)
@@ -23,7 +28,6 @@ class AppCoordinator(
         state = state.copy(
             destination = AppDestination.SEARCH,
             searchMode = mode,
-            searchResults = emptyList(),
             selectedMedia = null,
             selectedDetails = null,
             selectedSeasonNumber = null,

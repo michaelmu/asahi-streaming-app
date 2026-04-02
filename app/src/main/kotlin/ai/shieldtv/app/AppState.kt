@@ -24,3 +24,21 @@ data class AppState(
     val selectedSource: SourceResult? = null,
     val selectedSources: List<SourceResult> = emptyList()
 )
+
+fun AppState.toBundleMap(): Map<String, String> = buildMap {
+    put("destination", destination.name)
+    put("searchMode", searchMode.name)
+    put("query", query)
+    selectedSeasonNumber?.let { put("selectedSeasonNumber", it.toString()) }
+    selectedEpisodeNumber?.let { put("selectedEpisodeNumber", it.toString()) }
+}
+
+fun appStateFromBundleMap(values: Map<String, String>): AppState {
+    return AppState(
+        destination = values["destination"]?.let { AppDestination.valueOf(it) } ?: AppDestination.HOME,
+        searchMode = values["searchMode"]?.let { SearchMode.valueOf(it) } ?: SearchMode.MOVIES,
+        query = values["query"] ?: "Dune",
+        selectedSeasonNumber = values["selectedSeasonNumber"]?.toIntOrNull(),
+        selectedEpisodeNumber = values["selectedEpisodeNumber"]?.toIntOrNull()
+    )
+}

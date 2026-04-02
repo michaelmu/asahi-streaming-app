@@ -115,8 +115,26 @@ class MainActivity : ComponentActivity() {
         attachPlayerView()
         observePlaybackState()
         refreshAuthState()
-        coordinator.openHome()
+        val restored = savedInstanceState?.getStringArrayList("appStateEntries")
+            ?.mapNotNull {
+                val parts = it.split('=', limit = 2)
+                if (parts.size == 2) parts[0] to parts[1] else null
+            }
+            ?.toMap()
+        if (restored != null) {
+            coordinator.restoreState(appStateFromBundleMap(restored))
+        } else {
+            coordinator.openHome()
+        }
         renderCurrentScreen()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        val entries = ArrayList(
+            coordinator.currentState().toBundleMap().map { (key, value) -> "$key=$value" }
+        )
+        outState.putStringArrayList("appStateEntries", entries)
     }
 
     override fun onDestroy() {
@@ -304,13 +322,21 @@ class MainActivity : ComponentActivity() {
                 inSettings = destination == AppDestination.SETTINGS,
                 onMovies = {
                     AppContainer.playbackEngine.stop()
-                    coordinator.openSearch(SearchMode.MOVIES)
-                    renderCurrentScreen()
+                    if (coordinator.currentState().searchMode == SearchMode.MOVIES && coordinator.currentState().destination == AppDestination.SEARCH) {
+                        renderCurrentScreen()
+                    } else {
+                        coordinator.openSearch(SearchMode.MOVIES)
+                        renderCurrentScreen()
+                    }
                 },
                 onShows = {
                     AppContainer.playbackEngine.stop()
-                    coordinator.openSearch(SearchMode.SHOWS)
-                    renderCurrentScreen()
+                    if (coordinator.currentState().searchMode == SearchMode.SHOWS && coordinator.currentState().destination == AppDestination.SEARCH) {
+                        renderCurrentScreen()
+                    } else {
+                        coordinator.openSearch(SearchMode.SHOWS)
+                        renderCurrentScreen()
+                    }
                 },
                 onSettings = {
                     AppContainer.playbackEngine.stop()
