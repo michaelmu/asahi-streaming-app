@@ -274,7 +274,8 @@ class MainActivity : ComponentActivity() {
                 onSettings = {
                     coordinator.openSettings()
                     renderCurrentScreen()
-                }
+                },
+                onFirstFocusTarget = ::focusView
             )
             AppDestination.SEARCH -> searchRenderer.render(
                 state = coordinator.currentState(),
@@ -282,7 +283,8 @@ class MainActivity : ComponentActivity() {
                 onBack = {
                     coordinator.openHome()
                     renderCurrentScreen()
-                }
+                },
+                onFirstFocusTarget = ::focusView
             )
             AppDestination.RESULTS -> resultsRenderer.render(
                 state = coordinator.currentState(),
@@ -310,7 +312,8 @@ class MainActivity : ComponentActivity() {
                     coordinator.currentState().selectedDetails?.let { details ->
                         loadSourcesFor(details.mediaRef, null, null)
                     }
-                }
+                },
+                onFirstFocusTarget = ::focusView
             )
             AppDestination.EPISODES -> episodesRenderer.render(
                 state = coordinator.currentState(),
@@ -373,7 +376,8 @@ class MainActivity : ComponentActivity() {
                 onStartLink = ::startRealDebridLink,
                 onPoll = ::pollRealDebridLink,
                 onTogglePlaybackMode = ::toggleRenderMode,
-                onCopyDebugInfo = ::copyDebugInfoToClipboard
+                onCopyDebugInfo = ::copyDebugInfoToClipboard,
+                onFirstFocusTarget = ::focusView
             )
         }
     }

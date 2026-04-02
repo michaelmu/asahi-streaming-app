@@ -21,10 +21,21 @@ class HomeScreenRenderer(
     private val host: LinearLayout,
     private val viewFactory: ScreenViewFactory
 ) {
-    fun render(settingsLabel: String, onMovies: () -> Unit, onShows: () -> Unit, onSettings: () -> Unit) {
+    fun render(
+        settingsLabel: String,
+        onMovies: () -> Unit,
+        onShows: () -> Unit,
+        onSettings: () -> Unit,
+        onFirstFocusTarget: (View) -> Unit = {}
+    ) {
         host.addView(viewFactory.title("Home"))
         host.addView(viewFactory.body("Start with a content mode, or open settings/accounts."))
-        host.addView(viewFactory.button("Movies", onMovies))
+        host.addView(Button(host.context).apply {
+            text = "Movies"
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
+            setOnClickListener { onMovies() }
+            post { onFirstFocusTarget(this) }
+        })
         host.addView(viewFactory.button("TV Shows", onShows))
         host.addView(viewFactory.button(settingsLabel, onSettings))
     }
@@ -35,7 +46,12 @@ class SearchScreenRenderer(
     private val host: LinearLayout,
     private val viewFactory: ScreenViewFactory
 ) {
-    fun render(state: AppState, onSearch: (SearchMode, String) -> Unit, onBack: () -> Unit) {
+    fun render(
+        state: AppState,
+        onSearch: (SearchMode, String) -> Unit,
+        onBack: () -> Unit,
+        onFirstFocusTarget: (View) -> Unit = {}
+    ) {
         host.addView(viewFactory.title("Search ${state.searchMode.label}"))
         host.addView(viewFactory.body("Enter a title to search ${state.searchMode.label.lowercase()}."))
 
@@ -50,6 +66,7 @@ class SearchScreenRenderer(
                 SearchMode.SHOWS -> "Search TV shows"
             }
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            post { onFirstFocusTarget(this) }
         }
         val searchButton = Button(activity).apply {
             text = "Search"
@@ -110,7 +127,12 @@ class DetailsScreenRenderer(
     private val host: LinearLayout,
     private val viewFactory: ScreenViewFactory
 ) {
-    fun render(state: AppState, onBrowseEpisodes: () -> Unit, onFindSources: () -> Unit) {
+    fun render(
+        state: AppState,
+        onBrowseEpisodes: () -> Unit,
+        onFindSources: () -> Unit,
+        onFirstFocusTarget: (View) -> Unit = {}
+    ) {
         val details = state.selectedDetails
         if (details == null) {
             host.addView(viewFactory.title("Details"))
@@ -135,9 +157,19 @@ class DetailsScreenRenderer(
         )
 
         if (details.mediaRef.mediaType == MediaType.SHOW) {
-            host.addView(viewFactory.button("Browse Episodes", onBrowseEpisodes))
+            host.addView(Button(host.context).apply {
+                text = "Browse Episodes"
+                gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                setOnClickListener { onBrowseEpisodes() }
+                post { onFirstFocusTarget(this) }
+            })
         } else {
-            host.addView(viewFactory.button("Find Sources", onFindSources))
+            host.addView(Button(host.context).apply {
+                text = "Find Sources"
+                gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                setOnClickListener { onFindSources() }
+                post { onFirstFocusTarget(this) }
+            })
         }
     }
 }
@@ -347,7 +379,8 @@ class SettingsScreenRenderer(
         onStartLink: () -> Unit,
         onPoll: (DeviceCodeFlow) -> Unit,
         onTogglePlaybackMode: () -> Unit,
-        onCopyDebugInfo: () -> Unit
+        onCopyDebugInfo: () -> Unit,
+        onFirstFocusTarget: (View) -> Unit = {}
     ) {
         host.addView(viewFactory.title("Settings / Accounts"))
         host.addView(
@@ -362,7 +395,19 @@ class SettingsScreenRenderer(
         host.addView(viewFactory.body("Playback mode: $playbackModeLabel"))
 
         if (!authState.isLinked) {
-            host.addView(viewFactory.button("Start Real-Debrid Link", onStartLink))
+            host.addView(Button(activity).apply {
+                text = "Start Real-Debrid Link"
+                gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                setOnClickListener { onStartLink() }
+                post { onFirstFocusTarget(this) }
+            })
+        } else {
+            host.addView(Button(activity).apply {
+                text = "Toggle Playback Mode"
+                gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                setOnClickListener { onTogglePlaybackMode() }
+                post { onFirstFocusTarget(this) }
+            })
         }
 
         activeDeviceFlow?.let { flow ->
@@ -385,7 +430,9 @@ class SettingsScreenRenderer(
             host.addView(viewFactory.body("Auth error: $it"))
         }
 
-        host.addView(viewFactory.button("Toggle Playback Mode", onTogglePlaybackMode))
+        if (!authState.isLinked) {
+            host.addView(viewFactory.button("Toggle Playback Mode", onTogglePlaybackMode))
+        }
         host.addView(viewFactory.button("Copy Debug Info", onCopyDebugInfo))
     }
 }
