@@ -398,6 +398,9 @@ class MainActivity : ComponentActivity() {
                     onRecentQuery = { recentQuery ->
                         runSearch(coordinator.currentState().searchMode, recentQuery)
                     },
+                    onContinueWatching = { item ->
+                        runSearch(coordinator.currentState().searchMode, item.queryHint)
+                    },
                     onFirstFocusTarget = ::focusView
                 )
             }
@@ -753,6 +756,18 @@ class MainActivity : ComponentActivity() {
             }
             setLoading(false, state.error ?: if (state.prepared) "Playback item prepared." else "Playback not prepared.")
             if (state.prepared) {
+                val progressPercent = when {
+                    latestPlaybackState.durationMs > 0 -> ((latestPlaybackState.positionMs * 100) / latestPlaybackState.durationMs).toInt()
+                    else -> 8
+                }
+                coordinator.recordContinueWatching(
+                    mediaRef = source.mediaRef,
+                    artworkUrl = coordinator.currentState().selectedDetails?.backdropUrl
+                        ?: coordinator.currentState().selectedDetails?.posterUrl,
+                    seasonNumber = seasonNumber,
+                    episodeNumber = episodeNumber,
+                    progressPercent = progressPercent
+                )
                 coordinator.showPlayer(source)
             }
             renderCurrentScreen()

@@ -7,6 +7,14 @@ import ai.shieldtv.app.core.model.media.TitleDetails
 import ai.shieldtv.app.core.model.source.SourceResult
 import ai.shieldtv.app.navigation.AppDestination
 
+data class ContinueWatchingItem(
+    val mediaTitle: String,
+    val subtitle: String,
+    val artworkUrl: String? = null,
+    val queryHint: String,
+    val progressPercent: Int = 0
+)
+
 enum class SearchMode(val mediaType: MediaType, val label: String) {
     MOVIES(MediaType.MOVIE, "Movies"),
     SHOWS(MediaType.SHOW, "TV Shows")
@@ -23,7 +31,8 @@ data class AppState(
     val selectedEpisodeNumber: Int? = null,
     val selectedSource: SourceResult? = null,
     val selectedSources: List<SourceResult> = emptyList(),
-    val recentQueries: List<String> = emptyList()
+    val recentQueries: List<String> = emptyList(),
+    val continueWatching: List<ContinueWatchingItem> = emptyList()
 )
 
 fun AppState.toBundleMap(): Map<String, String> = buildMap {
@@ -31,6 +40,18 @@ fun AppState.toBundleMap(): Map<String, String> = buildMap {
     put("searchMode", searchMode.name)
     put("query", query)
     put("recentQueries", recentQueries.joinToString("|"))
+    put(
+        "continueWatching",
+        continueWatching.joinToString("||") {
+            listOf(
+                it.mediaTitle,
+                it.subtitle,
+                it.artworkUrl.orEmpty(),
+                it.queryHint,
+                it.progressPercent.toString()
+            ).joinToString("::")
+        }
+    )
     selectedSeasonNumber?.let { put("selectedSeasonNumber", it.toString()) }
     selectedEpisodeNumber?.let { put("selectedEpisodeNumber", it.toString()) }
 }
@@ -46,6 +67,20 @@ fun appStateFromBundleMap(values: Map<String, String>): AppState {
             ?.split('|')
             ?.map { it.trim() }
             ?.filter { it.isNotEmpty() }
+            ?: emptyList(),
+        continueWatching = values["continueWatching"]
+            ?.split("||")
+            ?.mapNotNull { item ->
+                val parts = item.split("::")
+                if (parts.size < 5) return@mapNotNull null
+                ContinueWatchingItem(
+                    mediaTitle = parts[0],
+                    subtitle = parts[1],
+                    artworkUrl = parts[2].ifBlank { null },
+                    queryHint = parts[3],
+                    progressPercent = parts[4].toIntOrNull() ?: 0
+                )
+            }
             ?: emptyList()
     )
 }

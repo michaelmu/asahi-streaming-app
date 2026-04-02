@@ -14,6 +14,7 @@ import android.widget.TextView
 import androidx.core.view.setPadding
 import androidx.media3.ui.PlayerView
 import ai.shieldtv.app.AppState
+import ai.shieldtv.app.ContinueWatchingItem
 import ai.shieldtv.app.SearchMode
 import ai.shieldtv.app.core.model.auth.DeviceCodeFlow
 import ai.shieldtv.app.core.model.auth.RealDebridAuthState
@@ -131,6 +132,7 @@ class HomeScreenRenderer(
         onResumeSearch: (() -> Unit)?,
         onQuickPick: (SearchResult) -> Unit,
         onRecentQuery: (String) -> Unit,
+        onContinueWatching: (ContinueWatchingItem) -> Unit,
         onFirstFocusTarget: (View) -> Unit = {}
     ) {
         val libraryPicks = if (state.searchMode == SearchMode.SHOWS) featuredShows else featuredMovies
@@ -173,6 +175,13 @@ class HomeScreenRenderer(
         }
         host.addView(HorizontalScrollView(host.context).apply { addView(statusRow) })
         host.addView(viewFactory.spacer())
+
+        if (state.continueWatching.isNotEmpty()) {
+            host.addView(viewFactory.sectionTitle("Continue Watching"))
+            host.addView(viewFactory.spacer(12))
+            host.addView(buildContinueWatchingRow(state.continueWatching, onContinueWatching, onFirstFocusTarget))
+            host.addView(viewFactory.spacer())
+        }
 
         host.addView(viewFactory.sectionTitle("Quick Picks"))
         host.addView(viewFactory.spacer(12))
@@ -233,6 +242,44 @@ class HomeScreenRenderer(
             )
         }
         return listOfNotNull(selected).plus(fallback).distinctBy { it.mediaRef.title }.take(3)
+    }
+
+    private fun buildContinueWatchingRow(
+        items: List<ContinueWatchingItem>,
+        onContinueWatching: (ContinueWatchingItem) -> Unit,
+        onFirstFocusTarget: (View) -> Unit
+    ): View {
+        return LinearLayout(host.context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            items.forEachIndexed { index, item ->
+                val card = focusableCard(onClick = { onContinueWatching(item) }).apply {
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
+                        if (index > 0) it.marginStart = viewFactory.dp(12)
+                    }
+                }
+                card.addView(ImageView(host.context).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        viewFactory.dp(150)
+                    )
+                    scaleType = ImageView.ScaleType.CENTER_CROP
+                    item.artworkUrl?.takeIf { it.isNotBlank() }?.let { load(it) }
+                })
+                card.addView(viewFactory.spacer(10))
+                card.addView(TextView(host.context).apply {
+                    text = item.mediaTitle
+                    setTextColor(viewFactory.textPrimaryColor)
+                    textSize = 19f
+                    setTypeface(typeface, Typeface.BOLD)
+                })
+                card.addView(viewFactory.spacer(6))
+                card.addView(viewFactory.caption("${item.subtitle} • ${item.progressPercent}% watched"))
+                addView(card)
+                if (index == 0) {
+                    card.post { onFirstFocusTarget(card) }
+                }
+            }
+        }
     }
 
     private fun buildQuickPickRow(

@@ -1,6 +1,7 @@
 package ai.shieldtv.app
 
 import ai.shieldtv.app.core.model.media.MediaRef
+import ai.shieldtv.app.core.model.media.MediaType
 import ai.shieldtv.app.core.model.media.SearchResult
 import ai.shieldtv.app.core.model.media.TitleDetails
 import ai.shieldtv.app.core.model.source.SourceResult
@@ -111,5 +112,30 @@ class AppCoordinator(
     fun openSettings() {
         state = state.copy(destination = AppDestination.SETTINGS)
         navigator.goTo(AppDestination.SETTINGS)
+    }
+
+    fun recordContinueWatching(
+        mediaRef: MediaRef,
+        artworkUrl: String?,
+        seasonNumber: Int?,
+        episodeNumber: Int?,
+        progressPercent: Int
+    ) {
+        val subtitle = if (mediaRef.mediaType == MediaType.SHOW && seasonNumber != null && episodeNumber != null) {
+            "S${seasonNumber.toString().padStart(2, '0')}E${episodeNumber.toString().padStart(2, '0')}"
+        } else {
+            mediaRef.year?.toString() ?: mediaRef.mediaType.name.lowercase().replaceFirstChar { it.uppercase() }
+        }
+        val item = ContinueWatchingItem(
+            mediaTitle = mediaRef.title,
+            subtitle = subtitle,
+            artworkUrl = artworkUrl,
+            queryHint = mediaRef.title,
+            progressPercent = progressPercent.coerceIn(0, 100)
+        )
+        state = state.copy(
+            continueWatching = (listOf(item) + state.continueWatching.filterNot { it.mediaTitle == item.mediaTitle && it.subtitle == item.subtitle })
+                .take(6)
+        )
     }
 }
