@@ -23,6 +23,13 @@ Asahi has now validated the core playback path:
 
 That means the UI can now stop acting like a single debugging harness.
 
+Recent review of Stremio's UI structure reinforces this direction:
+- content-first landing flow
+- clear separation between search, results, details, sources, and player
+- player treated as its own screen/world
+- account/settings separated from core browsing flow
+- source selection presented as a chooser rather than a debugging panel
+
 ### Current UI problems
 
 The current `MainActivity` is trying to be all of these at once:
@@ -56,6 +63,11 @@ Responsibilities:
 - top-level navigation
 - choose content mode
 - later: continue watching / recent / settings
+
+Stremio-inspired direction:
+- the landing page should be content-first, not tool-first
+- auth/debug/settings should not dominate the initial experience
+- the page should feel like the start of a media app, not a combined setup panel
 
 Initial entries:
 - Movies
@@ -121,6 +133,11 @@ Responsibilities:
 - let user choose source
 - optionally provide compatibility hints later
 
+Stremio-inspired direction:
+- this page should read as a clear chooser, not a raw diagnostics log
+- concise, decision-useful information should come first
+- deep/raw debug info should remain available, but not dominate the row layout
+
 This page should stop looking like a debug panel and start looking like a chooser.
 
 ### Full-Screen Player
@@ -131,6 +148,11 @@ Responsibilities:
 - controls overlay on top
 - clean back behavior
 - minimal but clear playback state
+
+Stremio-inspired direction:
+- entering playback should feel like entering a separate playback mode/world
+- browsing UI should get out of the way
+- player should not remain embedded inside a giant page layout
 
 Back behavior should return to:
 - source selection page
@@ -164,6 +186,8 @@ Home
 ## Auth / Settings Placement
 
 Real-Debrid auth should not live permanently in the middle of the content browsing flow.
+
+This is one of the clearest lessons from Stremio's structure: content browsing and account/configuration should feel separate.
 
 ### Recommended placement
 
@@ -338,6 +362,39 @@ This gives the biggest UX improvement with the least risk because:
 
 ---
 
+## Stremio-Inspired UX Principles
+
+The main lessons worth borrowing from Stremio are about information architecture rather than visual mimicry.
+
+### 1. Content-first home
+The app should open into a media-first landing experience, not a diagnostics/setup wall.
+
+### 2. Distinct stage-based navigation
+The user should move through clearly separated stages:
+- search
+- results
+- details
+- sources
+- player
+
+### 3. Player as a separate mode
+Playback should take over the experience rather than living inline with search/results/details.
+
+### 4. Source selection should optimize choice clarity
+A source row should quickly answer:
+- what quality is this?
+- is it cached?
+- roughly how large is it?
+- is it likely to work well?
+
+### 5. Debug should exist, but not dominate
+Debug visibility remains important for Asahi, but should increasingly move into:
+- settings/debug page
+- copy-debug actions
+- optional expanded details
+
+rather than permanently occupying the main browsing flow.
+
 ## Screen-Specific Notes
 
 ## Home page
@@ -372,6 +429,9 @@ Potential layout:
 - simple vertical list first
 - grid later
 
+Stremio-inspired note:
+- results should feel like a dedicated browsing stage, not a transient section inside a much larger page
+
 ## Details page
 
 Should include:
@@ -391,6 +451,10 @@ Suggested default presentation:
 - size
 - provider name
 - maybe a compatibility hint later
+
+Stremio-inspired note:
+- source rows should present the minimum useful decision information first
+- raw metadata should be secondary/expandable/copyable, not always-on noise
 
 Keep detailed raw diagnostics off the main row by default.
 Use debug copy path instead.
@@ -445,6 +509,13 @@ Proceed with:
    - Sources
 4. make player full-screen early
 5. move auth/settings/debug to their own area shortly after
+
+This aligns with the most valuable lessons taken from Stremio:
+- content-first entry flow
+- clean stage boundaries
+- separate player world
+- concise source chooser
+- configuration separated from browsing
 
 That gives the best balance of:
 - keeping momentum
