@@ -19,6 +19,7 @@ import ai.shieldtv.app.core.model.auth.RealDebridAuthState
 import ai.shieldtv.app.core.model.media.EpisodeSummary
 import ai.shieldtv.app.core.model.media.MediaType
 import ai.shieldtv.app.core.model.source.CacheStatus
+import ai.shieldtv.app.core.model.source.Quality
 import ai.shieldtv.app.core.model.source.SourceResult
 import coil.load
 
@@ -71,9 +72,11 @@ class HomeScreenRenderer(
         onResumeSearch: (() -> Unit)?,
         onFirstFocusTarget: (View) -> Unit = {}
     ) {
-        host.addView(viewFactory.heroCard(
+        host.addView(viewFactory.artworkHero(
             title = "Asahi",
-            subtitle = "A cleaner TV-first shell: browse, inspect, choose a source, then let playback take over the room."
+            subtitle = "A cleaner TV-first shell: browse, inspect, choose a source, then let playback take over the room.",
+            imageUrl = null,
+            imageHeightDp = 300
         ))
         host.addView(viewFactory.spacer())
 
@@ -107,16 +110,22 @@ class HomeScreenRenderer(
         host.addView(HorizontalScrollView(host.context).apply { addView(statusRow) })
         host.addView(viewFactory.spacer())
 
-        host.addView(viewFactory.panel(elevated = true).apply {
+        val lowerRow = LinearLayout(host.context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.TOP
+        }
+        val leftPanel = viewFactory.panel(elevated = true).apply {
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.1f)
             addView(viewFactory.sectionTitle("What’s Ready"))
             addView(viewFactory.spacer(12))
             addView(viewFactory.body(statusMessage))
             addView(viewFactory.spacer(12))
             addView(viewFactory.caption("TMDb metadata, Torrentio source lookup, Real-Debrid auth/resolve, and Media3 playback are all in the loop."))
-        })
-        host.addView(viewFactory.spacer())
-
-        host.addView(viewFactory.panel(elevated = false).apply {
+        }
+        val rightPanel = viewFactory.panel(elevated = false).apply {
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.9f).also {
+                it.marginStart = viewFactory.dp(14)
+            }
             addView(viewFactory.sectionTitle("Suggested Next Step"))
             addView(viewFactory.spacer(12))
             addView(viewFactory.body(
@@ -130,7 +139,10 @@ class HomeScreenRenderer(
                 addView(viewFactory.spacer(16))
                 addView(viewFactory.button("Resume Last Flow", it))
             }
-        })
+        }
+        lowerRow.addView(leftPanel)
+        lowerRow.addView(rightPanel)
+        host.addView(lowerRow)
 
         moviesButton.post { onFirstFocusTarget(moviesButton) }
     }
@@ -224,10 +236,22 @@ class ResultsScreenRenderer(
         onNewSearch: () -> Unit,
         onFirstFocusTarget: (View) -> Unit = {}
     ) {
-        host.addView(viewFactory.heroCard(
-            title = "Results for \"${state.query}\"",
-            subtitle = "${state.searchResults.size} match(es) across ${state.searchMode.label.lowercase()}. Pick a title to drill into details."
-        ))
+        val featuredPrimary = state.searchResults.firstOrNull()
+        host.addView(
+            if (featuredPrimary != null) {
+                viewFactory.artworkHero(
+                    title = featuredPrimary.mediaRef.title,
+                    subtitle = featuredPrimary.subtitle?.take(180) ?: "Top search hit for \"${state.query}\".",
+                    imageUrl = featuredPrimary.backdropUrl ?: featuredPrimary.posterUrl,
+                    imageHeightDp = 300
+                )
+            } else {
+                viewFactory.heroCard(
+                    title = "Results for \"${state.query}\"",
+                    subtitle = "${state.searchResults.size} match(es) across ${state.searchMode.label.lowercase()}."
+                )
+            }
+        )
         host.addView(viewFactory.spacer())
 
         if (state.searchResults.isEmpty()) {
@@ -259,6 +283,19 @@ class ResultsScreenRenderer(
                     view.scaleY = if (hasFocus) 1.02f else 1f
                 }
             }
+            val poster = ImageView(activity).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    viewFactory.dp(180)
+                )
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                result.backdropUrl?.takeIf { it.isNotBlank() }
+                    ?: result.posterUrl?.takeIf { it.isNotBlank() }
+            }.also { image ->
+                (result.backdropUrl ?: result.posterUrl)?.takeIf { it.isNotBlank() }?.let { image.load(it) }
+            }
+            featuredCard.addView(poster)
+            featuredCard.addView(viewFactory.spacer(12))
             featuredCard.addView(TextView(activity).apply {
                 text = result.mediaRef.title
                 setTextColor(viewFactory.textPrimaryColor)
@@ -272,6 +309,10 @@ class ResultsScreenRenderer(
                     result.mediaRef.year?.let {
                         append(" • ")
                         append(it)
+                    }
+                    if (result.badges.isNotEmpty()) {
+                        append(" • ")
+                        append(result.badges.take(2).joinToString())
                     }
                 }
             ))
@@ -359,10 +400,11 @@ class DetailsScreenRenderer(
             return
         }
 
-        host.addView(viewFactory.heroCard(
+        host.addView(viewFactory.artworkHero(
             title = details.mediaRef.title,
-            subtitle = details.overview?.take(180)
-                ?: "No overview yet."
+            subtitle = details.overview?.take(180) ?: "No overview yet.",
+            imageUrl = details.backdropUrl ?: details.posterUrl,
+            imageHeightDp = 320
         ))
         host.addView(viewFactory.spacer())
 
@@ -372,14 +414,15 @@ class DetailsScreenRenderer(
         }
         val posterPanel = viewFactory.panel(elevated = true).apply {
             layoutParams = LinearLayout.LayoutParams(viewFactory.dp(250), LinearLayout.LayoutParams.WRAP_CONTENT)
-            addView(TextView(host.context).apply {
-                text = details.mediaRef.title.take(1).uppercase()
-                gravity = Gravity.CENTER
-                minHeight = viewFactory.dp(320)
-                setTextColor(viewFactory.textMutedColor)
-                textSize = 96f
-                setTypeface(typeface, Typeface.BOLD)
-            })
+            val poster = ImageView(host.context).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    viewFactory.dp(360)
+                )
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                details.posterUrl?.takeIf { it.isNotBlank() }?.let { load(it) }
+            }
+            addView(poster)
         }
         val infoPanel = LinearLayout(host.context).apply {
             orientation = LinearLayout.VERTICAL
@@ -463,9 +506,11 @@ class EpisodePickerScreenRenderer(
         val selectedEpisode = state.selectedEpisodeNumber ?: 1
         val knownSeasonCount = (details.seasonCount ?: 3).coerceAtMost(12)
 
-        host.addView(viewFactory.heroCard(
+        host.addView(viewFactory.artworkHero(
             title = details.mediaRef.title,
-            subtitle = "Season $selectedSeason · Episode $selectedEpisode — closer to Stremio than the old one-page scroll monster."
+            subtitle = "Season $selectedSeason · Episode $selectedEpisode — closer to Stremio than the old one-page scroll monster.",
+            imageUrl = details.backdropUrl ?: details.posterUrl,
+            imageHeightDp = 280
         ))
         host.addView(viewFactory.spacer())
 
@@ -621,7 +666,7 @@ class SourcesScreenRenderer(
                     setTypeface(typeface, Typeface.BOLD)
                 })
                 pickCard.addView(viewFactory.spacer(8))
-                pickCard.addView(viewFactory.caption("${source.quality} • ${source.cacheStatus}"))
+                pickCard.addView(viewFactory.caption(bestSourceBadge(source)))
                 source.sizeLabel?.let {
                     pickCard.addView(viewFactory.spacer(8))
                     pickCard.addView(viewFactory.body(it))
@@ -648,24 +693,36 @@ class SourcesScreenRenderer(
                 }
             }
 
-            card.addView(TextView(host.context).apply {
-                text = source.displayName.lineSequence().firstOrNull()?.take(72) ?: source.displayName.take(72)
+            val headRow = LinearLayout(host.context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            headRow.addView(TextView(host.context).apply {
+                text = source.displayName.lineSequence().firstOrNull()?.take(52) ?: source.displayName.take(52)
                 setTextColor(viewFactory.textPrimaryColor)
                 textSize = 21f
                 setTypeface(typeface, Typeface.BOLD)
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             })
+            headRow.addView(TextView(host.context).apply {
+                text = sourceLabel(source)
+                setTextColor(viewFactory.accentAltColor)
+                textSize = 14f
+                setTypeface(typeface, Typeface.BOLD)
+            })
+            card.addView(headRow)
             card.addView(viewFactory.spacer(8))
 
             val pillRow = LinearLayout(host.context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.START
             }
-            pillRow.addView(viewFactory.statPill("Quality", source.quality.name, StatTone.ACCENT))
+            pillRow.addView(viewFactory.statPill("Quality", qualityLabel(source.quality), StatTone.ACCENT))
             pillRow.addView(statSpacer())
             pillRow.addView(
                 viewFactory.statPill(
                     "Cache",
-                    source.cacheStatus.name.lowercase(),
+                    cacheLabel(source.cacheStatus),
                     when (source.cacheStatus) {
                         CacheStatus.CACHED -> StatTone.SUCCESS
                         CacheStatus.UNCACHED -> StatTone.WARNING
@@ -697,6 +754,41 @@ class SourcesScreenRenderer(
             host.addView(card)
             host.addView(viewFactory.spacer(12))
         }
+    }
+
+    private fun bestSourceBadge(source: SourceResult): String {
+        return listOfNotNull(
+            qualityLabel(source.quality),
+            cacheLabel(source.cacheStatus),
+            source.sizeLabel
+        ).joinToString(" • ")
+    }
+
+    private fun sourceLabel(source: SourceResult): String {
+        return when {
+            source.cacheStatus == CacheStatus.CACHED && source.quality == Quality.UHD_4K -> "BEST"
+            source.cacheStatus == CacheStatus.CACHED -> "CACHED"
+            source.cacheStatus == CacheStatus.DIRECT -> "DIRECT"
+            else -> "ALT"
+        }
+    }
+
+    private fun qualityLabel(quality: Quality): String = when (quality) {
+        Quality.UHD_4K -> "4K"
+        Quality.FHD_1080P -> "1080p"
+        Quality.HD_720P -> "720p"
+        Quality.SD -> "SD"
+        Quality.SCR -> "SCR"
+        Quality.CAM -> "CAM"
+        Quality.TELE -> "TELE"
+        Quality.UNKNOWN -> "Unknown"
+    }
+
+    private fun cacheLabel(cacheStatus: CacheStatus): String = when (cacheStatus) {
+        CacheStatus.CACHED -> "Cached"
+        CacheStatus.UNCACHED -> "Uncached"
+        CacheStatus.UNCHECKED -> "Unchecked"
+        CacheStatus.DIRECT -> "Direct"
     }
 
     private fun statSpacer(): View = View(host.context).apply {

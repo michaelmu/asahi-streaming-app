@@ -8,8 +8,11 @@ import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import coil.load
 import ai.shieldtv.app.R
 
 class ScreenViewFactory(
@@ -69,6 +72,58 @@ class ScreenViewFactory(
             addView(pageTitle(title))
             addView(spacer(10))
             addView(body(subtitle))
+        }
+    }
+
+    fun artworkHero(
+        title: String,
+        subtitle: String,
+        imageUrl: String? = null,
+        imageHeightDp: Int = 260
+    ): FrameLayout {
+        return FrameLayout(context).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(imageHeightDp)
+            )
+            background = ContextCompat.getDrawable(context, R.drawable.asahi_panel_elevated_bg)
+
+            val image = ImageView(context).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                )
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                alpha = 0.42f
+                imageUrl?.takeIf { it.isNotBlank() }?.let { load(it) }
+            }
+
+            val scrim = View(context).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                )
+                setBackgroundColor(color(R.color.asahi_scrim))
+            }
+
+            val content = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    Gravity.BOTTOM
+                )
+                setPadding(dp(24), dp(24), dp(24), dp(24))
+                addView(sectionTitle("Featured"))
+                addView(spacer(10))
+                addView(pageTitle(title))
+                addView(spacer(10))
+                addView(body(subtitle))
+            }
+
+            addView(image)
+            addView(scrim)
+            addView(content)
         }
     }
 
