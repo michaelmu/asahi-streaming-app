@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
@@ -38,6 +39,7 @@ import ai.shieldtv.app.feature.sources.presentation.SourcesPresenter
 import ai.shieldtv.app.feature.sources.presentation.SourcesViewModel
 import ai.shieldtv.app.integration.playback.media3.engine.Media3PlaybackEngine
 import ai.shieldtv.app.integration.playback.media3.engine.Media3PlaybackEngine.RenderMode
+import ai.shieldtv.app.navigation.AppDestination
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -63,23 +65,14 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    private val coordinator = AppCoordinator()
+
+    private lateinit var root: LinearLayout
     private lateinit var statusText: TextView
     private lateinit var loadingView: ProgressBar
-    private lateinit var queryInput: EditText
-    private lateinit var authContainer: LinearLayout
-    private lateinit var resultsContainer: LinearLayout
-    private lateinit var detailsContainer: LinearLayout
-    private lateinit var episodeSelectionContainer: LinearLayout
-    private lateinit var sourcesContainer: LinearLayout
-    private lateinit var playbackContainer: LinearLayout
-    private lateinit var playbackControlsContainer: LinearLayout
-    private lateinit var playerHostContainer: LinearLayout
+    private lateinit var screenHost: LinearLayout
     private lateinit var playerView: PlayerView
 
-    private var selectedMediaRef: MediaRef? = null
-    private var selectedSeasonNumber: Int? = null
-    private var selectedEpisodeNumber: Int? = null
-    private var selectedTitleDetails: TitleDetails? = null
     private var authState: RealDebridAuthState = RealDebridAuthState(isLinked = false)
     private var activeDeviceFlow: DeviceCodeFlow? = null
     private var authPollingJob: Job? = null
@@ -89,14 +82,18 @@ class MainActivity : ComponentActivity() {
         positionMs = 0,
         durationMs = 0
     )
+    private var latestSourceDiagnostics: String? = null
+    private var latestSourcesError: String? = null
+    private var latestPlaybackMessage: String? = null
+    private var latestPlaybackError: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(buildContentView())
         attachPlayerView()
         observePlaybackState()
-        refreshAuthPanel()
-        runInitialSearch()
+        refreshAuthState()
+        renderCurrentScreen()
     }
 
     override fun onDestroy() {
@@ -105,8 +102,15 @@ class MainActivity : ComponentActivity() {
         AppContainer.playbackEngine.release()
     }
 
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_BACK && handleBackPress()) {
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
     private fun buildContentView(): View {
-        val root = LinearLayout(this).apply {
+        root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(48, 32, 48, 32)
         }
@@ -116,28 +120,12 @@ class MainActivity : ComponentActivity() {
             textSize = 28f
         }
         val subtitle = TextView(this).apply {
-            text = "Minimal in-app search → details → sources → playback flow"
+            text = "Page-based in-app search → details → sources → playback flow"
             textSize = 16f
         }
         val buildInfo = TextView(this).apply {
-            text = "${ai.shieldtv.app.BuildConfig.VERSION_NAME} (${ai.shieldtv.app.BuildConfig.VERSION_CODE}) · ${ai.shieldtv.app.BuildConfig.GIT_SHA}"
+            text = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) · ${BuildConfig.GIT_SHA}"
             textSize = 14f
-        }
-
-        val searchRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-
-        queryInput = EditText(this).apply {
-            setText("Dune")
-            hint = "Search title"
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        }
-
-        val searchButton = Button(this).apply {
-            text = "Search"
-            setOnClickListener { runSearch(queryInput.text.toString()) }
         }
 
         loadingView = ProgressBar(this).apply {
@@ -149,59 +137,21 @@ class MainActivity : ComponentActivity() {
             textSize = 15f
         }
 
-        authContainer = verticalSection("Real-Debrid")
-        resultsContainer = verticalSection("Search Results")
-        detailsContainer = verticalSection("Details")
-        episodeSelectionContainer = verticalSection("Episode Selection")
-        episodeSelectionContainer.visibility = View.GONE
-        sourcesContainer = verticalSection("Sources")
-        playbackContainer = verticalSection("Playback")
-        playbackControlsContainer = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-        }
-        playerHostContainer = LinearLayout(this).apply {
+        screenHost = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
         }
-        playerView = createPlayerView()
-
-        searchRow.addView(queryInput)
-        searchRow.addView(searchButton)
 
         root.addView(title)
         root.addView(subtitle)
         root.addView(buildInfo)
         root.addView(space())
-        root.addView(searchRow)
-        root.addView(space())
         root.addView(loadingView)
         root.addView(statusText)
         root.addView(space())
-
-        val scrollContent = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            addView(authContainer)
-            addView(space())
-            addView(resultsContainer)
-            addView(space())
-            addView(detailsContainer)
-            addView(space())
-            addView(episodeSelectionContainer)
-            addView(space())
-            addView(sourcesContainer)
-            addView(space())
-            addView(playbackContainer)
-            addView(space())
-            addView(playbackControlsContainer)
-            addView(space())
-            addView(playerHostContainer)
-        }
-
-        val scrollView = ScrollView(this).apply {
-            addView(scrollContent)
-        }
-
         root.addView(
-            scrollView,
+            ScrollView(this).apply {
+                addView(screenHost)
+            },
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 0,
@@ -225,85 +175,523 @@ class MainActivity : ComponentActivity() {
 
     private fun attachPlayerView() {
         val engine = AppContainer.playbackEngine as? Media3PlaybackEngine ?: return
-        playerHostContainer.removeAllViews()
         playerView = createPlayerView().apply {
             player = engine.attach(this@MainActivity)
         }
-        playerHostContainer.addView(playerView)
     }
 
-    private fun verticalSection(title: String): LinearLayout {
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            addView(TextView(context).apply {
-                text = title
-                textSize = 20f
-            })
+    private fun handleBackPress(): Boolean {
+        return when (coordinator.currentState().destination) {
+            AppDestination.HOME -> false
+            AppDestination.SEARCH,
+            AppDestination.RESULTS,
+            AppDestination.SETTINGS -> {
+                coordinator.openHome()
+                renderCurrentScreen()
+                true
+            }
+            AppDestination.DETAILS -> {
+                coordinator.showResults(
+                    query = coordinator.currentState().query,
+                    results = coordinator.currentState().searchResults
+                )
+                renderCurrentScreen()
+                true
+            }
+            AppDestination.EPISODES -> {
+                coordinator.currentState().selectedDetails?.let {
+                    coordinator.showDetails(it.mediaRef, it)
+                    renderCurrentScreen()
+                    true
+                } ?: false
+            }
+            AppDestination.SOURCES -> {
+                val state = coordinator.currentState()
+                val details = state.selectedDetails
+                if (details != null && details.mediaRef.mediaType == MediaType.SHOW) {
+                    coordinator.showEpisodes(details, state.selectedSeasonNumber, state.selectedEpisodeNumber)
+                } else if (details != null) {
+                    coordinator.showDetails(details.mediaRef, details)
+                } else {
+                    coordinator.showResults(state.query, state.searchResults)
+                }
+                renderCurrentScreen()
+                true
+            }
+            AppDestination.PLAYER -> {
+                coordinator.currentState().selectedMedia?.let { mediaRef ->
+                    coordinator.showSources(
+                        mediaRef = mediaRef,
+                        details = coordinator.currentState().selectedDetails,
+                        seasonNumber = coordinator.currentState().selectedSeasonNumber,
+                        episodeNumber = coordinator.currentState().selectedEpisodeNumber,
+                        sources = coordinator.currentState().selectedSources
+                    )
+                    renderCurrentScreen()
+                    true
+                } ?: false
+            }
         }
     }
 
-    private fun refreshAuthPanel() {
+    private fun refreshAuthState() {
         lifecycleScope.launch {
             authState = AppContainer.getRealDebridAuthStateUseCase()
-            renderAuthPanel()
+            renderCurrentScreen()
         }
     }
 
-    private fun renderAuthPanel() {
-        clearSection(authContainer)
+    private fun refreshAuthUiOnly() {
+        renderCurrentScreen()
+    }
 
-        appendBody(
-            authContainer,
-            if (authState.isLinked) {
-                "Real-Debrid linked${authState.username?.let { " as $it" } ?: ""}."
-            } else {
-                "Real-Debrid not linked. Magnet/debrid playback will fail until you link it."
+    private fun renderCurrentScreen() {
+        screenHost.removeAllViews()
+        when (coordinator.currentState().destination) {
+            AppDestination.HOME -> renderHomeScreen()
+            AppDestination.SEARCH -> renderSearchScreen()
+            AppDestination.RESULTS -> renderResultsScreen()
+            AppDestination.DETAILS -> renderDetailsScreen()
+            AppDestination.EPISODES -> renderEpisodesScreen()
+            AppDestination.SOURCES -> renderSourcesScreen()
+            AppDestination.PLAYER -> renderPlayerScreen()
+            AppDestination.SETTINGS -> renderSettingsScreen()
+        }
+    }
+
+    private fun renderHomeScreen() {
+        screenHost.addView(screenTitle("Home"))
+        screenHost.addView(bodyText("Start with a content mode, or open settings/accounts."))
+        screenHost.addView(primaryButton("Movies") {
+            coordinator.openSearch(SearchMode.MOVIES)
+            renderCurrentScreen()
+        })
+        screenHost.addView(primaryButton("TV Shows") {
+            coordinator.openSearch(SearchMode.SHOWS)
+            renderCurrentScreen()
+        })
+        screenHost.addView(primaryButton(settingsLabel()) {
+            coordinator.openSettings()
+            renderCurrentScreen()
+        })
+    }
+
+    private fun renderSearchScreen() {
+        val state = coordinator.currentState()
+        screenHost.addView(screenTitle("Search ${state.searchMode.label}"))
+        screenHost.addView(bodyText("Enter a title to search ${state.searchMode.label.lowercase()}."))
+
+        val searchRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val queryInput = EditText(this).apply {
+            setText(state.query)
+            hint = when (state.searchMode) {
+                SearchMode.MOVIES -> "Search movies"
+                SearchMode.SHOWS -> "Search TV shows"
             }
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        val searchButton = Button(this).apply {
+            text = "Search"
+            setOnClickListener { runSearch(state.searchMode, queryInput.text.toString()) }
+        }
+        searchRow.addView(queryInput)
+        searchRow.addView(searchButton)
+
+        screenHost.addView(searchRow)
+        screenHost.addView(space())
+        screenHost.addView(primaryButton("Back to Home") {
+            coordinator.openHome()
+            renderCurrentScreen()
+        })
+    }
+
+    private fun renderResultsScreen() {
+        val state = coordinator.currentState()
+        screenHost.addView(screenTitle("Results"))
+        screenHost.addView(bodyText("Query: ${state.query}"))
+
+        if (state.searchResults.isEmpty()) {
+            screenHost.addView(bodyText(latestSourcesError ?: "No results."))
+        } else {
+            state.searchResults.take(20).forEach { result ->
+                screenHost.addView(Button(this).apply {
+                    text = buildString {
+                        append(result.mediaRef.title)
+                        result.mediaRef.year?.let { append(" ($it)") }
+                        result.subtitle?.takeIf { it.isNotBlank() }?.let {
+                            append(" — ")
+                            append(it)
+                        }
+                    }
+                    gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                    setOnClickListener { onSearchResultSelected(result) }
+                })
+            }
+        }
+
+        screenHost.addView(space())
+        screenHost.addView(primaryButton("New Search") {
+            coordinator.openSearch(state.searchMode)
+            renderCurrentScreen()
+        })
+    }
+
+    private fun renderDetailsScreen() {
+        val details = coordinator.currentState().selectedDetails
+        if (details == null) {
+            screenHost.addView(screenTitle("Details"))
+            screenHost.addView(bodyText("No details loaded."))
+            return
+        }
+
+        screenHost.addView(screenTitle(details.mediaRef.title))
+        screenHost.addView(
+            bodyText(
+                buildString {
+                    appendLine("Type: ${details.mediaRef.mediaType}")
+                    details.mediaRef.year?.let { appendLine("Year: $it") }
+                    if (details.genres.isNotEmpty()) appendLine("Genres: ${details.genres.joinToString()}")
+                    details.runtimeMinutes?.let { appendLine("Runtime: ${it}m") }
+                    details.seasonCount?.let { appendLine("Seasons: $it") }
+                    details.episodeCount?.let { appendLine("Episodes: $it") }
+                    appendLine()
+                    append(details.overview ?: "No overview yet.")
+                }
+            )
         )
 
-        if (!authState.isLinked) {
-            authContainer.addView(Button(this).apply {
-                text = "Start Real-Debrid Link"
-                setOnClickListener { startRealDebridLink() }
+        if (details.mediaRef.mediaType == MediaType.SHOW) {
+            screenHost.addView(primaryButton("Browse Episodes") {
+                coordinator.showEpisodes(
+                    details = details,
+                    seasonNumber = coordinator.currentState().selectedSeasonNumber ?: 1,
+                    episodeNumber = coordinator.currentState().selectedEpisodeNumber ?: 1
+                )
+                renderCurrentScreen()
+            })
+        } else {
+            screenHost.addView(primaryButton("Find Sources") {
+                loadSourcesFor(details.mediaRef, null, null)
+            })
+        }
+    }
+
+    private fun renderEpisodesScreen() {
+        val state = coordinator.currentState()
+        val details = state.selectedDetails
+        if (details == null) {
+            screenHost.addView(screenTitle("Episodes"))
+            screenHost.addView(bodyText("No show loaded."))
+            return
+        }
+
+        screenHost.addView(screenTitle("${details.mediaRef.title} Episodes"))
+        screenHost.addView(bodyText("Pick a season and episode, then load sources."))
+
+        val knownSeasonCount = (details.seasonCount ?: 3).coerceAtMost(12)
+        val selectedSeason = state.selectedSeasonNumber ?: 1
+        val selectedEpisode = state.selectedEpisodeNumber ?: 1
+
+        val seasonStrip = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        (1..knownSeasonCount).forEach { season ->
+            seasonStrip.addView(Button(this).apply {
+                text = if (season == selectedSeason) {
+                    "• S${season.toString().padStart(2, '0')}"
+                } else {
+                    "S${season.toString().padStart(2, '0')}"
+                }
+                setOnClickListener {
+                    coordinator.showEpisodes(details, season, 1)
+                    renderCurrentScreen()
+                }
+            })
+        }
+        screenHost.addView(HorizontalScrollView(this).apply { addView(seasonStrip) })
+
+        val realEpisodes = details.episodesBySeason[selectedSeason].orEmpty()
+        val episodeChoices = if (realEpisodes.isNotEmpty()) {
+            realEpisodes.take(20)
+        } else {
+            (1..12).map { episode ->
+                EpisodeSummary(
+                    seasonNumber = selectedSeason,
+                    episodeNumber = episode,
+                    title = "Episode $episode"
+                )
+            }
+        }
+
+        episodeChoices.forEach { episode ->
+            val isSelected = selectedEpisode == episode.episodeNumber
+            screenHost.addView(Button(this).apply {
+                text = buildString {
+                    if (isSelected) append("• ")
+                    append("E")
+                    append(episode.episodeNumber.toString().padStart(2, '0'))
+                    episode.title?.takeIf { it.isNotBlank() }?.let {
+                        append(" — ")
+                        append(it.take(48))
+                    }
+                    episode.airDate?.let {
+                        append(" [")
+                        append(it)
+                        append("]")
+                    }
+                    episode.overview?.takeIf { it.isNotBlank() }?.let {
+                        append("\n")
+                        append(it.take(140))
+                        if (it.length > 140) append("…")
+                    }
+                }
+                gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                setOnClickListener {
+                    coordinator.showEpisodes(details, selectedSeason, episode.episodeNumber)
+                    renderCurrentScreen()
+                }
             })
         }
 
-
-        appendBody(
-            authContainer,
-            buildString {
-                append("Playback mode: ")
-                append(currentRenderModeLabel())
-            }
-        )
-        authContainer.addView(Button(this).apply {
-            text = "Copy Debug Info"
-            setOnClickListener { copyDebugInfoToClipboard() }
+        screenHost.addView(space())
+        screenHost.addView(primaryButton("Find Sources for S${selectedSeason.toString().padStart(2, '0')}E${selectedEpisode.toString().padStart(2, '0')}") {
+            loadSourcesFor(details.mediaRef, selectedSeason, selectedEpisode)
         })
+    }
 
-        activeDeviceFlow?.let { flow ->
-            appendBody(
-                authContainer,
-                buildString {
-                    appendLine("Open: ${flow.verificationUrl}")
-                    appendLine("Code: ${flow.userCode}")
-                    append("Polling starts automatically for up to 2 minutes after you begin linking.")
+    private fun renderSourcesScreen() {
+        val state = coordinator.currentState()
+        val mediaRef = state.selectedMedia
+        screenHost.addView(screenTitle("Sources"))
+        if (mediaRef != null) {
+            val label = if (state.selectedSeasonNumber != null && state.selectedEpisodeNumber != null) {
+                "${mediaRef.title} S${state.selectedSeasonNumber.toString().padStart(2, '0')}E${state.selectedEpisodeNumber.toString().padStart(2, '0')}"
+            } else {
+                mediaRef.title
+            }
+            screenHost.addView(bodyText(label))
+        }
+
+        latestSourcesError?.let {
+            screenHost.addView(bodyText("Source lookup failed: $it"))
+        }
+        latestSourceDiagnostics?.let {
+            screenHost.addView(bodyText("Diagnostics: $it"))
+        }
+
+        if (state.selectedSources.isEmpty()) {
+            screenHost.addView(bodyText("No sources."))
+            return
+        }
+
+        state.selectedSources.take(12).forEach { source ->
+            screenHost.addView(Button(this).apply {
+                text = buildString {
+                    append(source.displayName)
+                    append("\n")
+                    append(source.quality)
+                    append(" · ")
+                    append(source.cacheStatus)
+                    append(" · ")
+                    append(source.providerDisplayName)
+                    source.sizeLabel?.let {
+                        append(" · ")
+                        append(it)
+                    }
                 }
-            )
-            authContainer.addView(Button(this).apply {
-                text = "Open Real-Debrid Link Page"
+                gravity = Gravity.START or Gravity.CENTER_VERTICAL
                 setOnClickListener {
-                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(buildRealDebridAuthUrl(flow))))
+                    preparePlayback(
+                        source = source,
+                        seasonNumber = state.selectedSeasonNumber,
+                        episodeNumber = state.selectedEpisodeNumber
+                    )
                 }
             })
-            authContainer.addView(Button(this).apply {
-                text = "Poll Link Status"
-                setOnClickListener { pollRealDebridLink(flow) }
+        }
+    }
+
+    private fun renderPlayerScreen() {
+        val state = coordinator.currentState()
+        val source = state.selectedSource
+        screenHost.addView(screenTitle("Player"))
+        if (source == null) {
+            screenHost.addView(bodyText("No source selected."))
+            return
+        }
+
+        screenHost.addView(
+            bodyText(
+                buildString {
+                    appendLine("Selected source: ${source.displayName}")
+                    appendLine("Provider: ${source.providerDisplayName}")
+                    appendLine("Quality: ${source.quality}")
+                    appendLine("Cache: ${source.cacheStatus}")
+                    if (state.selectedSeasonNumber != null && state.selectedEpisodeNumber != null) {
+                        appendLine(
+                            "Episode target: S${state.selectedSeasonNumber.toString().padStart(2, '0')}E${state.selectedEpisodeNumber.toString().padStart(2, '0')}"
+                        )
+                    }
+                    appendLine()
+                    append(latestPlaybackMessage ?: "Preparing playback…")
+                }
+            )
+        )
+        latestPlaybackError?.let {
+            screenHost.addView(bodyText("Playback error: $it"))
+        }
+
+        playerView.visibility = if (source != null) View.VISIBLE else View.GONE
+        detachPlayerFromParent()
+        screenHost.addView(playerView)
+        screenHost.addView(space())
+        screenHost.addView(buildPlaybackControls())
+    }
+
+    private fun renderSettingsScreen() {
+        screenHost.addView(screenTitle("Settings / Accounts"))
+        screenHost.addView(
+            bodyText(
+                if (authState.isLinked) {
+                    "Real-Debrid linked${authState.username?.let { " as $it" } ?: ""}."
+                } else {
+                    "Real-Debrid not linked. Debrid-backed playback will fail until you link it."
+                }
+            )
+        )
+        screenHost.addView(bodyText("Playback mode: ${currentRenderModeLabel()}"))
+
+        if (!authState.isLinked) {
+            screenHost.addView(primaryButton("Start Real-Debrid Link") {
+                startRealDebridLink()
+            })
+        }
+
+        activeDeviceFlow?.let { flow ->
+            screenHost.addView(
+                bodyText(
+                    buildString {
+                        appendLine("Open: ${flow.verificationUrl}")
+                        appendLine("Code: ${flow.userCode}")
+                        append("Polling starts automatically for up to 2 minutes after you begin linking.")
+                    }
+                )
+            )
+            screenHost.addView(primaryButton("Open Real-Debrid Link Page") {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(buildRealDebridAuthUrl(flow))))
+            })
+            screenHost.addView(primaryButton("Poll Link Status") {
+                pollRealDebridLink(flow)
             })
         }
 
         authState.lastError?.takeIf { it.isNotBlank() }?.let {
-            appendBody(authContainer, "Auth error: $it")
+            screenHost.addView(bodyText("Auth error: $it"))
+        }
+
+        screenHost.addView(primaryButton("Toggle Playback Mode") {
+            toggleRenderMode()
+        })
+        screenHost.addView(primaryButton("Copy Debug Info") {
+            copyDebugInfoToClipboard()
+        })
+    }
+
+    private fun settingsLabel(): String {
+        return if (authState.isLinked) {
+            "Settings / Accounts (RD linked)"
+        } else {
+            "Settings / Accounts (RD not linked)"
+        }
+    }
+
+    private fun runSearch(mode: SearchMode, rawQuery: String) {
+        val query = rawQuery.trim().ifEmpty { "Dune" }
+        latestSourcesError = null
+        latestSourceDiagnostics = null
+        latestPlaybackMessage = null
+        latestPlaybackError = null
+        AppContainer.playbackEngine.stop()
+        setLoading(true, "Searching for \"$query\"…")
+
+        lifecycleScope.launch {
+            val state = searchViewModel.search(query)
+            val filteredResults = state.results.filter { it.mediaRef.mediaType == mode.mediaType }
+            coordinator.showResults(query = query, results = filteredResults)
+            setLoading(false, state.error ?: "Found ${filteredResults.size} result(s) for \"$query\".")
+            if (state.error != null && filteredResults.isEmpty()) {
+                latestSourcesError = state.error
+            }
+            renderCurrentScreen()
+        }
+    }
+
+    private fun onSearchResultSelected(result: SearchResult) {
+        latestSourcesError = null
+        latestSourceDiagnostics = null
+        latestPlaybackMessage = null
+        latestPlaybackError = null
+        AppContainer.playbackEngine.stop()
+        setLoading(true, "Loading details for ${result.mediaRef.title}…")
+
+        lifecycleScope.launch {
+            val state = detailsViewModel.load(result.mediaRef)
+            val details = state.item
+            if (details == null) {
+                setLoading(false, state.error ?: "No details available.")
+                latestSourcesError = state.error ?: "No details available."
+                renderCurrentScreen()
+                return@launch
+            }
+
+            coordinator.showDetails(result.mediaRef, details)
+            setLoading(false, "Loaded details for ${details.mediaRef.title}.")
+            renderCurrentScreen()
+        }
+    }
+
+    private fun loadSourcesFor(
+        mediaRef: MediaRef,
+        seasonNumber: Int? = null,
+        episodeNumber: Int? = null
+    ) {
+        latestSourcesError = null
+        latestSourceDiagnostics = null
+        latestPlaybackMessage = null
+        latestPlaybackError = null
+        AppContainer.playbackEngine.stop()
+
+        val searchLabel = if (seasonNumber != null && episodeNumber != null) {
+            "${mediaRef.title} S${seasonNumber.toString().padStart(2, '0')}E${episodeNumber.toString().padStart(2, '0')}"
+        } else {
+            mediaRef.title
+        }
+
+        setLoading(true, "Finding sources for $searchLabel…")
+
+        lifecycleScope.launch {
+            val state = sourcesViewModel.load(
+                SourceSearchRequest(
+                    mediaRef = mediaRef,
+                    seasonNumber = seasonNumber,
+                    episodeNumber = episodeNumber
+                )
+            )
+            latestSourceDiagnostics = buildSourceDiagnostics(state.sources)
+            latestSourcesError = state.error
+            coordinator.showSources(
+                mediaRef = mediaRef,
+                details = coordinator.currentState().selectedDetails,
+                seasonNumber = seasonNumber,
+                episodeNumber = episodeNumber,
+                sources = state.sources
+            )
+            setLoading(false, state.error ?: "Found ${state.sources.size} source(s) for $searchLabel.")
+            renderCurrentScreen()
         }
     }
 
@@ -316,13 +704,13 @@ class MainActivity : ComponentActivity() {
                 activeDeviceFlow = flow
                 authState = RealDebridAuthState(isLinked = false, authInProgress = true, lastError = null)
                 setLoading(false, "Real-Debrid device flow started: ${flow.userCode}")
-                renderAuthPanel()
+                refreshAuthUiOnly()
                 startAutoPolling(flow)
             }.onFailure { error ->
                 authPollingJob?.cancel()
                 authState = RealDebridAuthState(isLinked = false, authInProgress = false, lastError = error.message)
                 setLoading(false, "Failed to start Real-Debrid link flow.")
-                renderAuthPanel()
+                refreshAuthUiOnly()
             }
         }
     }
@@ -341,11 +729,11 @@ class MainActivity : ComponentActivity() {
                 } else {
                     setLoading(false, "Real-Debrid still waiting for authorization.")
                 }
-                renderAuthPanel()
+                refreshAuthUiOnly()
             }.onFailure { error ->
                 authState = RealDebridAuthState(isLinked = false, authInProgress = true, lastError = error.message)
                 setLoading(false, "Polling Real-Debrid link failed.")
-                renderAuthPanel()
+                refreshAuthUiOnly()
             }
         }
     }
@@ -364,17 +752,17 @@ class MainActivity : ComponentActivity() {
                     if (state.isLinked) {
                         activeDeviceFlow = null
                         statusText.text = "Real-Debrid linked successfully."
-                        renderAuthPanel()
+                        refreshAuthUiOnly()
                         return@launch
                     }
-                    renderAuthPanel()
+                    refreshAuthUiOnly()
                 }.onFailure { error ->
                     authState = RealDebridAuthState(
                         isLinked = false,
                         authInProgress = true,
                         lastError = error.message
                     )
-                    renderAuthPanel()
+                    refreshAuthUiOnly()
                 }
             }
             if (!authState.isLinked && activeDeviceFlow != null) {
@@ -383,7 +771,7 @@ class MainActivity : ComponentActivity() {
                     lastError = authState.lastError ?: "Real-Debrid link timed out after 2 minutes."
                 )
                 statusText.text = "Real-Debrid link polling timed out."
-                renderAuthPanel()
+                refreshAuthUiOnly()
             }
         }
     }
@@ -411,7 +799,7 @@ class MainActivity : ComponentActivity() {
         engine.setRenderMode(nextMode)
         attachPlayerView()
         statusText.text = "Playback render mode: ${currentRenderModeLabel()}"
-        renderAuthPanel()
+        renderCurrentScreen()
     }
 
     private fun observePlaybackState() {
@@ -422,400 +810,22 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun copyDebugInfoToClipboard() {
-        val clipboard = getSystemService(ClipboardManager::class.java)
-        val debugText = buildString {
-            appendLine("build=${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) ${BuildConfig.GIT_SHA}")
-            appendLine("tmdb_key_embedded=${BuildConfig.TMDB_KEY_EMBEDDED}")
-            appendLine("auth_linked=${authState.isLinked}")
-            appendLine("auth_user=${authState.username ?: "none"}")
-            appendLine("auth_in_progress=${authState.authInProgress}")
-            appendLine("auth_error=${authState.lastError ?: "none"}")
-            appendLine("token_path=${AppContainer.realDebridTokenStoreDebugPath()}")
-            activeDeviceFlow?.let { flow ->
-                appendLine("verification_url=${flow.verificationUrl}")
-                appendLine("auth_url=${buildRealDebridAuthUrl(flow)}")
-                appendLine("user_code=${flow.userCode}")
-                appendLine("device_code=${flow.deviceCode}")
-            }
-            appendLine("selected_media=${selectedMediaRef?.title ?: "none"}")
-            appendLine("selected_season=${selectedSeasonNumber ?: "none"}")
-            appendLine("selected_episode=${selectedEpisodeNumber ?: "none"}")
-            appendLine("status=${statusText.text}")
-            appendLine("playback_state=${latestPlaybackState.playerStateLabel}")
-            appendLine("playback_is_playing=${latestPlaybackState.isPlaying}")
-            appendLine("playback_is_buffering=${latestPlaybackState.isBuffering}")
-            appendLine("playback_position_ms=${latestPlaybackState.positionMs}")
-            appendLine("playback_duration_ms=${latestPlaybackState.durationMs}")
-            appendLine("playback_video_format=${latestPlaybackState.videoFormat ?: "none"}")
-            appendLine("playback_video_size=${latestPlaybackState.videoSizeLabel ?: "none"}")
-            appendLine("playback_error=${latestPlaybackState.errorMessage ?: "none"}")
-        }
-        clipboard?.setPrimaryClip(ClipData.newPlainText("Asahi Debug Info", debugText))
-        statusText.text = "Debug info copied to clipboard"
-    }
-
-    private fun runInitialSearch() {
-        runSearch(queryInput.text.toString())
-    }
-
-    private fun runSearch(rawQuery: String) {
-        val query = rawQuery.trim().ifEmpty { "Dune" }
-        queryInput.setText(query)
-        selectedMediaRef = null
-        selectedSeasonNumber = null
-        selectedEpisodeNumber = null
-        selectedTitleDetails = null
-        clearSection(resultsContainer)
-        clearSection(detailsContainer)
-        clearSection(episodeSelectionContainer)
-        episodeSelectionContainer.visibility = View.GONE
-        clearSection(sourcesContainer)
-        clearSection(playbackContainer)
-        clearButtons(playbackControlsContainer)
-        playerView.visibility = View.GONE
-        setLoading(true, "Searching for \"$query\"…")
-
-        lifecycleScope.launch {
-            val state = searchViewModel.search(query)
-            setLoading(false, state.error ?: "Found ${state.results.size} result(s) for \"$query\".")
-            renderSearchResults(state.results, state.error)
-        }
-    }
-
-    private fun renderSearchResults(results: List<SearchResult>, error: String?) {
-        if (error != null) {
-            appendBody(resultsContainer, "Search failed: $error")
-            return
-        }
-        if (results.isEmpty()) {
-            appendBody(resultsContainer, "No results.")
-            return
-        }
-
-        results.take(8).forEachIndexed { index, result ->
-            val button = Button(this).apply {
-                text = buildString {
-                    append(result.mediaRef.title)
-                    result.mediaRef.year?.let { append(" ($it)") }
-                    result.subtitle?.takeIf { it.isNotBlank() }?.let { append(" — $it") }
-                }
-                setOnClickListener { onSearchResultSelected(result.mediaRef) }
-            }
-            resultsContainer.addView(button)
-            if (index == 0) {
-                button.post { button.performClick() }
-            }
-        }
-    }
-
-    private fun onSearchResultSelected(mediaRef: MediaRef) {
-        selectedMediaRef = mediaRef
-        selectedSeasonNumber = if (mediaRef.mediaType == MediaType.SHOW) 1 else null
-        selectedEpisodeNumber = if (mediaRef.mediaType == MediaType.SHOW) 1 else null
-        clearSection(detailsContainer)
-        clearSection(episodeSelectionContainer)
-        episodeSelectionContainer.visibility = View.GONE
-        clearSection(sourcesContainer)
-        clearSection(playbackContainer)
-        clearButtons(playbackControlsContainer)
-        playerView.visibility = View.GONE
-        setLoading(true, "Loading details for ${mediaRef.title}…")
-
-        lifecycleScope.launch {
-            val state = detailsViewModel.load(mediaRef)
-            val details = state.item
-            if (details == null) {
-                setLoading(false, state.error ?: "No details available.")
-                appendBody(detailsContainer, "Details failed: ${state.error ?: "unknown error"}")
-                return@launch
-            }
-
-            selectedTitleDetails = details
-            setLoading(false, "Loaded details for ${details.mediaRef.title}.")
-            renderDetails(details)
-            renderEpisodeSelection(details)
-            loadSourcesFor(
-                mediaRef = details.mediaRef,
-                seasonNumber = selectedSeasonNumber,
-                episodeNumber = selectedEpisodeNumber
-            )
-        }
-    }
-
-    private fun renderDetails(details: TitleDetails) {
-        appendBody(
-            detailsContainer,
-            buildString {
-                appendLine(details.mediaRef.title)
-                appendLine("Type: ${details.mediaRef.mediaType}")
-                details.mediaRef.year?.let { appendLine("Year: $it") }
-                if (details.genres.isNotEmpty()) appendLine("Genres: ${details.genres.joinToString()}")
-                details.runtimeMinutes?.let { appendLine("Runtime: ${it}m") }
-                details.seasonCount?.let { appendLine("Seasons: $it") }
-                details.episodeCount?.let { appendLine("Episodes: $it") }
-                appendLine()
-                append(details.overview ?: "No overview yet.")
-            }
-        )
-    }
-
-    private fun renderEpisodeSelection(details: TitleDetails) {
-        clearSection(episodeSelectionContainer)
-        val mediaRef = details.mediaRef
-        if (mediaRef.mediaType != MediaType.SHOW) {
-            episodeSelectionContainer.visibility = View.GONE
-            return
-        }
-
-        episodeSelectionContainer.visibility = View.VISIBLE
-
-        val knownSeasonCount = details.seasonCount ?: 3
-        val seasonStrip = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-
-        episodeSelectionContainer.addView(TextView(this).apply {
-            text = "Pick a season and episode for source lookup and RD resolution."
-            textSize = 16f
-        })
-
-        val seasonScroll = HorizontalScrollView(this).apply {
-            addView(seasonStrip)
-        }
-
-        (1..knownSeasonCount.coerceAtMost(12)).forEach { season ->
-            seasonStrip.addView(Button(this).apply {
-                text = if (season == selectedSeasonNumber) {
-                    "• S${season.toString().padStart(2, '0')}"
-                } else {
-                    "S${season.toString().padStart(2, '0')}"
-                }
-                setOnClickListener {
-                    selectedSeasonNumber = season
-                    renderEpisodeSelection(details)
-                }
-            })
-        }
-
-        episodeSelectionContainer.addView(TextView(this).apply {
-            text = "Seasons"
-            textSize = 18f
-        })
-        episodeSelectionContainer.addView(seasonScroll)
-
-        val activeSeason = selectedSeasonNumber ?: 1
-        episodeSelectionContainer.addView(TextView(this).apply {
-            text = "Episodes for season ${activeSeason.toString().padStart(2, '0')}"
-            textSize = 18f
-        })
-
-        val realEpisodes = details.episodesBySeason[activeSeason].orEmpty()
-        val episodeChoices = if (realEpisodes.isNotEmpty()) {
-            realEpisodes.take(20)
-        } else {
-            (1..12).map { episode ->
-                EpisodeSummary(
-                    seasonNumber = activeSeason,
-                    episodeNumber = episode,
-                    title = "Episode $episode"
-                )
-            }
-        }
-
-        val episodeList = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-        }
-
-        episodeChoices.forEach { episode ->
-            episodeList.addView(buildEpisodeButton(mediaRef, activeSeason, episode))
-        }
-
-        episodeSelectionContainer.addView(episodeList)
-
-        val seasonInput = EditText(this).apply {
-            hint = "Season"
-            setText(activeSeason.toString())
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        }
-        val episodeInput = EditText(this).apply {
-            hint = "Episode"
-            setText((selectedEpisodeNumber ?: 1).toString())
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        }
-        val loadButton = Button(this).apply {
-            text = "Load Exact Episode"
-            setOnClickListener {
-                val season = seasonInput.text.toString().toIntOrNull()?.coerceAtLeast(1) ?: 1
-                val episode = episodeInput.text.toString().toIntOrNull()?.coerceAtLeast(1) ?: 1
-                selectedSeasonNumber = season
-                selectedEpisodeNumber = episode
-                loadSourcesFor(
-                    mediaRef = mediaRef,
-                    seasonNumber = season,
-                    episodeNumber = episode
-                )
-            }
-        }
-
-        episodeSelectionContainer.addView(LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            addView(seasonInput)
-            addView(episodeInput)
-            addView(loadButton)
-        })
-    }
-
-    private fun buildEpisodeButton(
-        mediaRef: MediaRef,
-        activeSeason: Int,
-        episode: EpisodeSummary
-    ): Button {
-        val isSelected = selectedEpisodeNumber == episode.episodeNumber && selectedSeasonNumber == activeSeason
-        return Button(this).apply {
-            text = buildString {
-                if (isSelected) append("• ")
-                append("E")
-                append(episode.episodeNumber.toString().padStart(2, '0'))
-                episode.title?.takeIf { it.isNotBlank() }?.let {
-                    append(" — ")
-                    append(it.take(36))
-                }
-                episode.airDate?.let {
-                    append("  [")
-                    append(it)
-                    append("]")
-                }
-                episode.overview?.takeIf { it.isNotBlank() }?.let {
-                    append("\n")
-                    append(it.take(120))
-                    if (it.length > 120) append("…")
-                }
-            }
-            gravity = Gravity.START or Gravity.CENTER_VERTICAL
-            setOnClickListener {
-                selectedSeasonNumber = activeSeason
-                selectedEpisodeNumber = episode.episodeNumber
-                loadSourcesFor(
-                    mediaRef = mediaRef,
-                    seasonNumber = activeSeason,
-                    episodeNumber = episode.episodeNumber
-                )
-            }
-        }
-    }
-
-    private fun loadSourcesFor(
-        mediaRef: MediaRef,
-        seasonNumber: Int? = null,
-        episodeNumber: Int? = null
-    ) {
-        clearSection(sourcesContainer)
-        clearSection(playbackContainer)
-        clearButtons(playbackControlsContainer)
-        playerView.visibility = View.GONE
-
-        val searchLabel = if (seasonNumber != null && episodeNumber != null) {
-            "${mediaRef.title} S${seasonNumber.toString().padStart(2, '0')}E${episodeNumber.toString().padStart(2, '0')}"
-        } else {
-            mediaRef.title
-        }
-
-        setLoading(true, "Finding sources for $searchLabel…")
-
-        lifecycleScope.launch {
-            val state = sourcesViewModel.load(
-                SourceSearchRequest(
-                    mediaRef = mediaRef,
-                    seasonNumber = seasonNumber,
-                    episodeNumber = episodeNumber
-                )
-            )
-            setLoading(false, state.error ?: "Found ${state.sources.size} source(s) for $searchLabel.")
-            renderSources(state.sources, state.error, buildSourceDiagnostics(state.sources))
-        }
-    }
-
-    private fun renderSources(sources: List<SourceResult>, error: String?, diagnostics: String?) {
-        if (error != null) {
-            appendBody(sourcesContainer, "Source lookup failed: $error")
-            return
-        }
-        diagnostics?.let {
-            appendBody(sourcesContainer, "Diagnostics: $it")
-        }
-
-        if (sources.isEmpty()) {
-            appendBody(sourcesContainer, "No sources.")
-            appendBody(sourcesContainer, "Diagnostics: Torrentio enabled, but no live provider results returned for this title/request.")
-            return
-        }
-
-        val fallbackMode = sources.any { it.rawMetadata["fallbackMode"] == "true" }
-        appendBody(
-            sourcesContainer,
-            if (fallbackMode) {
-                "Diagnostics: no live Torrentio results came back, so fallback/demo providers are being shown."
-            } else {
-                "Diagnostics: showing live provider results."
-            }
-        )
-
-        sources.take(12).forEach { source ->
-            val button = Button(this).apply {
-                text = buildString {
-                    append(source.displayName)
-                    append("\n")
-                    append(source.quality)
-                    append(" · ")
-                    append(source.cacheStatus)
-                    append(" · ")
-                    append(source.providerDisplayName)
-                    append(" · ")
-                    append(source.debridService)
-                    if (source.seasonNumber != null && source.episodeNumber != null) {
-                        append(" · S")
-                        append(source.seasonNumber.toString().padStart(2, '0'))
-                        append("E")
-                        append(source.episodeNumber.toString().padStart(2, '0'))
-                    }
-                    source.sizeLabel?.let {
-                        append(" · ")
-                        append(it)
-                    }
-                }
-                setOnClickListener {
-                    preparePlayback(
-                        source = source,
-                        seasonNumber = source.seasonNumber,
-                        episodeNumber = source.episodeNumber
-                    )
-                }
-            }
-            sourcesContainer.addView(button)
-        }
-    }
-
     private fun preparePlayback(
         source: SourceResult,
         seasonNumber: Int? = source.seasonNumber,
         episodeNumber: Int? = source.episodeNumber
     ) {
-        clearSection(playbackContainer)
-        clearButtons(playbackControlsContainer)
-        playerView.visibility = View.GONE
-
         if (source.debridService == DebridService.REAL_DEBRID && !authState.isLinked) {
-            appendBody(
-                playbackContainer,
-                "This source needs Real-Debrid. Link your account in the Real-Debrid section above, then try again."
-            )
+            latestPlaybackError = "Real-Debrid link required before playback."
+            latestPlaybackMessage = "This source needs Real-Debrid. Link your account in Settings / Accounts, then try again."
             statusText.text = "Real-Debrid link required before playback."
+            coordinator.openSettings()
+            renderCurrentScreen()
             return
         }
 
+        latestPlaybackError = null
+        latestPlaybackMessage = null
         setLoading(true, "Resolving ${source.displayName}…")
 
         lifecycleScope.launch {
@@ -824,43 +834,21 @@ class MainActivity : ComponentActivity() {
                 seasonNumber = seasonNumber,
                 episodeNumber = episodeNumber
             )
-            setLoading(false, state.error ?: if (state.prepared) "Playback item prepared." else "Playback not prepared.")
-            appendBody(
-                playbackContainer,
-                buildString {
-                    appendLine("Selected source: ${source.displayName}")
-                    appendLine("Provider: ${source.providerDisplayName}")
-                    appendLine("Quality: ${source.quality}")
-                    appendLine("Cache: ${source.cacheStatus}")
-                    if (seasonNumber != null && episodeNumber != null) {
-                        appendLine("Episode target: S${seasonNumber.toString().padStart(2, '0')}E${episodeNumber.toString().padStart(2, '0')}")
-                    }
-                    appendLine()
-                    append(
-                        if (state.prepared) {
-                            buildString {
-                                appendLine("Playback preparation succeeded.")
-                                appendLine("Current item: ${AppContainer.playbackEngine.getCurrentItem()?.title ?: source.displayName}")
-                                appendLine("Stream URL: ${state.playbackUrl ?: AppContainer.playbackEngine.getCurrentUrl() ?: source.url}")
-                                appendLine("Player state: ${latestPlaybackState.playerStateLabel}")
-                                appendLine("Video format: ${latestPlaybackState.videoFormat ?: "unknown"}")
-                                appendLine("Video size: ${latestPlaybackState.videoSizeLabel ?: "unknown"}")
-                                appendLine("Playback error: ${latestPlaybackState.errorMessage ?: "none"}")
-                                append("Player surface is attached below for direct HTTP playback.")
-                            }
-                        } else {
-                            buildString {
-                                appendLine("Playback preparation failed.")
-                                append(state.error ?: "unknown error")
-                            }
-                        }
-                    )
-                }
-            )
-            if (state.prepared) {
-                playerView.visibility = View.VISIBLE
-                renderPlaybackControls()
+            latestPlaybackError = state.error
+            latestPlaybackMessage = buildString {
+                appendLine(if (state.prepared) "Playback preparation succeeded." else "Playback preparation failed.")
+                appendLine("Current item: ${AppContainer.playbackEngine.getCurrentItem()?.title ?: source.displayName}")
+                appendLine("Stream URL: ${state.playbackUrl ?: AppContainer.playbackEngine.getCurrentUrl() ?: source.url}")
+                appendLine("Player state: ${latestPlaybackState.playerStateLabel}")
+                appendLine("Video format: ${latestPlaybackState.videoFormat ?: "unknown"}")
+                appendLine("Video size: ${latestPlaybackState.videoSizeLabel ?: "unknown"}")
+                append("Playback error: ${latestPlaybackState.errorMessage ?: state.error ?: "none"}")
             }
+            setLoading(false, state.error ?: if (state.prepared) "Playback item prepared." else "Playback not prepared.")
+            if (state.prepared) {
+                coordinator.showPlayer(source)
+            }
+            renderCurrentScreen()
         }
     }
 
@@ -881,46 +869,95 @@ class MainActivity : ComponentActivity() {
         statusText.text = message
     }
 
-    private fun renderPlaybackControls() {
-        clearButtons(playbackControlsContainer)
-        playbackControlsContainer.addView(Button(this).apply {
-            text = "Play"
-            setOnClickListener {
-                AppContainer.playbackEngine.play()
-                statusText.text = "Playback state: playing"
-            }
-        })
-        playbackControlsContainer.addView(Button(this).apply {
-            text = "Pause"
-            setOnClickListener {
-                AppContainer.playbackEngine.pause()
-                statusText.text = "Playback state: paused"
-            }
-        })
-        playbackControlsContainer.addView(Button(this).apply {
-            text = "Stop"
-            setOnClickListener {
-                AppContainer.playbackEngine.stop()
-                statusText.text = "Playback state: stopped"
-            }
-        })
-    }
-
-    private fun clearSection(section: LinearLayout) {
-        while (section.childCount > 1) {
-            section.removeViewAt(1)
+    private fun buildPlaybackControls(): View {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            addView(Button(this@MainActivity).apply {
+                text = "Play"
+                setOnClickListener {
+                    AppContainer.playbackEngine.play()
+                    statusText.text = "Playback state: playing"
+                }
+            })
+            addView(Button(this@MainActivity).apply {
+                text = "Pause"
+                setOnClickListener {
+                    AppContainer.playbackEngine.pause()
+                    statusText.text = "Playback state: paused"
+                }
+            })
+            addView(Button(this@MainActivity).apply {
+                text = "Stop"
+                setOnClickListener {
+                    AppContainer.playbackEngine.stop()
+                    statusText.text = "Playback state: stopped"
+                }
+            })
         }
     }
 
-    private fun clearButtons(section: LinearLayout) {
-        section.removeAllViews()
+    private fun copyDebugInfoToClipboard() {
+        val clipboard = getSystemService(ClipboardManager::class.java)
+        val state = coordinator.currentState()
+        val debugText = buildString {
+            appendLine("build=${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) ${BuildConfig.GIT_SHA}")
+            appendLine("tmdb_key_embedded=${BuildConfig.TMDB_KEY_EMBEDDED}")
+            appendLine("auth_linked=${authState.isLinked}")
+            appendLine("auth_user=${authState.username ?: "none"}")
+            appendLine("auth_in_progress=${authState.authInProgress}")
+            appendLine("auth_error=${authState.lastError ?: "none"}")
+            appendLine("token_path=${AppContainer.realDebridTokenStoreDebugPath()}")
+            activeDeviceFlow?.let { flow ->
+                appendLine("verification_url=${flow.verificationUrl}")
+                appendLine("auth_url=${buildRealDebridAuthUrl(flow)}")
+                appendLine("user_code=${flow.userCode}")
+                appendLine("device_code=${flow.deviceCode}")
+            }
+            appendLine("destination=${state.destination}")
+            appendLine("search_mode=${state.searchMode}")
+            appendLine("query=${state.query}")
+            appendLine("selected_media=${state.selectedMedia?.title ?: "none"}")
+            appendLine("selected_season=${state.selectedSeasonNumber ?: "none"}")
+            appendLine("selected_episode=${state.selectedEpisodeNumber ?: "none"}")
+            appendLine("selected_source=${state.selectedSource?.displayName ?: "none"}")
+            appendLine("status=${statusText.text}")
+            appendLine("playback_state=${latestPlaybackState.playerStateLabel}")
+            appendLine("playback_is_playing=${latestPlaybackState.isPlaying}")
+            appendLine("playback_is_buffering=${latestPlaybackState.isBuffering}")
+            appendLine("playback_position_ms=${latestPlaybackState.positionMs}")
+            appendLine("playback_duration_ms=${latestPlaybackState.durationMs}")
+            appendLine("playback_video_format=${latestPlaybackState.videoFormat ?: "none"}")
+            appendLine("playback_video_size=${latestPlaybackState.videoSizeLabel ?: "none"}")
+            appendLine("playback_error=${latestPlaybackState.errorMessage ?: latestPlaybackError ?: "none"}")
+            appendLine("source_diagnostics=${latestSourceDiagnostics ?: "none"}")
+        }
+        clipboard?.setPrimaryClip(ClipData.newPlainText("Asahi Debug Info", debugText))
+        statusText.text = "Debug info copied to clipboard"
     }
 
-    private fun appendBody(section: LinearLayout, text: String) {
-        section.addView(TextView(this).apply {
+    private fun detachPlayerFromParent() {
+        (playerView.parent as? LinearLayout)?.removeView(playerView)
+    }
+
+    private fun screenTitle(text: String): View {
+        return TextView(this).apply {
+            this.text = text
+            textSize = 24f
+        }
+    }
+
+    private fun bodyText(text: String): View {
+        return TextView(this).apply {
             this.text = text
             textSize = 16f
-        })
+        }
+    }
+
+    private fun primaryButton(text: String, onClick: () -> Unit): View {
+        return Button(this).apply {
+            this.text = text
+            setOnClickListener { onClick() }
+        }
     }
 
     private fun space(): View = TextView(this).apply { text = "" }
