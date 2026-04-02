@@ -775,18 +775,25 @@ class MainActivity : ComponentActivity() {
                     currentVersionName = BuildConfig.VERSION_NAME
                 ).check()
             }
-            result.onSuccess { updateInfo ->
-                latestUpdateInfo = updateInfo
-                latestUpdateMessage = if (updateInfo == null) {
-                    "No newer release found."
-                } else {
-                    "Update available: ${updateInfo.versionName}"
-                }
+            result.onSuccess { checkResult ->
+                latestUpdateInfo = checkResult.updateInfo
+                latestUpdateMessage = checkResult.statusMessage
                 setLoading(false, latestUpdateMessage ?: "Update check complete.")
                 renderCurrentScreen()
             }.onFailure { error ->
                 latestUpdateInfo = null
-                latestUpdateMessage = "Update check failed: ${error.message ?: "unknown error"}"
+                latestUpdateMessage = buildString {
+                    append("Update check failed")
+                    error::class.simpleName?.let {
+                        append(" (")
+                        append(it)
+                        append(")")
+                    }
+                    error.message?.takeIf { it.isNotBlank() }?.let {
+                        append(": ")
+                        append(it.take(180))
+                    }
+                }
                 setLoading(false, latestUpdateMessage ?: "Update check failed.")
                 renderCurrentScreen()
             }

@@ -7,14 +7,21 @@ import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
 
+data class UpdateCheckResult(
+    val updateInfo: AppUpdateInfo? = null,
+    val statusMessage: String
+)
+
 class GitHubReleaseUpdateChecker(
     private val owner: String,
     private val repo: String,
     private val currentVersionName: String
 ) {
-    fun check(): AppUpdateInfo? {
+    fun check(): UpdateCheckResult {
         val releases = fetchReleases()
-        if (releases.length() == 0) return null
+        if (releases.length() == 0) {
+            return UpdateCheckResult(statusMessage = "No GitHub releases found.")
+        }
 
         for (index in 0 until releases.length()) {
             val json = releases.optJSONObject(index) ?: continue
@@ -22,27 +29,31 @@ class GitHubReleaseUpdateChecker(
                 json.optString("name")
             }.removePrefix("v")
 
-            if (latestVersion.isBlank()) {
-                continue
-            }
+            if (latestVersion.isBlank()) continue
 
+            val assets = json.optJSONArray("assets") ?: JSONArray()
+            val apkAsset = findApkAsset(assets)
             val isDebugRollingRelease = latestVersion.equals("latest-debug", ignoreCase = true)
             if (!isDebugRollingRelease && !isNewerThanCurrent(latestVersion)) {
                 continue
             }
+            if (apkAsset == null) {
+                return UpdateCheckResult(statusMessage = "Release $latestVersion found, but no APK asset was attached.")
+            }
 
-            val assets = json.optJSONArray("assets") ?: JSONArray()
-            val apkAsset = findApkAsset(assets) ?: continue
-            return AppUpdateInfo(
-                versionName = latestVersion,
-                downloadUrl = apkAsset.optString("browser_download_url"),
-                pageUrl = json.optString("html_url"),
-                publishedAt = json.optString("published_at"),
-                notes = json.optString("body")
+            return UpdateCheckResult(
+                updateInfo = AppUpdateInfo(
+                    versionName = latestVersion,
+                    downloadUrl = apkAsset.optString("browser_download_url"),
+                    pageUrl = json.optString("html_url"),
+                    publishedAt = json.optString("published_at"),
+                    notes = json.optString("body")
+                ),
+                statusMessage = "Update available: $latestVersion"
             )
         }
 
-        return null
+        return UpdateCheckResult(statusMessage = "No newer release found.")
     }
 
     private fun fetchReleases(): JSONArray {
