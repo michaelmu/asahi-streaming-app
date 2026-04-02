@@ -66,11 +66,11 @@ class SearchScreenRenderer(
                 SearchMode.SHOWS -> "Search TV shows"
             }
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            post { onFirstFocusTarget(this) }
         }
         val searchButton = Button(activity).apply {
             text = "Search"
             setOnClickListener { onSearch(state.searchMode, queryInput.text.toString()) }
+            post { onFirstFocusTarget(this) }
         }
         searchRow.addView(queryInput)
         searchRow.addView(searchButton)
@@ -292,7 +292,7 @@ class SourcesScreenRenderer(
             host.addView(viewFactory.body("Source lookup failed: $it"))
         }
         diagnostics?.let {
-            host.addView(viewFactory.body("Debug summary: $it"))
+            host.addView(viewFactory.body("Source summary: $it"))
         }
 
         if (state.selectedSources.isEmpty()) {
@@ -300,27 +300,27 @@ class SourcesScreenRenderer(
             return
         }
 
-        state.selectedSources.take(12).forEachIndexed { index, source ->
+        state.selectedSources.take(10).forEachIndexed { index, source ->
             host.addView(Button(activity).apply {
                 text = buildString {
-                    append(source.displayName)
+                    append(source.displayName.lineSequence().firstOrNull()?.take(52) ?: source.displayName.take(52))
                     append("\n")
                     append(source.quality)
-                    append(" · ")
+                    append(" • ")
                     append(source.cacheStatus)
                     source.sizeLabel?.let {
-                        append(" · ")
+                        append(" • ")
                         append(it)
                     }
                     append("\n")
-                    append("Provider: ")
                     append(source.providerDisplayName)
                     source.debridService.name.takeIf { it.isNotBlank() }?.let {
-                        append(" · Debrid: ")
-                        append(it)
+                        append(" • ")
+                        append(it.removePrefix("REAL_").replace('_', ' '))
                     }
                 }
                 gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                setPadding(24, 18, 24, 18)
                 setOnClickListener { onSourceSelected(source) }
                 if (index == 0) {
                     post { onFirstFocusTarget(this) }
