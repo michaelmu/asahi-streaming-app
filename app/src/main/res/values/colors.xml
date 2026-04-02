@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="asahi_bg">#0A0E17</color>
+    <color name="asahi_panel">#111827</color>
+    <color name="asahi_panel_elevated">#182235</color>
+    <color name="asahi_panel_soft">#1B2940</color>
+    <color name="asahi_accent">#5B8CFF</color>
+    <color name="asahi_accent_alt">#23C9A9</color>
+    <color name="asahi_warning">#FFB84D</color>
+    <color name="asahi_error">#FF6B6B</color>
+    <color name="asahi_text_primary">#F7FAFF</color>
+    <color name="asahi_text_secondary">#A8B3C7</color>
+    <color name="asahi_text_muted">#7F8CA3</color>
+    <color name="asahi_stroke">#2B3952</color>
+    <color name="asahi_focus">#7AA2FF</color>
+    <color name="asahi_scrim">#CC05080F</color>
+</resources>

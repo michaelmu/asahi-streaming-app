@@ -1,15 +1,16 @@
 package ai.shieldtv.app.ui
 
 import android.content.Intent
+import android.graphics.Typeface
 import android.net.Uri
+import android.text.InputType
 import android.view.Gravity
 import android.view.View
-import android.widget.Button
-import android.widget.EditText
 import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.view.setPadding
 import androidx.media3.ui.PlayerView
 import ai.shieldtv.app.AppState
 import ai.shieldtv.app.SearchMode
@@ -17,6 +18,7 @@ import ai.shieldtv.app.core.model.auth.DeviceCodeFlow
 import ai.shieldtv.app.core.model.auth.RealDebridAuthState
 import ai.shieldtv.app.core.model.media.EpisodeSummary
 import ai.shieldtv.app.core.model.media.MediaType
+import ai.shieldtv.app.core.model.source.CacheStatus
 import ai.shieldtv.app.core.model.source.SourceResult
 import coil.load
 
@@ -32,18 +34,26 @@ class NavigationRailRenderer(
         onSettings: () -> Unit,
         onFirstFocusTarget: (View) -> Unit = {}
     ) {
-        host.addView(viewFactory.body("Browse"))
-        host.addView(Button(host.context).apply {
-            text = if (!inSettings && selectedMode == SearchMode.MOVIES) "• Movies" else "Movies"
-            gravity = Gravity.START or Gravity.CENTER_VERTICAL
-            setOnClickListener { onMovies() }
-            post { onFirstFocusTarget(this) }
-        })
-        host.addView(viewFactory.button(
-            if (!inSettings && selectedMode == SearchMode.SHOWS) "• TV Shows" else "TV Shows",
-            onShows
-        ))
-        host.addView(viewFactory.button(if (inSettings) "• Settings" else "Settings", onSettings))
+        host.removeAllViews()
+        host.addView(viewFactory.sectionTitle("Library"))
+        host.addView(viewFactory.spacer(12))
+
+        val movieButton = viewFactory.button(
+            if (!inSettings && selectedMode == SearchMode.MOVIES) "Movies •" else "Movies",
+            onMovies
+        )
+        host.addView(movieButton)
+        host.addView(viewFactory.spacer(10))
+        host.addView(
+            viewFactory.button(
+                if (!inSettings && selectedMode == SearchMode.SHOWS) "TV Shows •" else "TV Shows",
+                onShows
+            )
+        )
+        host.addView(viewFactory.spacer(10))
+        host.addView(viewFactory.button(if (inSettings) "Settings •" else "Settings", onSettings))
+
+        movieButton.post { onFirstFocusTarget(movieButton) }
     }
 }
 
@@ -58,30 +68,52 @@ class SearchScreenRenderer(
         onBack: (() -> Unit)?,
         onFirstFocusTarget: (View) -> Unit = {}
     ) {
-        host.addView(viewFactory.title("Search ${state.searchMode.label}"))
-        host.addView(viewFactory.body("Enter a title to search ${state.searchMode.label.lowercase()}."))
-
-        val searchRow = LinearLayout(activity).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        val queryInput = EditText(activity).apply {
-            setText(state.query)
-            hint = when (state.searchMode) {
-                SearchMode.MOVIES -> "Search movies"
-                SearchMode.SHOWS -> "Search TV shows"
+        host.addView(viewFactory.heroCard(
+            title = state.searchMode.label,
+            subtitle = when (state.searchMode) {
+                SearchMode.MOVIES -> "Search films, jump into details, then pick the best cached source."
+                SearchMode.SHOWS -> "Search series, browse episodes, and move straight into the source picker."
             }
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        }
-        val searchButton = Button(activity).apply {
-            text = "Search"
-            setOnClickListener { onSearch(state.searchMode, queryInput.text.toString()) }
-            post { onFirstFocusTarget(this) }
-        }
-        searchRow.addView(queryInput)
-        searchRow.addView(searchButton)
+        ))
+        host.addView(viewFactory.spacer())
 
-        host.addView(searchRow)
+        val searchPanel = viewFactory.panel(elevated = true).apply {
+            addView(viewFactory.sectionTitle("Search"))
+            addView(viewFactory.spacer(12))
+            addView(viewFactory.body("Lean into a Stremio-style flow: query first, results next, source chooser after that."))
+            addView(viewFactory.spacer(16))
+
+            val searchRow = LinearLayout(activity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            val queryInput = viewFactory.input(
+                hint = when (state.searchMode) {
+                    SearchMode.MOVIES -> "Try: Dune, Alien, Blade Runner"
+                    SearchMode.SHOWS -> "Try: Severance, Andor, The Last of Us"
+                },
+                initialValue = state.query
+            ).apply {
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                inputType = InputType.TYPE_CLASS_TEXT
+            }
+            val searchButton = viewFactory.button("Search") {
+                onSearch(state.searchMode, queryInput.text.toString())
+            }.apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    viewFactory.dp(180),
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).also { it.marginStart = viewFactory.dp(16) }
+            }
+
+            searchRow.addView(queryInput)
+            searchRow.addView(searchButton)
+            addView(searchRow)
+
+            searchButton.post { onFirstFocusTarget(searchButton) }
+        }
+
+        host.addView(searchPanel)
         onBack?.let {
             host.addView(viewFactory.spacer())
             host.addView(viewFactory.button("Back", it))
@@ -101,60 +133,74 @@ class ResultsScreenRenderer(
         onNewSearch: () -> Unit,
         onFirstFocusTarget: (View) -> Unit = {}
     ) {
-        host.addView(viewFactory.title("Results"))
-        host.addView(viewFactory.body("Query: ${state.query}"))
+        host.addView(viewFactory.heroCard(
+            title = "Results for \"${state.query}\"",
+            subtitle = "${state.searchResults.size} match(es) across ${state.searchMode.label.lowercase()}. Pick a title to drill into details."
+        ))
+        host.addView(viewFactory.spacer())
 
         if (state.searchResults.isEmpty()) {
-            host.addView(viewFactory.body(emptyMessage))
-        } else {
-            state.searchResults.take(20).forEachIndexed { index, result ->
-                val row = LinearLayout(activity).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER_VERTICAL
-                    isFocusable = true
-                    isClickable = true
-                    setPadding(12, 12, 12, 12)
-                    setOnClickListener { onResultSelected(result) }
-                    if (index == 0) {
-                        post { onFirstFocusTarget(this) }
-                    }
-                }
+            host.addView(viewFactory.panel(elevated = true).apply {
+                addView(viewFactory.title("Nothing useful yet"))
+                addView(viewFactory.spacer(10))
+                addView(viewFactory.body(emptyMessage))
+                addView(viewFactory.spacer(16))
+                addView(viewFactory.button("Try another search", onNewSearch))
+            })
+            return
+        }
 
-                val posterView = ImageView(activity).apply {
-                    layoutParams = LinearLayout.LayoutParams(120, 180).apply {
-                        marginEnd = 24
-                    }
-                    scaleType = ImageView.ScaleType.CENTER_CROP
-                    result.posterUrl?.takeIf { it.isNotBlank() }?.let { url ->
-                        load(url)
-                    }
+        state.searchResults.take(20).forEachIndexed { index, result ->
+            val card = viewFactory.panel(vertical = false, elevated = index < 3).apply {
+                gravity = Gravity.CENTER_VERTICAL
+                isFocusable = true
+                isClickable = true
+                setOnClickListener { onResultSelected(result) }
+                setOnFocusChangeListener { view, hasFocus ->
+                    view.scaleX = if (hasFocus) 1.02f else 1f
+                    view.scaleY = if (hasFocus) 1.02f else 1f
                 }
+            }
 
-                val textColumn = LinearLayout(activity).apply {
-                    orientation = LinearLayout.VERTICAL
-                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            val posterView = ImageView(activity).apply {
+                layoutParams = LinearLayout.LayoutParams(viewFactory.dp(120), viewFactory.dp(180)).apply {
+                    marginEnd = viewFactory.dp(20)
                 }
-                textColumn.addView(TextView(activity).apply {
-                    text = buildString {
-                        append(result.mediaRef.title)
-                        result.mediaRef.year?.let { append(" ($it)") }
-                    }
-                    textSize = 18f
-                })
-                result.subtitle?.takeIf { it.isNotBlank() }?.let { subtitle ->
-                    textColumn.addView(TextView(activity).apply {
-                        text = subtitle
-                        textSize = 14f
-                    })
-                }
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                clipToOutline = true
+                result.posterUrl?.takeIf { it.isNotBlank() }?.let { url -> load(url) }
+            }
 
-                row.addView(posterView)
-                row.addView(textColumn)
-                host.addView(row)
+            val textColumn = LinearLayout(activity).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+            textColumn.addView(TextView(activity).apply {
+                text = buildString {
+                    append(result.mediaRef.title)
+                    result.mediaRef.year?.let { append(" ($it)") }
+                }
+                setTextColor(viewFactory.textPrimaryColor)
+                textSize = 22f
+                setTypeface(typeface, Typeface.BOLD)
+            })
+            textColumn.addView(viewFactory.spacer(6))
+            textColumn.addView(viewFactory.caption(result.mediaRef.mediaType.name.lowercase().replaceFirstChar { it.uppercase() }))
+            result.subtitle?.takeIf { it.isNotBlank() }?.let { subtitle ->
+                textColumn.addView(viewFactory.spacer(10))
+                textColumn.addView(viewFactory.body(subtitle.take(220)))
+            }
+
+            card.addView(posterView)
+            card.addView(textColumn)
+            host.addView(card)
+            host.addView(viewFactory.spacer(14))
+
+            if (index == 0) {
+                card.post { onFirstFocusTarget(card) }
             }
         }
 
-        host.addView(viewFactory.spacer())
         host.addView(viewFactory.button("New Search", onNewSearch))
     }
 }
@@ -172,40 +218,62 @@ class DetailsScreenRenderer(
         val details = state.selectedDetails
         if (details == null) {
             host.addView(viewFactory.title("Details"))
+            host.addView(viewFactory.spacer(10))
             host.addView(viewFactory.body("No details loaded."))
             return
         }
 
-        host.addView(viewFactory.title(details.mediaRef.title))
-        host.addView(
-            viewFactory.body(
-                buildString {
-                    appendLine("Type: ${details.mediaRef.mediaType}")
-                    details.mediaRef.year?.let { appendLine("Year: $it") }
-                    if (details.genres.isNotEmpty()) appendLine("Genres: ${details.genres.joinToString()}")
-                    details.runtimeMinutes?.let { appendLine("Runtime: ${it}m") }
-                    details.seasonCount?.let { appendLine("Seasons: $it") }
-                    details.episodeCount?.let { appendLine("Episodes: $it") }
-                    appendLine()
-                    append(details.overview ?: "No overview yet.")
-                }
-            )
-        )
+        host.addView(viewFactory.heroCard(
+            title = details.mediaRef.title,
+            subtitle = details.overview?.take(180)
+                ?: "No overview yet."
+        ))
+        host.addView(viewFactory.spacer())
 
-        if (details.mediaRef.mediaType == MediaType.SHOW) {
-            host.addView(Button(host.context).apply {
-                text = "Browse Episodes"
-                gravity = Gravity.START or Gravity.CENTER_VERTICAL
-                setOnClickListener { onBrowseEpisodes() }
-                post { onFirstFocusTarget(this) }
-            })
+        val statsRow = LinearLayout(host.context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.START
+        }
+        statsRow.addView(viewFactory.statPill("Type", details.mediaRef.mediaType.name))
+        details.mediaRef.year?.let {
+            statsRow.addView(spacedStat(viewFactory.statPill("Year", it.toString())))
+        }
+        details.runtimeMinutes?.let {
+            statsRow.addView(spacedStat(viewFactory.statPill("Runtime", "${it}m", StatTone.ACCENT)))
+        }
+        details.seasonCount?.let {
+            statsRow.addView(spacedStat(viewFactory.statPill("Seasons", it.toString(), StatTone.SUCCESS)))
+        }
+        host.addView(HorizontalScrollView(host.context).apply { addView(statsRow) })
+        host.addView(viewFactory.spacer())
+
+        host.addView(viewFactory.panel(elevated = true).apply {
+            addView(viewFactory.sectionTitle("Overview"))
+            addView(viewFactory.spacer(12))
+            addView(viewFactory.body(details.overview ?: "No overview yet."))
+            if (details.genres.isNotEmpty()) {
+                addView(viewFactory.spacer(16))
+                addView(viewFactory.caption("Genres: ${details.genres.joinToString()}") )
+            }
+        })
+        host.addView(viewFactory.spacer())
+
+        val primaryAction = if (details.mediaRef.mediaType == MediaType.SHOW) {
+            viewFactory.button("Browse Episodes", onBrowseEpisodes)
         } else {
-            host.addView(Button(host.context).apply {
-                text = "Find Sources"
-                gravity = Gravity.START or Gravity.CENTER_VERTICAL
-                setOnClickListener { onFindSources() }
-                post { onFirstFocusTarget(this) }
-            })
+            viewFactory.button("Find Sources", onFindSources)
+        }
+        host.addView(primaryAction)
+        primaryAction.post { onFirstFocusTarget(primaryAction) }
+    }
+
+    private fun spacedStat(view: View): View {
+        (view.layoutParams as? LinearLayout.LayoutParams)?.marginStart = viewFactory.dp(10)
+        return view.apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).also { it.marginStart = viewFactory.dp(10) }
         }
     }
 }
@@ -226,29 +294,43 @@ class EpisodePickerScreenRenderer(
         val details = state.selectedDetails
         if (details == null) {
             host.addView(viewFactory.title("Episodes"))
+            host.addView(viewFactory.spacer(10))
             host.addView(viewFactory.body("No show loaded."))
             return
         }
 
-        host.addView(viewFactory.title("${details.mediaRef.title} Episodes"))
-        host.addView(viewFactory.body("Pick a season and episode, then load sources."))
-
-        val knownSeasonCount = (details.seasonCount ?: 3).coerceAtMost(12)
         val selectedSeason = state.selectedSeasonNumber ?: 1
         val selectedEpisode = state.selectedEpisodeNumber ?: 1
+        val knownSeasonCount = (details.seasonCount ?: 3).coerceAtMost(12)
 
+        host.addView(viewFactory.heroCard(
+            title = details.mediaRef.title,
+            subtitle = "Season $selectedSeason · Episode $selectedEpisode — closer to Stremio than the old one-page scroll monster."
+        ))
+        host.addView(viewFactory.spacer())
+
+        host.addView(viewFactory.sectionTitle("Seasons"))
+        host.addView(viewFactory.spacer(12))
         val seasonStrip = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
         (1..knownSeasonCount).forEach { season ->
-            seasonStrip.addView(Button(activity).apply {
-                text = if (season == selectedSeason) "• S${season.toString().padStart(2, '0')}" else "S${season.toString().padStart(2, '0')}"
-                setOnClickListener { onSeasonSelected(season) }
-            })
+            val chip = viewFactory.chip("Season $season", selected = season == selectedSeason) {
+                onSeasonSelected(season)
+            }
+            seasonStrip.addView(chip)
+            if (season < knownSeasonCount) {
+                seasonStrip.addView(View(activity).apply {
+                    layoutParams = LinearLayout.LayoutParams(viewFactory.dp(10), 1)
+                })
+            }
         }
         host.addView(HorizontalScrollView(activity).apply { addView(seasonStrip) })
+        host.addView(viewFactory.spacer())
 
+        host.addView(viewFactory.sectionTitle("Episodes"))
+        host.addView(viewFactory.spacer(12))
         val realEpisodes = details.episodesBySeason[selectedSeason].orEmpty()
         val episodeChoices = if (realEpisodes.isNotEmpty()) {
             realEpisodes.take(20)
@@ -265,44 +347,47 @@ class EpisodePickerScreenRenderer(
 
         episodeChoices.forEachIndexed { index, episode ->
             val isSelected = selectedEpisode == episode.episodeNumber
-            host.addView(Button(activity).apply {
-                text = buildString {
-                    if (isSelected) append("• ")
-                    append("E")
-                    append(episode.episodeNumber.toString().padStart(2, '0'))
-                    episode.title?.takeIf { it.isNotBlank() }?.let {
-                        append(" — ")
-                        append(it.take(48))
-                    }
-                    episode.airDate?.let {
-                        append(" [")
-                        append(it)
-                        append("]")
-                    }
-                    episode.overview?.takeIf { it.isNotBlank() }?.let {
-                        append("\n")
-                        append(it.take(140))
-                        if (it.length > 140) append("…")
-                    }
-                }
-                gravity = Gravity.START or Gravity.CENTER_VERTICAL
+            val card = viewFactory.panel(elevated = isSelected).apply {
+                isFocusable = true
+                isClickable = true
                 setOnClickListener {
                     onEpisodeSelected(episode.episodeNumber)
                     onEpisodePlay(episode.episodeNumber)
                 }
-                if (isSelected || (selectedEpisode !in episodeNumbers && index == 0)) {
-                    post { onFirstFocusTarget(this) }
+                setOnFocusChangeListener { view, hasFocus ->
+                    view.scaleX = if (hasFocus) 1.015f else 1f
+                    view.scaleY = if (hasFocus) 1.015f else 1f
                 }
+            }
+            card.addView(TextView(activity).apply {
+                text = "Episode ${episode.episodeNumber.toString().padStart(2, '0')}"
+                setTextColor(viewFactory.textPrimaryColor)
+                textSize = 20f
+                setTypeface(typeface, Typeface.BOLD)
             })
+            episode.title?.takeIf { it.isNotBlank() }?.let {
+                card.addView(viewFactory.spacer(8))
+                card.addView(viewFactory.body(it))
+            }
+            episode.airDate?.let {
+                card.addView(viewFactory.spacer(8))
+                card.addView(viewFactory.caption(it))
+            }
+            episode.overview?.takeIf { it.isNotBlank() }?.let {
+                card.addView(viewFactory.spacer(10))
+                card.addView(viewFactory.body(it.take(180) + if (it.length > 180) "…" else ""))
+            }
+            host.addView(card)
+            host.addView(viewFactory.spacer(12))
+            if (isSelected || (selectedEpisode !in episodeNumbers && index == 0)) {
+                card.post { onFirstFocusTarget(card) }
+            }
         }
 
-        host.addView(viewFactory.spacer())
-        host.addView(
-            viewFactory.button(
-                "Find Sources for S${selectedSeason.toString().padStart(2, '0')}E${selectedEpisode.toString().padStart(2, '0')}",
-                onFindSources
-            )
-        )
+        host.addView(viewFactory.button(
+            "Find Sources for S${selectedSeason.toString().padStart(2, '0')}E${selectedEpisode.toString().padStart(2, '0')}",
+            onFindSources
+        ))
     }
 }
 
@@ -318,55 +403,108 @@ class SourcesScreenRenderer(
         onFirstFocusTarget: (View) -> Unit = {}
     ) {
         val mediaRef = state.selectedMedia
-        host.addView(viewFactory.title("Sources"))
-        if (mediaRef != null) {
-            val label = if (state.selectedSeasonNumber != null && state.selectedEpisodeNumber != null) {
-                "${mediaRef.title} S${state.selectedSeasonNumber.toString().padStart(2, '0')}E${state.selectedEpisodeNumber.toString().padStart(2, '0')}"
-            } else {
-                mediaRef.title
-            }
-            host.addView(viewFactory.body(label))
+        val title = if (mediaRef != null && state.selectedSeasonNumber != null && state.selectedEpisodeNumber != null) {
+            "${mediaRef.title} S${state.selectedSeasonNumber.toString().padStart(2, '0')}E${state.selectedEpisodeNumber.toString().padStart(2, '0')}"
+        } else {
+            mediaRef?.title ?: "Sources"
         }
 
-        error?.let {
-            host.addView(viewFactory.body("Source lookup failed: $it"))
+        host.addView(viewFactory.heroCard(
+            title = title,
+            subtitle = "Choose the clearest cached stream first — Kodi/Fenlight brain, cleaner native TV shell."
+        ))
+        host.addView(viewFactory.spacer())
+
+        val summaryPanel = viewFactory.panel(elevated = true).apply {
+            addView(viewFactory.sectionTitle("Source Summary"))
+            addView(viewFactory.spacer(10))
+            if (!error.isNullOrBlank()) {
+                addView(viewFactory.body("Lookup issue: $error"))
+                addView(viewFactory.spacer(10))
+            }
+            addView(viewFactory.caption(diagnostics ?: "No provider diagnostics yet."))
         }
-        diagnostics?.let {
-            host.addView(viewFactory.body("Source summary: $it"))
-        }
+        host.addView(summaryPanel)
+        host.addView(viewFactory.spacer())
 
         if (state.selectedSources.isEmpty()) {
-            host.addView(viewFactory.body("No sources."))
+            host.addView(viewFactory.panel(elevated = false).apply {
+                addView(viewFactory.title("No sources surfaced"))
+                addView(viewFactory.spacer(8))
+                addView(viewFactory.body("Either the providers came back empty, or the filter/ranking path stripped everything out."))
+            })
             return
         }
 
-        state.selectedSources.take(10).forEachIndexed { index, source ->
-            host.addView(Button(host.context).apply {
-                text = buildString {
-                    append(source.displayName.lineSequence().firstOrNull()?.take(52) ?: source.displayName.take(52))
-                    append("\n")
-                    append(source.quality)
-                    append(" • ")
-                    append(source.cacheStatus)
-                    source.sizeLabel?.let {
-                        append(" • ")
-                        append(it)
-                    }
-                    append("\n")
-                    append(source.providerDisplayName)
-                    source.debridService.name.takeIf { it.isNotBlank() }?.let {
-                        append(" • ")
-                        append(it.removePrefix("REAL_").replace('_', ' '))
-                    }
-                }
-                gravity = Gravity.START or Gravity.CENTER_VERTICAL
-                setPadding(24, 18, 24, 18)
+        state.selectedSources.take(16).forEachIndexed { index, source ->
+            val card = viewFactory.panel(elevated = source.cacheStatus == CacheStatus.CACHED).apply {
+                isFocusable = true
+                isClickable = true
                 setOnClickListener { onSourceSelected(source) }
-                if (index == 0) {
-                    post { onFirstFocusTarget(this) }
+                setOnFocusChangeListener { view, hasFocus ->
+                    view.scaleX = if (hasFocus) 1.015f else 1f
+                    view.scaleY = if (hasFocus) 1.015f else 1f
                 }
+            }
+
+            card.addView(TextView(host.context).apply {
+                text = source.displayName.lineSequence().firstOrNull()?.take(72) ?: source.displayName.take(72)
+                setTextColor(viewFactory.textPrimaryColor)
+                textSize = 21f
+                setTypeface(typeface, Typeface.BOLD)
             })
+            card.addView(viewFactory.spacer(8))
+
+            val pillRow = LinearLayout(host.context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.START
+            }
+            pillRow.addView(viewFactory.statPill("Quality", source.quality.name, StatTone.ACCENT))
+            pillRow.addView(statSpacer())
+            pillRow.addView(
+                viewFactory.statPill(
+                    "Cache",
+                    source.cacheStatus.name.lowercase(),
+                    when (source.cacheStatus) {
+                        CacheStatus.CACHED -> StatTone.SUCCESS
+                        CacheStatus.UNCACHED -> StatTone.WARNING
+                        CacheStatus.UNCHECKED,
+                        CacheStatus.DIRECT -> StatTone.NORMAL
+                    }
+                )
+            )
+            source.sizeLabel?.let {
+                pillRow.addView(statSpacer())
+                pillRow.addView(viewFactory.statPill("Size", it, StatTone.NORMAL))
+            }
+            host.addView(card)
+            card.addView(viewFactory.spacer(10))
+            card.addView(HorizontalScrollView(host.context).apply { addView(pillRow) })
+            card.addView(viewFactory.spacer(12))
+            card.addView(viewFactory.caption("${source.providerDisplayName} • ${source.debridService.name.replace('_', ' ')}"))
+            val detailText = buildString {
+                source.sourceSite?.takeIf { it.isNotBlank() }?.let {
+                    append(it)
+                }
+                source.rawMetadata["releaseTitle"]?.takeIf { it.isNotBlank() }?.let {
+                    if (isNotBlank()) append(" • ")
+                    append(it)
+                }
+            }
+            detailText.takeIf { it.isNotBlank() }?.let {
+                card.addView(viewFactory.spacer(8))
+                card.addView(viewFactory.body(it.take(160)))
+            }
+            host.addView(viewFactory.spacer(12))
+
+            if (index == 0) {
+                card.post { onFirstFocusTarget(card) }
+            }
         }
+    }
+
+    private fun statSpacer(): View = View(host.context).apply {
+        layoutParams = LinearLayout.LayoutParams(viewFactory.dp(10), 1)
     }
 }
 
@@ -383,18 +521,46 @@ class PlayerScreenRenderer(
         val source = state.selectedSource
         if (source == null) {
             host.addView(viewFactory.title("Player"))
+            host.addView(viewFactory.spacer(10))
             host.addView(viewFactory.body("No source selected."))
             return
         }
 
-        if (!playbackError.isNullOrBlank()) {
-            host.addView(viewFactory.body("Playback error: $playbackError"))
+        val overlay = LinearLayout(host.context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(viewFactory.dp(24))
+            background?.alpha = 0
         }
+        overlay.addView(TextView(host.context).apply {
+            text = source.mediaRef.title
+            setTextColor(viewFactory.textPrimaryColor)
+            textSize = 28f
+            setTypeface(typeface, Typeface.BOLD)
+        })
+        overlay.addView(viewFactory.caption(source.displayName.take(90)))
+        playbackError?.takeIf { it.isNotBlank() }?.let {
+            overlay.addView(viewFactory.spacer(10))
+            overlay.addView(TextView(host.context).apply {
+                text = it
+                setTextColor(viewFactory.errorColor)
+                textSize = 15f
+            })
+        }
+        playbackMessage?.takeIf { it.isNotBlank() }?.let {
+            overlay.addView(viewFactory.spacer(10))
+            overlay.addView(TextView(host.context).apply {
+                text = it.lineSequence().take(3).joinToString("\n")
+                setTextColor(viewFactory.textSecondaryColor)
+                textSize = 14f
+            })
+        }
+
         playerView.layoutParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
             LinearLayout.LayoutParams.MATCH_PARENT
         )
         host.addView(playerView)
+        host.addView(overlay)
     }
 }
 
@@ -418,66 +584,90 @@ class SettingsScreenRenderer(
         onBackToHome: () -> Unit,
         onFirstFocusTarget: (View) -> Unit = {}
     ) {
-        host.addView(viewFactory.title("Settings / Accounts"))
-        host.addView(
-            viewFactory.body(
+        host.addView(viewFactory.heroCard(
+            title = "Settings / Accounts",
+            subtitle = "Keep debrid auth and debug controls out of the main browsing flow — finally."
+        ))
+        host.addView(viewFactory.spacer())
+
+        val accountPanel = viewFactory.panel(elevated = true).apply {
+            addView(viewFactory.sectionTitle("Real-Debrid"))
+            addView(viewFactory.spacer(10))
+            addView(viewFactory.body(
                 if (authState.isLinked) {
-                    "Real-Debrid linked${authState.username?.let { " as $it" } ?: ""}."
+                    "Linked${authState.username?.let { " as $it" } ?: ""}. Cached and resolve-backed playback is ready."
                 } else {
-                    "Real-Debrid not linked. Debrid-backed playback will fail until you link it."
+                    "Not linked yet. Debrid-backed playback and cached-source preference will stay limited until you connect it."
                 }
-            )
-        )
-        host.addView(viewFactory.body("Playback mode: $playbackModeLabel"))
-        updateSummary?.let {
-            host.addView(viewFactory.body(it))
+            ))
+            authState.lastError?.takeIf { it.isNotBlank() }?.let {
+                addView(viewFactory.spacer(10))
+                addView(TextView(activity).apply {
+                    text = "Auth error: $it"
+                    setTextColor(viewFactory.errorColor)
+                    textSize = 15f
+                })
+            }
+            activeDeviceFlow?.let { flow ->
+                addView(viewFactory.spacer(16))
+                addView(viewFactory.caption("Open ${flow.verificationUrl}"))
+                addView(viewFactory.spacer(6))
+                addView(TextView(activity).apply {
+                    text = flow.userCode
+                    setTextColor(viewFactory.warningColor)
+                    textSize = 24f
+                    setTypeface(typeface, Typeface.BOLD)
+                    letterSpacing = 0.14f
+                })
+                addView(viewFactory.spacer(12))
+                addView(viewFactory.button("Open Real-Debrid Link Page") {
+                    activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(buildAuthUrl(flow))))
+                })
+            }
         }
+        host.addView(accountPanel)
+        host.addView(viewFactory.spacer())
 
-        if (!authState.isLinked) {
-            host.addView(Button(activity).apply {
-                text = "Start Real-Debrid Link"
-                gravity = Gravity.START or Gravity.CENTER_VERTICAL
-                setOnClickListener { onStartLink() }
-                post { onFirstFocusTarget(this) }
-            })
+        val playbackPanel = viewFactory.panel(elevated = false).apply {
+            addView(viewFactory.sectionTitle("Playback"))
+            addView(viewFactory.spacer(10))
+            addView(viewFactory.body("Current render mode: $playbackModeLabel"))
+        }
+        host.addView(playbackPanel)
+        host.addView(viewFactory.spacer())
+
+        val updatePanel = viewFactory.panel(elevated = false).apply {
+            addView(viewFactory.sectionTitle("Updates"))
+            addView(viewFactory.spacer(10))
+            addView(viewFactory.body(updateSummary ?: "No update check run yet."))
+        }
+        host.addView(updatePanel)
+        host.addView(viewFactory.spacer())
+
+        val primaryButton = if (!authState.isLinked) {
+            viewFactory.button("Start Real-Debrid Link", onStartLink)
         } else {
-            host.addView(Button(activity).apply {
-                text = "Toggle Playback Mode"
-                gravity = Gravity.START or Gravity.CENTER_VERTICAL
-                setOnClickListener { onTogglePlaybackMode() }
-                post { onFirstFocusTarget(this) }
-            })
+            viewFactory.button("Toggle Playback Mode", onTogglePlaybackMode)
         }
-
-        activeDeviceFlow?.let { flow ->
-            host.addView(
-                viewFactory.body(
-                    buildString {
-                        appendLine("Open: ${flow.verificationUrl}")
-                        appendLine("Code: ${flow.userCode}")
-                        append("Polling runs automatically in the background after you begin linking.")
-                    }
-                )
-            )
-            host.addView(viewFactory.button("Open Real-Debrid Link Page") {
-                activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(buildAuthUrl(flow))))
-            })
-        }
-
-        authState.lastError?.takeIf { it.isNotBlank() }?.let {
-            host.addView(viewFactory.body("Auth error: $it"))
-        }
+        host.addView(primaryButton)
+        primaryButton.post { onFirstFocusTarget(primaryButton) }
+        host.addView(viewFactory.spacer(10))
 
         if (authState.isLinked) {
             host.addView(viewFactory.button("Reset Real-Debrid Auth", onResetAuth))
+            host.addView(viewFactory.spacer(10))
         } else {
             host.addView(viewFactory.button("Toggle Playback Mode", onTogglePlaybackMode))
+            host.addView(viewFactory.spacer(10))
         }
         host.addView(viewFactory.button("Check for Updates", onCheckForUpdates))
+        host.addView(viewFactory.spacer(10))
         onOpenLatestUpdate?.let { openLatest ->
             host.addView(viewFactory.button("Open Latest APK", openLatest))
+            host.addView(viewFactory.spacer(10))
         }
         host.addView(viewFactory.button("Copy Debug Info", onCopyDebugInfo))
+        host.addView(viewFactory.spacer(10))
         host.addView(viewFactory.button("Back to Browse", onBackToHome))
     }
 }

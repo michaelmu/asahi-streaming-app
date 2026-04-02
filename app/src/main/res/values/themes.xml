@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.Asahi" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="android:statusBarColor">@android:color/black</item>
-        <item name="android:navigationBarColor">@android:color/black</item>
+        <item name="android:windowBackground">@drawable/asahi_app_bg</item>
+        <item name="android:statusBarColor">@color/asahi_bg</item>
+        <item name="android:navigationBarColor">@color/asahi_bg</item>
+        <item name="colorPrimary">@color/asahi_accent</item>
+        <item name="colorSecondary">@color/asahi_accent_alt</item>
     </style>
 </resources>

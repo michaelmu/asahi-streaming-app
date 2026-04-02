@@ -154,22 +154,27 @@ class MainActivity : ComponentActivity() {
         root = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             setPadding(48, 32, 48, 32)
+            setBackgroundResource(ai.shieldtv.app.R.drawable.asahi_app_bg)
         }
 
         sidebar = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.28f)
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.26f)
             setPadding(0, 0, 32, 0)
+            setBackgroundResource(ai.shieldtv.app.R.drawable.asahi_panel_bg)
+            setPadding(24, 24, 24, 24)
         }
 
         contentPane = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.72f)
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.74f)
+            setBackgroundResource(ai.shieldtv.app.R.drawable.asahi_panel_elevated_bg)
+            setPadding(28, 28, 28, 28)
         }
 
-        val title = viewFactory.title("Asahi")
-        val subtitle = viewFactory.body("TV-first streaming browser")
-        val buildInfo = viewFactory.body("${BuildConfig.VERSION_NAME} · ${BuildConfig.GIT_SHA}")
+        val title = viewFactory.pageTitle("Asahi")
+        val subtitle = viewFactory.body("TV-first streaming shell with a Kodi/Stremio-flavored layout.")
+        val buildInfo = viewFactory.caption("${BuildConfig.VERSION_NAME} · ${BuildConfig.GIT_SHA}")
 
         railHost = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -177,11 +182,13 @@ class MainActivity : ComponentActivity() {
 
         loadingView = ProgressBar(this).apply {
             visibility = View.GONE
+            indeterminateTintList = android.content.res.ColorStateList.valueOf(viewFactory.accentColor)
         }
 
         statusText = android.widget.TextView(this).apply {
             text = "Ready"
             textSize = 15f
+            setTextColor(viewFactory.textSecondaryColor)
         }
 
         screenHost = LinearLayout(this).apply {
@@ -199,6 +206,7 @@ class MainActivity : ComponentActivity() {
 
         contentScrollView = ScrollView(this).apply {
             isFillViewport = true
+            isVerticalScrollBarEnabled = false
             addView(screenHost)
         }
         contentPane.addView(
@@ -745,10 +753,10 @@ class MainActivity : ComponentActivity() {
         root.orientation = LinearLayout.HORIZONTAL
         root.setPadding(48, 32, 48, 32)
         sidebar.visibility = View.VISIBLE
-        contentPane.setPadding(0, 0, 0, 0)
+        contentPane.setPadding(28, 28, 28, 28)
         contentScrollView.setPadding(0, 0, 0, 0)
-        sidebar.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.28f)
-        contentPane.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.72f)
+        sidebar.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.26f)
+        contentPane.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.74f)
         exitImmersiveFullscreen()
     }
 
