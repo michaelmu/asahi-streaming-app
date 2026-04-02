@@ -4,12 +4,14 @@ import android.content.Context
 import android.graphics.Typeface
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
-import android.widget.LinearLayout
 import android.widget.FrameLayout
 import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import coil.load
@@ -157,11 +159,22 @@ class ScreenViewFactory(
             setPadding(dp(20), dp(16), dp(20), dp(16))
             elevation = 0f
             stateListAnimator = null
+            isFocusable = true
+            isFocusableInTouchMode = true
+            alpha = 0.96f
             setOnClickListener { onClick() }
             setOnFocusChangeListener { view, hasFocus ->
                 view.scaleX = if (hasFocus) 1.03f else 1f
                 view.scaleY = if (hasFocus) 1.03f else 1f
                 view.alpha = if (hasFocus) 1f else 0.96f
+            }
+            setOnKeyListener { _, keyCode, event ->
+                if (event.action == KeyEvent.ACTION_DOWN && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)) {
+                    performClick()
+                    true
+                } else {
+                    false
+                }
             }
         }
     }
@@ -180,7 +193,17 @@ class ScreenViewFactory(
             isSelected = selected
             elevation = 0f
             stateListAnimator = null
+            isFocusable = true
+            isFocusableInTouchMode = true
             setOnClickListener { onClick() }
+            setOnKeyListener { _, keyCode, event ->
+                if (event.action == KeyEvent.ACTION_DOWN && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)) {
+                    performClick()
+                    true
+                } else {
+                    false
+                }
+            }
         }
     }
 
@@ -215,6 +238,17 @@ class ScreenViewFactory(
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
                 setTypeface(typeface, Typeface.BOLD)
             })
+        }
+    }
+
+    fun progressBar(progressPercent: Int): ProgressBar {
+        return ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
+            max = 100
+            progress = progressPercent.coerceIn(0, 100)
+            progressDrawable = ContextCompat.getDrawable(context, R.drawable.asahi_progress_fill)
+            background = ContextCompat.getDrawable(context, R.drawable.asahi_progress_bg)
+            minimumHeight = dp(8)
+            minHeight = dp(8)
         }
     }
 

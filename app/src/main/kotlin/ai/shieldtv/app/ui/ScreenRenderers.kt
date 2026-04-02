@@ -7,6 +7,7 @@ import android.text.InputType
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -68,10 +69,7 @@ class NavigationRailRenderer(
     }
 
     private fun focusableButton(text: String, onClick: () -> Unit): View {
-        return viewFactory.button(text, onClick).apply {
-            isFocusable = true
-            isFocusableInTouchMode = true
-        }
+        return viewFactory.button(text, onClick)
     }
 }
 
@@ -142,14 +140,6 @@ class HomeScreenRenderer(
     ) {
         val libraryPicks = if (state.searchMode == SearchMode.SHOWS) featuredShows else featuredMovies
         val featured = dynamicPicks(state, libraryPicks)
-        val hero = featured.first()
-        host.addView(viewFactory.artworkHero(
-            title = hero.mediaRef.title,
-            subtitle = hero.subtitle ?: "Featured pick",
-            imageUrl = hero.backdropUrl ?: hero.posterUrl,
-            imageHeightDp = 220
-        ))
-        host.addView(viewFactory.spacer(14))
 
         val actionRow = LinearLayout(host.context).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -206,7 +196,7 @@ class HomeScreenRenderer(
             addView(viewFactory.caption("TMDb metadata, Torrentio source lookup, Real-Debrid auth/resolve, and Media3 playback are all in the loop."))
             onResumeSearch?.let {
                 addView(viewFactory.spacer(16))
-                addView(focusableAction("Resume Last Flow", it))
+                addView(actionButton("Resume Last Flow", it))
             }
         }
         val rightPanel = viewFactory.panel(elevated = false).apply {
@@ -219,11 +209,9 @@ class HomeScreenRenderer(
                 addView(viewFactory.body("Nothing recent yet. Search for a title and it’ll show up here."))
             } else {
                 state.recentQueries.take(6).forEachIndexed { index, query ->
-                    val button = focusableAction(query) { onRecentQuery(query) }
+                    val button = actionButton(query, onClick = { onRecentQuery(query) })
                     addView(button)
-                    if (index < state.recentQueries.take(6).lastIndex) {
-                        addView(viewFactory.spacer(10))
-                    }
+                    if (index < state.recentQueries.take(6).lastIndex) addView(viewFactory.spacer(10))
                 }
             }
         }
@@ -278,11 +266,13 @@ class HomeScreenRenderer(
                     setTypeface(typeface, Typeface.BOLD)
                 })
                 card.addView(viewFactory.spacer(6))
-                card.addView(viewFactory.caption("${item.subtitle} • Resume from ${formatProgress(item.progressPercent)}"))
+                card.addView(viewFactory.caption("${item.subtitle} • Resumable"))
+                card.addView(viewFactory.spacer(8))
+                card.addView(viewFactory.progressBar(item.progressPercent))
+                card.addView(viewFactory.spacer(8))
+                card.addView(viewFactory.caption("Resume from ${formatProgress(item.progressPercent)}"))
                 addView(card)
-                if (index == 0) {
-                    card.post { onFirstFocusTarget(card) }
-                }
+                if (index == 0) card.post { onFirstFocusTarget(card) }
             }
         }
     }
@@ -325,30 +315,17 @@ class HomeScreenRenderer(
                 })
                 card.addView(viewFactory.spacer(6))
                 card.addView(viewFactory.caption(item.badges.joinToString(" • ")))
-                item.subtitle?.let {
-                    card.addView(viewFactory.spacer(8))
-                    card.addView(viewFactory.body(it.take(80)))
-                }
                 addView(card)
-                if (index == 0) {
-                    card.post { onFirstFocusTarget(card) }
-                }
+                if (index == 0) card.post { onFirstFocusTarget(card) }
             }
         }
     }
 
     private fun actionButton(text: String, onClick: () -> Unit, startMarginDp: Int = 0): View {
-        return focusableAction(text, onClick).apply {
+        return viewFactory.button(text, onClick).apply {
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
                 if (startMarginDp > 0) it.marginStart = viewFactory.dp(startMarginDp)
             }
-        }
-    }
-
-    private fun focusableAction(text: String, onClick: () -> Unit): View {
-        return viewFactory.button(text, onClick).apply {
-            isFocusable = true
-            isFocusableInTouchMode = true
         }
     }
 
@@ -360,8 +337,8 @@ class HomeScreenRenderer(
             alpha = 0.97f
             setOnClickListener { onClick() }
             setOnFocusChangeListener { view, hasFocus ->
-                view.scaleX = if (hasFocus) 1.03f else 1f
-                view.scaleY = if (hasFocus) 1.03f else 1f
+                view.scaleX = if (hasFocus) 1.05f else 1f
+                view.scaleY = if (hasFocus) 1.05f else 1f
                 view.alpha = if (hasFocus) 1f else 0.97f
             }
             setOnKeyListener { _, keyCode, event ->
@@ -427,8 +404,6 @@ class SearchScreenRenderer(
                     viewFactory.dp(180),
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 ).also { it.marginStart = viewFactory.dp(16) }
-                isFocusable = true
-                isFocusableInTouchMode = true
             }
 
             searchRow.addView(queryInput)
@@ -441,10 +416,7 @@ class SearchScreenRenderer(
         host.addView(searchPanel)
         onBack?.let {
             host.addView(viewFactory.spacer())
-            host.addView(viewFactory.button("Back", it).apply {
-                isFocusable = true
-                isFocusableInTouchMode = true
-            })
+            host.addView(viewFactory.button("Back", it))
         }
     }
 }
@@ -477,71 +449,15 @@ class ResultsScreenRenderer(
             return
         }
 
-        val featured = state.searchResults.take(3)
-        val featuredRow = LinearLayout(activity).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.START
-        }
-        featured.forEachIndexed { index, result ->
-            val featuredCard = focusableMediaCard(onClick = { onResultSelected(result) }).apply {
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
-                    if (index > 0) it.marginStart = viewFactory.dp(14)
-                }
-            }
-            val poster = ImageView(activity).apply {
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    viewFactory.dp(180)
-                )
-                scaleType = ImageView.ScaleType.CENTER_CROP
-            }
-            (result.backdropUrl ?: result.posterUrl)?.takeIf { it.isNotBlank() }?.let { poster.load(it) }
-            featuredCard.addView(poster)
-            featuredCard.addView(viewFactory.spacer(12))
-            featuredCard.addView(TextView(activity).apply {
-                text = result.mediaRef.title
-                setTextColor(viewFactory.textPrimaryColor)
-                textSize = 22f
-                setTypeface(typeface, Typeface.BOLD)
-            })
-            featuredCard.addView(viewFactory.spacer(8))
-            featuredCard.addView(viewFactory.caption(
-                buildString {
-                    append(result.mediaRef.mediaType.name.lowercase().replaceFirstChar { it.uppercase() })
-                    result.mediaRef.year?.let {
-                        append(" • ")
-                        append(it)
-                    }
-                    if (result.badges.isNotEmpty()) {
-                        append(" • ")
-                        append(result.badges.take(2).joinToString())
-                    }
-                }
-            ))
-            result.subtitle?.takeIf { it.isNotBlank() }?.let {
-                featuredCard.addView(viewFactory.spacer(10))
-                featuredCard.addView(viewFactory.body(it.take(140)))
-            }
-            featuredRow.addView(featuredCard)
-            if (index == 0) {
-                featuredCard.post { onFirstFocusTarget(featuredCard) }
-            }
-        }
-        host.addView(featuredRow)
-        host.addView(viewFactory.spacer())
-
-        host.addView(viewFactory.sectionTitle("All Results"))
-        host.addView(viewFactory.spacer(12))
-
-        state.searchResults.drop(3).take(17).forEach { result ->
-            val card = focusableMediaCard(onClick = { onResultSelected(result) }, elevated = false).apply {
+        state.searchResults.take(20).forEachIndexed { index, result ->
+            val card = focusableMediaCard(onClick = { onResultSelected(result) }, elevated = index < 4).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
             }
 
             val posterView = ImageView(activity).apply {
-                layoutParams = LinearLayout.LayoutParams(viewFactory.dp(120), viewFactory.dp(180)).apply {
-                    marginEnd = viewFactory.dp(20)
+                layoutParams = LinearLayout.LayoutParams(viewFactory.dp(104), viewFactory.dp(156)).apply {
+                    marginEnd = viewFactory.dp(18)
                 }
                 scaleType = ImageView.ScaleType.CENTER_CROP
                 clipToOutline = true
@@ -558,26 +474,32 @@ class ResultsScreenRenderer(
                     result.mediaRef.year?.let { append(" ($it)") }
                 }
                 setTextColor(viewFactory.textPrimaryColor)
-                textSize = 22f
+                textSize = 21f
                 setTypeface(typeface, Typeface.BOLD)
             })
-            textColumn.addView(viewFactory.spacer(6))
-            textColumn.addView(viewFactory.caption(result.mediaRef.mediaType.name.lowercase().replaceFirstChar { it.uppercase() }))
+            textColumn.addView(viewFactory.spacer(4))
+            textColumn.addView(viewFactory.caption(
+                buildString {
+                    append(result.mediaRef.mediaType.name.lowercase().replaceFirstChar { it.uppercase() })
+                    if (result.badges.isNotEmpty()) {
+                        append(" • ")
+                        append(result.badges.take(2).joinToString())
+                    }
+                }
+            ))
             result.subtitle?.takeIf { it.isNotBlank() }?.let { subtitle ->
-                textColumn.addView(viewFactory.spacer(10))
-                textColumn.addView(viewFactory.body(subtitle.take(220)))
+                textColumn.addView(viewFactory.spacer(8))
+                textColumn.addView(viewFactory.body(subtitle.take(140)))
             }
 
             card.addView(posterView)
             card.addView(textColumn)
             host.addView(card)
-            host.addView(viewFactory.spacer(14))
+            host.addView(viewFactory.spacer(12))
+            if (index == 0) card.post { onFirstFocusTarget(card) }
         }
 
-        host.addView(viewFactory.button("New Search", onNewSearch).apply {
-            isFocusable = true
-            isFocusableInTouchMode = true
-        })
+        host.addView(viewFactory.button("New Search", onNewSearch))
     }
 
     private fun focusableMediaCard(onClick: () -> Unit, elevated: Boolean = true): LinearLayout {
@@ -585,10 +507,12 @@ class ResultsScreenRenderer(
             isFocusable = true
             isFocusableInTouchMode = true
             isClickable = true
+            alpha = 0.97f
             setOnClickListener { onClick() }
             setOnFocusChangeListener { view, hasFocus ->
-                view.scaleX = if (hasFocus) 1.02f else 1f
-                view.scaleY = if (hasFocus) 1.02f else 1f
+                view.scaleX = if (hasFocus) 1.04f else 1f
+                view.scaleY = if (hasFocus) 1.04f else 1f
+                view.alpha = if (hasFocus) 1f else 0.97f
             }
             setOnKeyListener { _, keyCode, event ->
                 if (event.action == KeyEvent.ACTION_DOWN && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)) {
@@ -685,10 +609,7 @@ class DetailsScreenRenderer(
         val primaryAction = viewFactory.button(
             if (details.mediaRef.mediaType == MediaType.SHOW) "Browse Episodes" else "Find Sources",
             if (details.mediaRef.mediaType == MediaType.SHOW) onBrowseEpisodes else onFindSources
-        ).apply {
-            isFocusable = true
-            isFocusableInTouchMode = true
-        }
+        )
         host.addView(primaryAction)
         primaryAction.post { onFirstFocusTarget(primaryAction) }
     }
@@ -745,9 +666,6 @@ class EpisodePickerScreenRenderer(
         (1..knownSeasonCount).forEach { season ->
             val chip = viewFactory.chip("Season $season", selected = season == selectedSeason) {
                 onSeasonSelected(season)
-            }.apply {
-                isFocusable = true
-                isFocusableInTouchMode = true
             }
             seasonStrip.addView(chip)
             if (season < knownSeasonCount) {
@@ -786,8 +704,9 @@ class EpisodePickerScreenRenderer(
                     onEpisodePlay(episode.episodeNumber)
                 }
                 setOnFocusChangeListener { view, hasFocus ->
-                    view.scaleX = if (hasFocus) 1.015f else 1f
-                    view.scaleY = if (hasFocus) 1.015f else 1f
+                    view.scaleX = if (hasFocus) 1.04f else 1f
+                    view.scaleY = if (hasFocus) 1.04f else 1f
+                    view.alpha = if (hasFocus) 1f else 0.97f
                 }
             }
             card.addView(TextView(activity).apply {
@@ -804,10 +723,6 @@ class EpisodePickerScreenRenderer(
                 card.addView(viewFactory.spacer(8))
                 card.addView(viewFactory.caption(it))
             }
-            episode.overview?.takeIf { it.isNotBlank() }?.let {
-                card.addView(viewFactory.spacer(10))
-                card.addView(viewFactory.body(it.take(180) + if (it.length > 180) "…" else ""))
-            }
             host.addView(card)
             host.addView(viewFactory.spacer(12))
             if (isSelected || (selectedEpisode !in episodeNumbers && index == 0)) {
@@ -818,10 +733,7 @@ class EpisodePickerScreenRenderer(
         host.addView(viewFactory.button(
             "Find Sources for S${selectedSeason.toString().padStart(2, '0')}E${selectedEpisode.toString().padStart(2, '0')}",
             onFindSources
-        ).apply {
-            isFocusable = true
-            isFocusableInTouchMode = true
-        })
+        ))
     }
 }
 
@@ -843,11 +755,10 @@ class SourcesScreenRenderer(
             mediaRef?.title ?: "Sources"
         }
 
-        host.addView(viewFactory.heroCard(
-            title = title,
-            subtitle = "Choose the clearest cached stream first — Kodi/Fenlight brain, cleaner native TV shell."
-        ))
-        host.addView(viewFactory.spacer())
+        host.addView(viewFactory.title(title))
+        host.addView(viewFactory.spacer(6))
+        host.addView(viewFactory.caption("Choose the clearest cached stream first."))
+        host.addView(viewFactory.spacer(16))
 
         val summaryPanel = viewFactory.panel(elevated = true).apply {
             addView(viewFactory.sectionTitle("Source Summary"))
@@ -870,103 +781,75 @@ class SourcesScreenRenderer(
             return
         }
 
-        val topSources = state.selectedSources.take(3)
-        if (topSources.isNotEmpty()) {
-            host.addView(viewFactory.sectionTitle("Top Picks"))
+        val grouped = state.selectedSources.groupBy {
+            when (it.cacheStatus) {
+                CacheStatus.CACHED -> "Cached Picks"
+                CacheStatus.DIRECT -> "Direct Links"
+                CacheStatus.UNCACHED, CacheStatus.UNCHECKED -> "Fallback Sources"
+            }
+        }
+
+        grouped.forEach { (groupTitle, items) ->
+            host.addView(viewFactory.sectionTitle(groupTitle))
             host.addView(viewFactory.spacer(12))
-            val picksRow = LinearLayout(host.context).apply { orientation = LinearLayout.HORIZONTAL }
-            topSources.forEachIndexed { index, source ->
-                val pickCard = focusableSourceCard(onClick = { onSourceSelected(source) }).apply {
-                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
-                        if (index > 0) it.marginStart = viewFactory.dp(12)
-                    }
+            items.take(8).forEachIndexed { index, source ->
+                val card = focusableSourceCard(onClick = { onSourceSelected(source) }, elevated = source.cacheStatus == CacheStatus.CACHED)
+                val headRow = LinearLayout(host.context).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
                 }
-                pickCard.addView(TextView(host.context).apply {
-                    text = source.displayName.lineSequence().firstOrNull()?.take(42) ?: source.displayName.take(42)
+                headRow.addView(TextView(host.context).apply {
+                    text = source.displayName.lineSequence().firstOrNull()?.take(52) ?: source.displayName.take(52)
                     setTextColor(viewFactory.textPrimaryColor)
                     textSize = 20f
                     setTypeface(typeface, Typeface.BOLD)
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 })
-                pickCard.addView(viewFactory.spacer(8))
-                pickCard.addView(viewFactory.caption(bestSourceBadge(source)))
-                source.sizeLabel?.let {
-                    pickCard.addView(viewFactory.spacer(8))
-                    pickCard.addView(viewFactory.body(it))
-                }
-                picksRow.addView(pickCard)
-                if (index == 0) {
-                    pickCard.post { onFirstFocusTarget(pickCard) }
-                }
-            }
-            host.addView(picksRow)
-            host.addView(viewFactory.spacer())
-            host.addView(viewFactory.sectionTitle("All Sources"))
-            host.addView(viewFactory.spacer(12))
-        }
-
-        state.selectedSources.drop(3).take(13).forEach { source ->
-            val card = focusableSourceCard(onClick = { onSourceSelected(source) }, elevated = source.cacheStatus == CacheStatus.CACHED)
-
-            val headRow = LinearLayout(host.context).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-            }
-            headRow.addView(TextView(host.context).apply {
-                text = source.displayName.lineSequence().firstOrNull()?.take(52) ?: source.displayName.take(52)
-                setTextColor(viewFactory.textPrimaryColor)
-                textSize = 21f
-                setTypeface(typeface, Typeface.BOLD)
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            })
-            headRow.addView(TextView(host.context).apply {
-                text = sourceLabel(source)
-                setTextColor(viewFactory.accentAltColor)
-                textSize = 14f
-                setTypeface(typeface, Typeface.BOLD)
-            })
-            card.addView(headRow)
-            card.addView(viewFactory.spacer(8))
-
-            val pillRow = LinearLayout(host.context).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.START
-            }
-            pillRow.addView(viewFactory.statPill("Quality", qualityLabel(source.quality), StatTone.ACCENT))
-            pillRow.addView(statSpacer())
-            pillRow.addView(
-                viewFactory.statPill(
-                    "Cache",
-                    cacheLabel(source.cacheStatus),
-                    when (source.cacheStatus) {
-                        CacheStatus.CACHED -> StatTone.SUCCESS
-                        CacheStatus.UNCACHED -> StatTone.WARNING
-                        CacheStatus.UNCHECKED,
-                        CacheStatus.DIRECT -> StatTone.NORMAL
-                    }
-                )
-            )
-            source.sizeLabel?.let {
-                pillRow.addView(statSpacer())
-                pillRow.addView(viewFactory.statPill("Size", it, StatTone.NORMAL))
-            }
-            card.addView(HorizontalScrollView(host.context).apply { addView(pillRow) })
-            card.addView(viewFactory.spacer(12))
-            card.addView(viewFactory.caption("${source.providerDisplayName} • ${source.debridService.name.replace('_', ' ')}"))
-            val detailText = buildString {
-                source.sourceSite?.takeIf { it.isNotBlank() }?.let {
-                    append(it)
-                }
-                source.rawMetadata["releaseTitle"]?.takeIf { it.isNotBlank() }?.let {
-                    if (isNotBlank()) append(" • ")
-                    append(it)
-                }
-            }
-            detailText.takeIf { it.isNotBlank() }?.let {
+                headRow.addView(TextView(host.context).apply {
+                    text = sourceLabel(source)
+                    setTextColor(
+                        when (source.cacheStatus) {
+                            CacheStatus.CACHED -> viewFactory.accentAltColor
+                            CacheStatus.DIRECT -> viewFactory.accentColor
+                            CacheStatus.UNCACHED, CacheStatus.UNCHECKED -> viewFactory.warningColor
+                        }
+                    )
+                    textSize = 14f
+                    setTypeface(typeface, Typeface.BOLD)
+                })
+                card.addView(headRow)
                 card.addView(viewFactory.spacer(8))
-                card.addView(viewFactory.body(it.take(160)))
+
+                val pillRow = LinearLayout(host.context).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.START
+                }
+                pillRow.addView(viewFactory.statPill("Quality", qualityLabel(source.quality), StatTone.ACCENT))
+                pillRow.addView(statSpacer())
+                pillRow.addView(
+                    viewFactory.statPill(
+                        "Cache",
+                        cacheLabel(source.cacheStatus),
+                        when (source.cacheStatus) {
+                            CacheStatus.CACHED -> StatTone.SUCCESS
+                            CacheStatus.UNCACHED -> StatTone.WARNING
+                            CacheStatus.UNCHECKED,
+                            CacheStatus.DIRECT -> StatTone.NORMAL
+                        }
+                    )
+                )
+                source.sizeLabel?.let {
+                    pillRow.addView(statSpacer())
+                    pillRow.addView(viewFactory.statPill("Size", it, StatTone.NORMAL))
+                }
+                card.addView(HorizontalScrollView(host.context).apply { addView(pillRow) })
+                card.addView(viewFactory.spacer(10))
+                card.addView(viewFactory.caption("${source.providerDisplayName} • ${source.debridService.name.replace('_', ' ')}"))
+                host.addView(card)
+                host.addView(viewFactory.spacer(10))
+                if (groupTitle == "Cached Picks" && index == 0) card.post { onFirstFocusTarget(card) }
             }
-            host.addView(card)
-            host.addView(viewFactory.spacer(12))
+            host.addView(viewFactory.spacer(8))
         }
     }
 
@@ -975,10 +858,12 @@ class SourcesScreenRenderer(
             isFocusable = true
             isFocusableInTouchMode = true
             isClickable = true
+            alpha = 0.97f
             setOnClickListener { onClick() }
             setOnFocusChangeListener { view, hasFocus ->
-                view.scaleX = if (hasFocus) 1.015f else 1f
-                view.scaleY = if (hasFocus) 1.015f else 1f
+                view.scaleX = if (hasFocus) 1.05f else 1f
+                view.scaleY = if (hasFocus) 1.05f else 1f
+                view.alpha = if (hasFocus) 1f else 0.97f
             }
             setOnKeyListener { _, keyCode, event ->
                 if (event.action == KeyEvent.ACTION_DOWN && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)) {
@@ -991,21 +876,11 @@ class SourcesScreenRenderer(
         }
     }
 
-    private fun bestSourceBadge(source: SourceResult): String {
-        return listOfNotNull(
-            qualityLabel(source.quality),
-            cacheLabel(source.cacheStatus),
-            source.sizeLabel
-        ).joinToString(" • ")
-    }
-
-    private fun sourceLabel(source: SourceResult): String {
-        return when {
-            source.cacheStatus == CacheStatus.CACHED && source.quality == Quality.UHD_4K -> "BEST"
-            source.cacheStatus == CacheStatus.CACHED -> "CACHED"
-            source.cacheStatus == CacheStatus.DIRECT -> "DIRECT"
-            else -> "ALT"
-        }
+    private fun sourceLabel(source: SourceResult): String = when {
+        source.cacheStatus == CacheStatus.CACHED && source.quality == Quality.UHD_4K -> "BEST"
+        source.cacheStatus == CacheStatus.CACHED -> "CACHED"
+        source.cacheStatus == CacheStatus.DIRECT -> "DIRECT"
+        else -> "FALLBACK"
     }
 
     private fun qualityLabel(quality: Quality): String = when (quality) {
@@ -1039,7 +914,10 @@ class PlayerScreenRenderer(
         state: AppState,
         playbackMessage: String?,
         playbackError: String?,
-        playerView: PlayerView
+        playerView: PlayerView,
+        playbackStateLabel: String,
+        playbackPositionMs: Long,
+        playbackDurationMs: Long
     ) {
         val source = state.selectedSource
         if (source == null) {
@@ -1049,41 +927,121 @@ class PlayerScreenRenderer(
             return
         }
 
-        val overlay = LinearLayout(host.context).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(viewFactory.dp(24))
-            background?.alpha = 0
+        val playerFrame = FrameLayout(host.context).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.MATCH_PARENT
+            )
         }
-        overlay.addView(TextView(host.context).apply {
+
+        playerView.layoutParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT
+        )
+        playerFrame.addView(playerView)
+
+        val topOverlay = LinearLayout(host.context).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.TOP
+            )
+            setPadding(viewFactory.dp(24))
+        }
+        topOverlay.addView(TextView(host.context).apply {
             text = source.mediaRef.title
             setTextColor(viewFactory.textPrimaryColor)
             textSize = 28f
             setTypeface(typeface, Typeface.BOLD)
         })
-        overlay.addView(viewFactory.caption(source.displayName.take(90)))
+        topOverlay.addView(viewFactory.caption(buildString {
+            append(source.providerDisplayName)
+            append(" • ")
+            append(qualityLabel(source.quality))
+            source.seasonNumber?.let { season ->
+                val episode = source.episodeNumber ?: 1
+                append(" • S${season.toString().padStart(2, '0')}E${episode.toString().padStart(2, '0')}")
+            }
+        }))
         playbackError?.takeIf { it.isNotBlank() }?.let {
-            overlay.addView(viewFactory.spacer(10))
-            overlay.addView(TextView(host.context).apply {
+            topOverlay.addView(viewFactory.spacer(10))
+            topOverlay.addView(TextView(host.context).apply {
                 text = it
                 setTextColor(viewFactory.errorColor)
                 textSize = 15f
             })
         }
-        playbackMessage?.takeIf { it.isNotBlank() }?.let {
-            overlay.addView(viewFactory.spacer(10))
-            overlay.addView(TextView(host.context).apply {
-                text = it.lineSequence().take(3).joinToString("\n")
-                setTextColor(viewFactory.textSecondaryColor)
-                textSize = 14f
+
+        val bottomChrome = viewFactory.panel(elevated = true).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.BOTTOM
+            ).also {
+                it.marginStart = viewFactory.dp(24)
+                it.marginEnd = viewFactory.dp(24)
+                it.bottomMargin = viewFactory.dp(24)
+            }
+            alpha = 0.94f
+            addView(viewFactory.sectionTitle("Playback"))
+            addView(viewFactory.spacer(10))
+            addView(TextView(host.context).apply {
+                text = source.displayName.take(70)
+                setTextColor(viewFactory.textPrimaryColor)
+                textSize = 20f
+                setTypeface(typeface, Typeface.BOLD)
             })
+            addView(viewFactory.spacer(8))
+            addView(viewFactory.progressBar(
+                if (playbackDurationMs > 0) ((playbackPositionMs * 100) / playbackDurationMs).toInt() else 0
+            ))
+            addView(viewFactory.spacer(10))
+            addView(TextView(host.context).apply {
+                text = "${formatTime(playbackPositionMs)} / ${formatTime(playbackDurationMs)} • ${stateLabel(playbackStateLabel)}"
+                setTextColor(viewFactory.textPrimaryColor)
+                textSize = 18f
+                setTypeface(typeface, Typeface.BOLD)
+            })
+            addView(viewFactory.spacer(8))
+            addView(viewFactory.caption("Center: player controls • Back: source picker • Left/Right: seek"))
+            playbackMessage?.takeIf { it.isNotBlank() }?.let {
+                addView(viewFactory.spacer(8))
+                addView(viewFactory.caption(it.lineSequence().firstOrNull() ?: it))
+            }
         }
 
-        playerView.layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.MATCH_PARENT
-        )
-        host.addView(playerView)
-        host.addView(overlay)
+        playerFrame.addView(topOverlay)
+        playerFrame.addView(bottomChrome)
+        host.addView(playerFrame)
+    }
+
+    private fun stateLabel(label: String): String = when (label.lowercase()) {
+        "ready" -> "Playing"
+        "buffering" -> "Buffering"
+        "ended" -> "Ended"
+        "idle" -> "Idle"
+        else -> label.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+    }
+
+    private fun qualityLabel(quality: Quality): String = when (quality) {
+        Quality.UHD_4K -> "4K"
+        Quality.FHD_1080P -> "1080p"
+        Quality.HD_720P -> "720p"
+        Quality.SD -> "SD"
+        Quality.SCR -> "SCR"
+        Quality.CAM -> "CAM"
+        Quality.TELE -> "TELE"
+        Quality.UNKNOWN -> "Unknown"
+    }
+
+    private fun formatTime(valueMs: Long): String {
+        if (valueMs <= 0L) return "00:00"
+        val totalSeconds = valueMs / 1000
+        val hours = totalSeconds / 3600
+        val minutes = (totalSeconds % 3600) / 60
+        val seconds = totalSeconds % 60
+        return if (hours > 0) "%d:%02d:%02d".format(hours, minutes, seconds) else "%02d:%02d".format(minutes, seconds)
     }
 }
 
@@ -1145,9 +1103,6 @@ class SettingsScreenRenderer(
                 addView(viewFactory.spacer(12))
                 addView(viewFactory.button("Open Real-Debrid Link Page") {
                     activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(buildAuthUrl(flow))))
-                }.apply {
-                    isFocusable = true
-                    isFocusableInTouchMode = true
                 })
             }
         }
@@ -1173,47 +1128,26 @@ class SettingsScreenRenderer(
         val primaryButton = viewFactory.button(
             if (!authState.isLinked) "Start Real-Debrid Link" else "Toggle Playback Mode",
             if (!authState.isLinked) onStartLink else onTogglePlaybackMode
-        ).apply {
-            isFocusable = true
-            isFocusableInTouchMode = true
-        }
+        )
         host.addView(primaryButton)
         primaryButton.post { onFirstFocusTarget(primaryButton) }
         host.addView(viewFactory.spacer(10))
 
         if (authState.isLinked) {
-            host.addView(viewFactory.button("Reset Real-Debrid Auth", onResetAuth).apply {
-                isFocusable = true
-                isFocusableInTouchMode = true
-            })
+            host.addView(viewFactory.button("Reset Real-Debrid Auth", onResetAuth))
             host.addView(viewFactory.spacer(10))
         } else {
-            host.addView(viewFactory.button("Toggle Playback Mode", onTogglePlaybackMode).apply {
-                isFocusable = true
-                isFocusableInTouchMode = true
-            })
+            host.addView(viewFactory.button("Toggle Playback Mode", onTogglePlaybackMode))
             host.addView(viewFactory.spacer(10))
         }
-        host.addView(viewFactory.button("Check for Updates", onCheckForUpdates).apply {
-            isFocusable = true
-            isFocusableInTouchMode = true
-        })
+        host.addView(viewFactory.button("Check for Updates", onCheckForUpdates))
         host.addView(viewFactory.spacer(10))
         onOpenLatestUpdate?.let { openLatest ->
-            host.addView(viewFactory.button("Open Latest APK", openLatest).apply {
-                isFocusable = true
-                isFocusableInTouchMode = true
-            })
+            host.addView(viewFactory.button("Open Latest APK", openLatest))
             host.addView(viewFactory.spacer(10))
         }
-        host.addView(viewFactory.button("Copy Debug Info", onCopyDebugInfo).apply {
-            isFocusable = true
-            isFocusableInTouchMode = true
-        })
+        host.addView(viewFactory.button("Copy Debug Info", onCopyDebugInfo))
         host.addView(viewFactory.spacer(10))
-        host.addView(viewFactory.button("Back to Browse", onBackToHome).apply {
-            isFocusable = true
-            isFocusableInTouchMode = true
-        })
+        host.addView(viewFactory.button("Back to Browse", onBackToHome))
     }
 }
