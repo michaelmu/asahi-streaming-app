@@ -1,5 +1,7 @@
 package ai.shieldtv.app.update
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedReader
@@ -17,7 +19,11 @@ class GitHubReleaseUpdateChecker(
     private val repo: String,
     private val currentVersionName: String
 ) {
-    fun check(): UpdateCheckResult {
+    suspend fun check(): UpdateCheckResult = withContext(Dispatchers.IO) {
+        runCheck()
+    }
+
+    private fun runCheck(): UpdateCheckResult {
         val releases = fetchReleases()
         if (releases.length() == 0) {
             return UpdateCheckResult(statusMessage = "No GitHub releases found.")
@@ -32,13 +38,12 @@ class GitHubReleaseUpdateChecker(
             if (latestVersion.isBlank()) continue
 
             val assets = json.optJSONArray("assets") ?: JSONArray()
-            val apkAsset = findApkAsset(assets)
+            val apkAsset = findApkAsset(assets) ?: return UpdateCheckResult(
+                statusMessage = "Release $latestVersion found, but no APK asset was attached."
+            )
             val isDebugRollingRelease = latestVersion.equals("latest-debug", ignoreCase = true)
             if (!isDebugRollingRelease && !isNewerThanCurrent(latestVersion)) {
                 continue
-            }
-            if (apkAsset == null) {
-                return UpdateCheckResult(statusMessage = "Release $latestVersion found, but no APK asset was attached.")
             }
 
             return UpdateCheckResult(
