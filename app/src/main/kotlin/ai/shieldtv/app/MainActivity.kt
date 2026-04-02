@@ -262,6 +262,7 @@ class MainActivity : ComponentActivity() {
                 true
             }
             AppDestination.PLAYER -> {
+                AppContainer.playbackEngine.stop()
                 coordinator.currentState().selectedMedia?.let { mediaRef ->
                     coordinator.showSources(
                         mediaRef = mediaRef,
@@ -302,14 +303,17 @@ class MainActivity : ComponentActivity() {
                 selectedMode = coordinator.currentState().searchMode,
                 inSettings = destination == AppDestination.SETTINGS,
                 onMovies = {
+                    AppContainer.playbackEngine.stop()
                     coordinator.openSearch(SearchMode.MOVIES)
                     renderCurrentScreen()
                 },
                 onShows = {
+                    AppContainer.playbackEngine.stop()
                     coordinator.openSearch(SearchMode.SHOWS)
                     renderCurrentScreen()
                 },
                 onSettings = {
+                    AppContainer.playbackEngine.stop()
                     coordinator.openSettings()
                     renderCurrentScreen()
                 },
