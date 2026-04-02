@@ -385,6 +385,19 @@ class MainActivity : ComponentActivity() {
                             renderCurrentScreen()
                         }
                     },
+                    onQuickPick = { quickPick ->
+                        coordinator.openSearch(
+                            if (quickPick.mediaRef.mediaType == ai.shieldtv.app.core.model.media.MediaType.SHOW) SearchMode.SHOWS else SearchMode.MOVIES
+                        )
+                        renderCurrentScreen()
+                        runSearch(
+                            if (quickPick.mediaRef.mediaType == ai.shieldtv.app.core.model.media.MediaType.SHOW) SearchMode.SHOWS else SearchMode.MOVIES,
+                            quickPick.mediaRef.title
+                        )
+                    },
+                    onRecentQuery = { recentQuery ->
+                        runSearch(coordinator.currentState().searchMode, recentQuery)
+                    },
                     onFirstFocusTarget = ::focusView
                 )
             }

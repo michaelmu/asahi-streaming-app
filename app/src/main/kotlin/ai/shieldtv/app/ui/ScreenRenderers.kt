@@ -17,7 +17,10 @@ import ai.shieldtv.app.SearchMode
 import ai.shieldtv.app.core.model.auth.DeviceCodeFlow
 import ai.shieldtv.app.core.model.auth.RealDebridAuthState
 import ai.shieldtv.app.core.model.media.EpisodeSummary
+import ai.shieldtv.app.core.model.media.MediaIds
+import ai.shieldtv.app.core.model.media.MediaRef
 import ai.shieldtv.app.core.model.media.MediaType
+import ai.shieldtv.app.core.model.media.SearchResult
 import ai.shieldtv.app.core.model.source.CacheStatus
 import ai.shieldtv.app.core.model.source.Quality
 import ai.shieldtv.app.core.model.source.SourceResult
@@ -62,6 +65,54 @@ class HomeScreenRenderer(
     private val host: LinearLayout,
     private val viewFactory: ScreenViewFactory
 ) {
+    private val featuredMovies = listOf(
+        SearchResult(
+            mediaRef = MediaRef(MediaType.MOVIE, MediaIds(tmdbId = "438631", imdbId = null, tvdbId = null), "Dune: Part Two", year = 2024),
+            subtitle = "Big sci-fi spectacle and a very safe default demo title.",
+            posterUrl = "https://image.tmdb.org/t/p/w500/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg",
+            backdropUrl = "https://image.tmdb.org/t/p/w780/xOMo8BRK7PfcJv9JCnx7s5hj0PX.jpg",
+            badges = listOf("Featured", "Movie")
+        ),
+        SearchResult(
+            mediaRef = MediaRef(MediaType.MOVIE, MediaIds(tmdbId = "157336", imdbId = null, tvdbId = null), "Interstellar", year = 2014),
+            subtitle = "Reliable showcase title with strong artwork and broad source availability.",
+            posterUrl = "https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",
+            backdropUrl = "https://image.tmdb.org/t/p/w780/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg",
+            badges = listOf("Sci-Fi")
+        ),
+        SearchResult(
+            mediaRef = MediaRef(MediaType.MOVIE, MediaIds(tmdbId = "603692", imdbId = null, tvdbId = null), "John Wick: Chapter 4", year = 2023),
+            subtitle = "Action-heavy quick pick for testing details and source rows.",
+            posterUrl = "https://image.tmdb.org/t/p/w500/vZloFAK7NmvMGKE7VkF5UHaz0I.jpg",
+            backdropUrl = "https://image.tmdb.org/t/p/w780/h8gHn0OzBoaefsYseUByqsmEDMY.jpg",
+            badges = listOf("Action")
+        )
+    )
+
+    private val featuredShows = listOf(
+        SearchResult(
+            mediaRef = MediaRef(MediaType.SHOW, MediaIds(tmdbId = "95396", imdbId = null, tvdbId = null), "Severance", year = 2022),
+            subtitle = "Great modern TV test case with strong episodic flow.",
+            posterUrl = "https://image.tmdb.org/t/p/w500/7lQzaWm0M0aX9P4o0P6m0Ht4dQJ.jpg",
+            backdropUrl = "https://image.tmdb.org/t/p/w780/kU98MbVVgi72wzceyrEbClZmMFe.jpg",
+            badges = listOf("Featured", "TV")
+        ),
+        SearchResult(
+            mediaRef = MediaRef(MediaType.SHOW, MediaIds(tmdbId = "83867", imdbId = null, tvdbId = null), "Andor", year = 2022),
+            subtitle = "Good fit for source + episode navigation validation.",
+            posterUrl = "https://image.tmdb.org/t/p/w500/59SVNwLfoMnZPPB6ukW6dlPxAdI.jpg",
+            backdropUrl = "https://image.tmdb.org/t/p/w780/zGoZB4CboMzY1z4G3nU6BWnMDB2.jpg",
+            badges = listOf("Sci-Fi")
+        ),
+        SearchResult(
+            mediaRef = MediaRef(MediaType.SHOW, MediaIds(tmdbId = "100088", imdbId = null, tvdbId = null), "The Last of Us", year = 2023),
+            subtitle = "Solid browse/demo pick with recognizable artwork.",
+            posterUrl = "https://image.tmdb.org/t/p/w500/uKvVjHNqB5VmOrdxqAt2F7J78ED.jpg",
+            backdropUrl = "https://image.tmdb.org/t/p/w780/56v2KjBlU4XaOv9rVYEQypROD7P.jpg",
+            badges = listOf("Drama")
+        )
+    )
+
     fun render(
         state: AppState,
         authLinked: Boolean,
@@ -70,13 +121,17 @@ class HomeScreenRenderer(
         onOpenShows: () -> Unit,
         onOpenSettings: () -> Unit,
         onResumeSearch: (() -> Unit)?,
+        onQuickPick: (SearchResult) -> Unit,
+        onRecentQuery: (String) -> Unit,
         onFirstFocusTarget: (View) -> Unit = {}
     ) {
+        val featured = if (state.searchMode == SearchMode.SHOWS) featuredShows else featuredMovies
+        val hero = featured.first()
         host.addView(viewFactory.artworkHero(
-            title = "Asahi",
-            subtitle = "A cleaner TV-first shell: browse, inspect, choose a source, then let playback take over the room.",
-            imageUrl = null,
-            imageHeightDp = 300
+            title = hero.mediaRef.title,
+            subtitle = hero.subtitle ?: "Featured pick",
+            imageUrl = hero.backdropUrl ?: hero.posterUrl,
+            imageHeightDp = 320
         ))
         host.addView(viewFactory.spacer())
 
@@ -110,6 +165,11 @@ class HomeScreenRenderer(
         host.addView(HorizontalScrollView(host.context).apply { addView(statusRow) })
         host.addView(viewFactory.spacer())
 
+        host.addView(viewFactory.sectionTitle("Quick Picks"))
+        host.addView(viewFactory.spacer(12))
+        host.addView(buildQuickPickRow(featured, onQuickPick, onFirstFocusTarget))
+        host.addView(viewFactory.spacer())
+
         val lowerRow = LinearLayout(host.context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.TOP
@@ -121,23 +181,27 @@ class HomeScreenRenderer(
             addView(viewFactory.body(statusMessage))
             addView(viewFactory.spacer(12))
             addView(viewFactory.caption("TMDb metadata, Torrentio source lookup, Real-Debrid auth/resolve, and Media3 playback are all in the loop."))
+            onResumeSearch?.let {
+                addView(viewFactory.spacer(16))
+                addView(viewFactory.button("Resume Last Flow", it))
+            }
         }
         val rightPanel = viewFactory.panel(elevated = false).apply {
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.9f).also {
                 it.marginStart = viewFactory.dp(14)
             }
-            addView(viewFactory.sectionTitle("Suggested Next Step"))
+            addView(viewFactory.sectionTitle("Recent Searches"))
             addView(viewFactory.spacer(12))
-            addView(viewFactory.body(
-                when {
-                    !authLinked -> "Link Real-Debrid in Settings if you want the best cached-source path."
-                    onResumeSearch != null -> "Jump back into your last search flow or start a new browse pass from Movies / TV Shows."
-                    else -> "Start with Movies or TV Shows from the action row above."
+            if (state.recentQueries.isEmpty()) {
+                addView(viewFactory.body("Nothing recent yet. Search for a title and it’ll show up here."))
+            } else {
+                state.recentQueries.take(6).forEachIndexed { index, query ->
+                    val button = viewFactory.button(query) { onRecentQuery(query) }
+                    addView(button)
+                    if (index < state.recentQueries.take(6).lastIndex) {
+                        addView(viewFactory.spacer(10))
+                    }
                 }
-            ))
-            onResumeSearch?.let {
-                addView(viewFactory.spacer(16))
-                addView(viewFactory.button("Resume Last Flow", it))
             }
         }
         lowerRow.addView(leftPanel)
@@ -145,6 +209,55 @@ class HomeScreenRenderer(
         host.addView(lowerRow)
 
         moviesButton.post { onFirstFocusTarget(moviesButton) }
+    }
+
+    private fun buildQuickPickRow(
+        items: List<SearchResult>,
+        onQuickPick: (SearchResult) -> Unit,
+        onFirstFocusTarget: (View) -> Unit
+    ): View {
+        return LinearLayout(host.context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            items.forEachIndexed { index, item ->
+                val card = viewFactory.panel(elevated = true).apply {
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
+                        if (index > 0) it.marginStart = viewFactory.dp(12)
+                    }
+                    isFocusable = true
+                    isClickable = true
+                    setOnClickListener { onQuickPick(item) }
+                    setOnFocusChangeListener { view, hasFocus ->
+                        view.scaleX = if (hasFocus) 1.02f else 1f
+                        view.scaleY = if (hasFocus) 1.02f else 1f
+                    }
+                }
+                card.addView(ImageView(host.context).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        viewFactory.dp(180)
+                    )
+                    scaleType = ImageView.ScaleType.CENTER_CROP
+                    (item.backdropUrl ?: item.posterUrl)?.takeIf { it.isNotBlank() }?.let { load(it) }
+                })
+                card.addView(viewFactory.spacer(10))
+                card.addView(TextView(host.context).apply {
+                    text = item.mediaRef.title
+                    setTextColor(viewFactory.textPrimaryColor)
+                    textSize = 20f
+                    setTypeface(typeface, Typeface.BOLD)
+                })
+                card.addView(viewFactory.spacer(6))
+                card.addView(viewFactory.caption(item.badges.joinToString(" • ")))
+                item.subtitle?.let {
+                    card.addView(viewFactory.spacer(8))
+                    card.addView(viewFactory.body(it.take(110)))
+                }
+                addView(card)
+                if (index == 0) {
+                    card.post { onFirstFocusTarget(card) }
+                }
+            }
+        }
     }
 
     private fun actionButton(text: String, onClick: () -> Unit, startMarginDp: Int = 0): View {
@@ -232,7 +345,7 @@ class ResultsScreenRenderer(
     fun render(
         state: AppState,
         emptyMessage: String,
-        onResultSelected: (ai.shieldtv.app.core.model.media.SearchResult) -> Unit,
+        onResultSelected: (SearchResult) -> Unit,
         onNewSearch: () -> Unit,
         onFirstFocusTarget: (View) -> Unit = {}
     ) {
@@ -289,11 +402,8 @@ class ResultsScreenRenderer(
                     viewFactory.dp(180)
                 )
                 scaleType = ImageView.ScaleType.CENTER_CROP
-                result.backdropUrl?.takeIf { it.isNotBlank() }
-                    ?: result.posterUrl?.takeIf { it.isNotBlank() }
-            }.also { image ->
-                (result.backdropUrl ?: result.posterUrl)?.takeIf { it.isNotBlank() }?.let { image.load(it) }
             }
+            (result.backdropUrl ?: result.posterUrl)?.takeIf { it.isNotBlank() }?.let { poster.load(it) }
             featuredCard.addView(poster)
             featuredCard.addView(viewFactory.spacer(12))
             featuredCard.addView(TextView(activity).apply {

@@ -22,13 +22,15 @@ data class AppState(
     val selectedSeasonNumber: Int? = null,
     val selectedEpisodeNumber: Int? = null,
     val selectedSource: SourceResult? = null,
-    val selectedSources: List<SourceResult> = emptyList()
+    val selectedSources: List<SourceResult> = emptyList(),
+    val recentQueries: List<String> = emptyList()
 )
 
 fun AppState.toBundleMap(): Map<String, String> = buildMap {
     put("destination", destination.name)
     put("searchMode", searchMode.name)
     put("query", query)
+    put("recentQueries", recentQueries.joinToString("|"))
     selectedSeasonNumber?.let { put("selectedSeasonNumber", it.toString()) }
     selectedEpisodeNumber?.let { put("selectedEpisodeNumber", it.toString()) }
 }
@@ -39,6 +41,11 @@ fun appStateFromBundleMap(values: Map<String, String>): AppState {
         searchMode = values["searchMode"]?.let { SearchMode.valueOf(it) } ?: SearchMode.MOVIES,
         query = values["query"] ?: "Dune",
         selectedSeasonNumber = values["selectedSeasonNumber"]?.toIntOrNull(),
-        selectedEpisodeNumber = values["selectedEpisodeNumber"]?.toIntOrNull()
+        selectedEpisodeNumber = values["selectedEpisodeNumber"]?.toIntOrNull(),
+        recentQueries = values["recentQueries"]
+            ?.split('|')
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+            ?: emptyList()
     )
 }

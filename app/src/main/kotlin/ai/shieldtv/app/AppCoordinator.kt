@@ -39,6 +39,8 @@ class AppCoordinator(
     }
 
     fun showResults(query: String, results: List<SearchResult>) {
+        val updatedRecentQueries = (listOf(query) + state.recentQueries.filterNot { it.equals(query, ignoreCase = true) })
+            .take(6)
         state = state.copy(
             destination = AppDestination.RESULTS,
             query = query,
@@ -48,7 +50,8 @@ class AppCoordinator(
             selectedSeasonNumber = null,
             selectedEpisodeNumber = null,
             selectedSource = null,
-            selectedSources = emptyList()
+            selectedSources = emptyList(),
+            recentQueries = updatedRecentQueries
         )
         navigator.goTo(AppDestination.RESULTS)
     }
