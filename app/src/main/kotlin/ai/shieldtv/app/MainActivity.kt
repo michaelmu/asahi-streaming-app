@@ -39,6 +39,7 @@ import ai.shieldtv.app.feature.sources.presentation.SourcesViewModel
 import ai.shieldtv.app.integration.playback.media3.engine.Media3PlaybackEngine
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -80,11 +81,18 @@ class MainActivity : ComponentActivity() {
     private var authState: RealDebridAuthState = RealDebridAuthState(isLinked = false)
     private var activeDeviceFlow: DeviceCodeFlow? = null
     private var authPollingJob: Job? = null
+    private var latestPlaybackState = ai.shieldtv.app.core.model.playback.PlaybackState(
+        isBuffering = false,
+        isPlaying = false,
+        positionMs = 0,
+        durationMs = 0
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(buildContentView())
         attachPlayerView()
+        observePlaybackState()
         refreshAuthPanel()
         runInitialSearch()
     }
@@ -372,6 +380,14 @@ class MainActivity : ComponentActivity() {
         return "$base?user_code=${Uri.encode(flow.userCode)}&device_code=${Uri.encode(flow.deviceCode)}"
     }
 
+    private fun observePlaybackState() {
+        lifecycleScope.launch {
+            AppContainer.playbackEngine.observeState().collectLatest { state ->
+                latestPlaybackState = state
+            }
+        }
+    }
+
     private fun copyDebugInfoToClipboard() {
         val clipboard = getSystemService(ClipboardManager::class.java)
         val debugText = buildString {
@@ -392,6 +408,14 @@ class MainActivity : ComponentActivity() {
             appendLine("selected_season=${selectedSeasonNumber ?: "none"}")
             appendLine("selected_episode=${selectedEpisodeNumber ?: "none"}")
             appendLine("status=${statusText.text}")
+            appendLine("playback_state=${latestPlaybackState.playerStateLabel}")
+            appendLine("playback_is_playing=${latestPlaybackState.isPlaying}")
+            appendLine("playback_is_buffering=${latestPlaybackState.isBuffering}")
+            appendLine("playback_position_ms=${latestPlaybackState.positionMs}")
+            appendLine("playback_duration_ms=${latestPlaybackState.durationMs}")
+            appendLine("playback_video_format=${latestPlaybackState.videoFormat ?: "none"}")
+            appendLine("playback_video_size=${latestPlaybackState.videoSizeLabel ?: "none"}")
+            appendLine("playback_error=${latestPlaybackState.errorMessage ?: "none"}")
         }
         clipboard?.setPrimaryClip(ClipData.newPlainText("Asahi Debug Info", debugText))
         statusText.text = "Debug info copied to clipboard"
@@ -796,6 +820,10 @@ class MainActivity : ComponentActivity() {
                                 appendLine("Playback preparation succeeded.")
                                 appendLine("Current item: ${AppContainer.playbackEngine.getCurrentItem()?.title ?: source.displayName}")
                                 appendLine("Stream URL: ${state.playbackUrl ?: AppContainer.playbackEngine.getCurrentUrl() ?: source.url}")
+                                appendLine("Player state: ${latestPlaybackState.playerStateLabel}")
+                                appendLine("Video format: ${latestPlaybackState.videoFormat ?: "unknown"}")
+                                appendLine("Video size: ${latestPlaybackState.videoSizeLabel ?: "unknown"}")
+                                appendLine("Playback error: ${latestPlaybackState.errorMessage ?: "none"}")
                                 append("Player surface is attached below for direct HTTP playback.")
                             }
                         } else {
