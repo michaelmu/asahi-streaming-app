@@ -204,13 +204,10 @@ class EpisodePickerScreenRenderer(
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-        (1..knownSeasonCount).forEachIndexed { index, season ->
+        (1..knownSeasonCount).forEach { season ->
             seasonStrip.addView(Button(activity).apply {
                 text = if (season == selectedSeason) "• S${season.toString().padStart(2, '0')}" else "S${season.toString().padStart(2, '0')}"
                 setOnClickListener { onSeasonSelected(season) }
-                if (index == 0) {
-                    post { onFirstFocusTarget(this) }
-                }
             })
         }
         host.addView(HorizontalScrollView(activity).apply { addView(seasonStrip) })
@@ -228,7 +225,7 @@ class EpisodePickerScreenRenderer(
             }
         }
 
-        episodeChoices.forEach { episode ->
+        episodeChoices.forEachIndexed { index, episode ->
             val isSelected = selectedEpisode == episode.episodeNumber
             host.addView(Button(activity).apply {
                 text = buildString {
@@ -252,6 +249,9 @@ class EpisodePickerScreenRenderer(
                 }
                 gravity = Gravity.START or Gravity.CENTER_VERTICAL
                 setOnClickListener { onEpisodeSelected(episode.episodeNumber) }
+                if (isSelected || (selectedEpisode !in episodeChoices.map { it.episodeNumber } && index == 0)) {
+                    post { onFirstFocusTarget(this) }
+                }
             })
         }
 
