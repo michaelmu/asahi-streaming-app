@@ -138,8 +138,8 @@ class MainActivity : ComponentActivity() {
         }
 
         val title = viewFactory.title("Asahi")
-        val subtitle = viewFactory.body("Page-based in-app search → details → sources → playback flow")
-        val buildInfo = viewFactory.body("${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) · ${BuildConfig.GIT_SHA}")
+        val subtitle = viewFactory.body("TV-first search → details → sources → playback")
+        val buildInfo = viewFactory.body("${BuildConfig.VERSION_NAME} · ${BuildConfig.GIT_SHA}")
 
         loadingView = ProgressBar(this).apply {
             visibility = View.GONE
@@ -163,6 +163,7 @@ class MainActivity : ComponentActivity() {
 
         contentPane.addView(
             ScrollView(this).apply {
+                isFillViewport = true
                 addView(screenHost)
             },
             LinearLayout.LayoutParams(
