@@ -376,6 +376,7 @@ class MainActivity : ComponentActivity() {
         val clipboard = getSystemService(ClipboardManager::class.java)
         val debugText = buildString {
             appendLine("build=${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) ${BuildConfig.GIT_SHA}")
+            appendLine("tmdb_key_embedded=${BuildConfig.TMDB_KEY_EMBEDDED}")
             appendLine("auth_linked=${authState.isLinked}")
             appendLine("auth_user=${authState.username ?: "none"}")
             appendLine("auth_in_progress=${authState.authInProgress}")
