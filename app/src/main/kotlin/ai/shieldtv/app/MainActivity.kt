@@ -174,9 +174,9 @@ class MainActivity : ComponentActivity() {
             setPadding(28, 28, 28, 28)
         }
 
-        val title = viewFactory.pageTitle("Asahi")
-        val subtitle = viewFactory.body("TV-first streaming shell with a Kodi/Stremio-flavored layout.")
-        val buildInfo = viewFactory.caption("${BuildConfig.VERSION_NAME} · ${BuildConfig.GIT_SHA}")
+        val title = viewFactory.railTitle("Asahi")
+        val subtitle = viewFactory.caption("TV-first streaming shell")
+        val buildInfo = viewFactory.caption("${BuildConfig.VERSION_NAME}")
 
         railHost = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -198,9 +198,11 @@ class MainActivity : ComponentActivity() {
         }
 
         sidebar.addView(title)
+        sidebar.addView(viewFactory.spacer(6))
         sidebar.addView(subtitle)
+        sidebar.addView(viewFactory.spacer(4))
         sidebar.addView(buildInfo)
-        sidebar.addView(viewFactory.spacer())
+        sidebar.addView(viewFactory.spacer(18))
         sidebar.addView(railHost)
         sidebar.addView(viewFactory.spacer())
         sidebar.addView(loadingView)
@@ -353,6 +355,10 @@ class MainActivity : ComponentActivity() {
                     AppContainer.playbackEngine.stop()
                     coordinator.openSettings()
                     renderCurrentScreen()
+                },
+                onQuit = {
+                    AppContainer.playbackEngine.stop()
+                    finishAffinity()
                 },
                 onFirstFocusTarget = ::focusView
             )

@@ -36,6 +36,13 @@ class ScreenViewFactory(
         setTypeface(typeface, Typeface.BOLD)
     }
 
+    fun railTitle(text: String): TextView = TextView(context).apply {
+        this.text = text
+        setTextColor(textPrimaryColor)
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 24f)
+        setTypeface(typeface, Typeface.BOLD)
+    }
+
     fun sectionTitle(text: String): TextView = TextView(context).apply {
         this.text = text.uppercase()
         setTextColor(textSecondaryColor)
@@ -152,8 +159,9 @@ class ScreenViewFactory(
             stateListAnimator = null
             setOnClickListener { onClick() }
             setOnFocusChangeListener { view, hasFocus ->
-                view.scaleX = if (hasFocus) 1.02f else 1f
-                view.scaleY = if (hasFocus) 1.02f else 1f
+                view.scaleX = if (hasFocus) 1.03f else 1f
+                view.scaleY = if (hasFocus) 1.03f else 1f
+                view.alpha = if (hasFocus) 1f else 0.96f
             }
         }
     }

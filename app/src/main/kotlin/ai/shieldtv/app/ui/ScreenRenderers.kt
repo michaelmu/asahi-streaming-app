@@ -38,6 +38,7 @@ class NavigationRailRenderer(
         onMovies: () -> Unit,
         onShows: () -> Unit,
         onSettings: () -> Unit,
+        onQuit: () -> Unit,
         onFirstFocusTarget: (View) -> Unit = {}
     ) {
         host.removeAllViews()
@@ -58,6 +59,10 @@ class NavigationRailRenderer(
         )
         host.addView(viewFactory.spacer(10))
         host.addView(focusableButton(if (inSettings) "Settings •" else "Settings", onSettings))
+        host.addView(viewFactory.spacer(18))
+        host.addView(viewFactory.sectionTitle("Session"))
+        host.addView(viewFactory.spacer(12))
+        host.addView(focusableButton("Quit", onQuit))
 
         movieButton.post { onFirstFocusTarget(movieButton) }
     }
@@ -142,9 +147,9 @@ class HomeScreenRenderer(
             title = hero.mediaRef.title,
             subtitle = hero.subtitle ?: "Featured pick",
             imageUrl = hero.backdropUrl ?: hero.posterUrl,
-            imageHeightDp = 320
+            imageHeightDp = 220
         ))
-        host.addView(viewFactory.spacer())
+        host.addView(viewFactory.spacer(14))
 
         val actionRow = LinearLayout(host.context).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -157,7 +162,7 @@ class HomeScreenRenderer(
         actionRow.addView(showsButton)
         actionRow.addView(settingsButton)
         host.addView(actionRow)
-        host.addView(viewFactory.spacer())
+        host.addView(viewFactory.spacer(14))
 
         val statusRow = LinearLayout(host.context).apply { orientation = LinearLayout.HORIZONTAL }
         statusRow.addView(
@@ -174,26 +179,26 @@ class HomeScreenRenderer(
             statusRow.addView(viewFactory.statPill("Selected", it.take(18), StatTone.NORMAL))
         }
         host.addView(HorizontalScrollView(host.context).apply { addView(statusRow) })
-        host.addView(viewFactory.spacer())
+        host.addView(viewFactory.spacer(14))
 
         if (state.continueWatching.isNotEmpty()) {
             host.addView(viewFactory.sectionTitle("Continue Watching"))
             host.addView(viewFactory.spacer(12))
             host.addView(buildContinueWatchingRow(state.continueWatching, onContinueWatching, onFirstFocusTarget))
-            host.addView(viewFactory.spacer())
+            host.addView(viewFactory.spacer(14))
         }
 
         host.addView(viewFactory.sectionTitle("Quick Picks"))
-        host.addView(viewFactory.spacer(12))
+        host.addView(viewFactory.spacer(10))
         host.addView(buildQuickPickRow(featured, onQuickPick, onFirstFocusTarget))
-        host.addView(viewFactory.spacer())
+        host.addView(viewFactory.spacer(14))
 
         val lowerRow = LinearLayout(host.context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.TOP
         }
         val leftPanel = viewFactory.panel(elevated = true).apply {
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.1f)
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             addView(viewFactory.sectionTitle("What’s Ready"))
             addView(viewFactory.spacer(12))
             addView(viewFactory.body(statusMessage))
@@ -205,7 +210,7 @@ class HomeScreenRenderer(
             }
         }
         val rightPanel = viewFactory.panel(elevated = false).apply {
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.9f).also {
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
                 it.marginStart = viewFactory.dp(14)
             }
             addView(viewFactory.sectionTitle("Recent Searches"))
@@ -260,7 +265,7 @@ class HomeScreenRenderer(
                 card.addView(ImageView(host.context).apply {
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
-                        viewFactory.dp(150)
+                        viewFactory.dp(120)
                     )
                     scaleType = ImageView.ScaleType.CENTER_CROP
                     item.artworkUrl?.takeIf { it.isNotBlank() }?.let { load(it) }
@@ -269,7 +274,7 @@ class HomeScreenRenderer(
                 card.addView(TextView(host.context).apply {
                     text = item.mediaTitle
                     setTextColor(viewFactory.textPrimaryColor)
-                    textSize = 19f
+                    textSize = 17f
                     setTypeface(typeface, Typeface.BOLD)
                 })
                 card.addView(viewFactory.spacer(6))
@@ -298,7 +303,7 @@ class HomeScreenRenderer(
                 card.addView(ImageView(host.context).apply {
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
-                        viewFactory.dp(180)
+                        viewFactory.dp(132)
                     )
                     scaleType = ImageView.ScaleType.CENTER_CROP
                     (item.backdropUrl ?: item.posterUrl)?.takeIf { it.isNotBlank() }?.let { load(it) }
@@ -307,14 +312,14 @@ class HomeScreenRenderer(
                 card.addView(TextView(host.context).apply {
                     text = item.mediaRef.title
                     setTextColor(viewFactory.textPrimaryColor)
-                    textSize = 20f
+                    textSize = 18f
                     setTypeface(typeface, Typeface.BOLD)
                 })
                 card.addView(viewFactory.spacer(6))
                 card.addView(viewFactory.caption(item.badges.joinToString(" • ")))
                 item.subtitle?.let {
                     card.addView(viewFactory.spacer(8))
-                    card.addView(viewFactory.body(it.take(110)))
+                    card.addView(viewFactory.body(it.take(80)))
                 }
                 addView(card)
                 if (index == 0) {
@@ -344,10 +349,12 @@ class HomeScreenRenderer(
             isFocusable = true
             isFocusableInTouchMode = true
             isClickable = true
+            alpha = 0.97f
             setOnClickListener { onClick() }
             setOnFocusChangeListener { view, hasFocus ->
-                view.scaleX = if (hasFocus) 1.02f else 1f
-                view.scaleY = if (hasFocus) 1.02f else 1f
+                view.scaleX = if (hasFocus) 1.03f else 1f
+                view.scaleY = if (hasFocus) 1.03f else 1f
+                view.alpha = if (hasFocus) 1f else 0.97f
             }
             setOnKeyListener { _, keyCode, event ->
                 if (event.action == KeyEvent.ACTION_DOWN && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)) {
