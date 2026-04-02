@@ -22,7 +22,12 @@ class GitHubReleaseUpdateChecker(
                 json.optString("name")
             }.removePrefix("v")
 
-            if (latestVersion.isBlank() || !isNewerThanCurrent(latestVersion)) {
+            if (latestVersion.isBlank()) {
+                continue
+            }
+
+            val isDebugRollingRelease = latestVersion.equals("latest-debug", ignoreCase = true)
+            if (!isDebugRollingRelease && !isNewerThanCurrent(latestVersion)) {
                 continue
             }
 

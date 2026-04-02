@@ -7,6 +7,8 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.View
+import android.view.WindowInsets
+import android.view.WindowInsetsController
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.ScrollView
@@ -695,6 +697,7 @@ class MainActivity : ComponentActivity() {
             LinearLayout.LayoutParams.MATCH_PARENT,
             LinearLayout.LayoutParams.MATCH_PARENT
         )
+        enterImmersiveFullscreen()
     }
 
     private fun showStandardShell() {
@@ -705,6 +708,20 @@ class MainActivity : ComponentActivity() {
         contentScrollView.setPadding(0, 0, 0, 0)
         sidebar.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.28f)
         contentPane.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.72f)
+        exitImmersiveFullscreen()
+    }
+
+    private fun enterImmersiveFullscreen() {
+        window.setDecorFitsSystemWindows(false)
+        window.insetsController?.let { controller ->
+            controller.hide(WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars())
+            controller.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
+    }
+
+    private fun exitImmersiveFullscreen() {
+        window.setDecorFitsSystemWindows(true)
+        window.insetsController?.show(WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars())
     }
 
     private fun checkForUpdates() {
