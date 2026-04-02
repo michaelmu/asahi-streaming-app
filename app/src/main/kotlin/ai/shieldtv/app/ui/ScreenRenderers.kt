@@ -372,11 +372,14 @@ class SettingsScreenRenderer(
         authState: RealDebridAuthState,
         activeDeviceFlow: DeviceCodeFlow?,
         playbackModeLabel: String,
+        updateSummary: String?,
         buildAuthUrl: (DeviceCodeFlow) -> String,
         onStartLink: () -> Unit,
         onPoll: (DeviceCodeFlow) -> Unit,
         onTogglePlaybackMode: () -> Unit,
         onCopyDebugInfo: () -> Unit,
+        onCheckForUpdates: () -> Unit,
+        onOpenLatestUpdate: (() -> Unit)?,
         onBackToHome: () -> Unit,
         onFirstFocusTarget: (View) -> Unit = {}
     ) {
@@ -391,6 +394,9 @@ class SettingsScreenRenderer(
             )
         )
         host.addView(viewFactory.body("Playback mode: $playbackModeLabel"))
+        updateSummary?.let {
+            host.addView(viewFactory.body(it))
+        }
 
         if (!authState.isLinked) {
             host.addView(Button(activity).apply {
@@ -430,6 +436,10 @@ class SettingsScreenRenderer(
 
         if (!authState.isLinked) {
             host.addView(viewFactory.button("Toggle Playback Mode", onTogglePlaybackMode))
+        }
+        host.addView(viewFactory.button("Check for Updates", onCheckForUpdates))
+        onOpenLatestUpdate?.let { openLatest ->
+            host.addView(viewFactory.button("Open Latest APK", openLatest))
         }
         host.addView(viewFactory.button("Copy Debug Info", onCopyDebugInfo))
         host.addView(viewFactory.button("Back to Browse", onBackToHome))

@@ -2,6 +2,8 @@ package ai.shieldtv.app
 
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.View
@@ -39,6 +41,8 @@ import ai.shieldtv.app.ui.ScreenViewFactory
 import ai.shieldtv.app.ui.SearchScreenRenderer
 import ai.shieldtv.app.ui.SettingsScreenRenderer
 import ai.shieldtv.app.ui.SourcesScreenRenderer
+import ai.shieldtv.app.update.AppUpdateInfo
+import ai.shieldtv.app.update.GitHubReleaseUpdateChecker
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -97,6 +101,8 @@ class MainActivity : ComponentActivity() {
     private var latestSourcesError: String? = null
     private var latestPlaybackMessage: String? = null
     private var latestPlaybackError: String? = null
+    private var latestUpdateInfo: AppUpdateInfo? = null
+    private var latestUpdateMessage: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -412,11 +418,14 @@ class MainActivity : ComponentActivity() {
                 authState = authState,
                 activeDeviceFlow = activeDeviceFlow,
                 playbackModeLabel = currentRenderModeLabel(),
+                updateSummary = latestUpdateMessage,
                 buildAuthUrl = ::buildRealDebridAuthUrl,
                 onStartLink = ::startRealDebridLink,
                 onPoll = ::pollRealDebridLink,
                 onTogglePlaybackMode = ::toggleRenderMode,
                 onCopyDebugInfo = ::copyDebugInfoToClipboard,
+                onCheckForUpdates = ::checkForUpdates,
+                onOpenLatestUpdate = latestUpdateInfo?.let { { openLatestUpdate(it) } },
                 onBackToHome = {
                     coordinator.openSearch(coordinator.currentState().searchMode)
                     renderCurrentScreen()
@@ -700,6 +709,38 @@ class MainActivity : ComponentActivity() {
         sidebar.visibility = View.VISIBLE
         sidebar.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.28f)
         contentPane.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.72f)
+    }
+
+    private fun checkForUpdates() {
+        setLoading(true, "Checking for updates…")
+        lifecycleScope.launch {
+            val result = runCatching {
+                GitHubReleaseUpdateChecker(
+                    owner = "michaelmu",
+                    repo = "asahi-streaming-app",
+                    currentVersionName = BuildConfig.VERSION_NAME
+                ).check()
+            }
+            result.onSuccess { updateInfo ->
+                latestUpdateInfo = updateInfo
+                latestUpdateMessage = if (updateInfo == null) {
+                    "No newer release found."
+                } else {
+                    "Update available: ${updateInfo.versionName}"
+                }
+                setLoading(false, latestUpdateMessage ?: "Update check complete.")
+                renderCurrentScreen()
+            }.onFailure { error ->
+                latestUpdateInfo = null
+                latestUpdateMessage = "Update check failed: ${error.message ?: "unknown error"}"
+                setLoading(false, latestUpdateMessage ?: "Update check failed.")
+                renderCurrentScreen()
+            }
+        }
+    }
+
+    private fun openLatestUpdate(updateInfo: AppUpdateInfo) {
+        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(updateInfo.downloadUrl.ifBlank { updateInfo.pageUrl })))
     }
 
     private fun copyDebugInfoToClipboard() {
