@@ -56,6 +56,15 @@ object RealDebridDebugState {
     var lastSourceFallbackCount: String = ""
 
     @Volatile
+    var lastTorrentioUrl: String = ""
+
+    @Volatile
+    var lastTorrentioResponsePreview: String = ""
+
+    @Volatile
+    var lastTorrentioParsedCount: String = ""
+
+    @Volatile
     var lastTokenStoreSaveCalled: String = ""
 
     @Volatile

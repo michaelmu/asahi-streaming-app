@@ -1,6 +1,7 @@
 package ai.shieldtv.app.integration.scrapers.provider.torrentio
 
 import ai.shieldtv.app.domain.provider.RawProviderSource
+import ai.shieldtv.app.integration.debrid.realdebrid.debug.RealDebridDebugState
 import ai.shieldtv.app.integration.scrapers.normalize.ReleaseInfoParser
 import ai.shieldtv.app.integration.scrapers.provider.template.ProviderParser
 import org.json.JSONArray
@@ -63,8 +64,13 @@ class TorrentioParser : ProviderParser {
                     }
                 )
             }
-            mapped
-        }.getOrElse { emptyList() }
+            mapped.also {
+                RealDebridDebugState.lastTorrentioParsedCount = it.size.toString()
+            }
+        }.getOrElse {
+            RealDebridDebugState.lastTorrentioParsedCount = "parse_error"
+            emptyList()
+        }
     }
 
     private fun looksLikeJunk(title: String): Boolean {

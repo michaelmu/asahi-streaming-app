@@ -2,6 +2,7 @@ package ai.shieldtv.app.integration.scrapers.provider.torrentio
 
 import ai.shieldtv.app.core.network.http.HttpClientFactory
 import ai.shieldtv.app.integration.debrid.realdebrid.auth.RealDebridTokenProvider
+import ai.shieldtv.app.integration.debrid.realdebrid.debug.RealDebridDebugState
 import ai.shieldtv.app.integration.scrapers.provider.template.ProviderRequest
 import ai.shieldtv.app.integration.scrapers.provider.template.ProviderTransport
 import java.net.URLEncoder
@@ -18,9 +19,13 @@ class TorrentioTransport(
         val httpClient = HttpClientFactory.createDefault()
         val token = tokenProvider?.getAccessToken()?.takeIf { it.isNotBlank() }
         val url = buildUrl(path, token)
+        RealDebridDebugState.lastTorrentioUrl = url
         return runCatching {
-            httpClient.get(url, headers = request.headers)
+            httpClient.get(url, headers = request.headers).also { response ->
+                RealDebridDebugState.lastTorrentioResponsePreview = response.take(500)
+            }
         }.getOrElse {
+            RealDebridDebugState.lastTorrentioResponsePreview = "transport_error:${it.message}"
             "{\"streams\": []}"
         }
     }

@@ -37,6 +37,43 @@ class SourceRepositoryImpl(
         val fallbackCount = shaped.count { it.rawMetadata["fallbackMode"] == "true" }
         RealDebridDebugState.lastSourceLiveCount = liveCount.toString()
         RealDebridDebugState.lastSourceFallbackCount = fallbackCount.toString()
+        val torrentioPreview = RealDebridDebugState.lastTorrentioResponsePreview
+            .replace("\n", " ")
+            .replace("\r", " ")
+            .take(160)
+        println(
+            buildString {
+                append("AsahiSources ")
+                append("title=")
+                append(request.mediaRef.title)
+                append(" type=")
+                append(request.mediaRef.mediaType)
+                request.seasonNumber?.let {
+                    append(" season=")
+                    append(it)
+                }
+                request.episodeNumber?.let {
+                    append(" episode=")
+                    append(it)
+                }
+                append(" providers=")
+                append(RealDebridDebugState.lastSourceProviderSummary)
+                append(" live=")
+                append(liveCount)
+                append(" fallback=")
+                append(fallbackCount)
+                append(" torrentioParsed=")
+                append(RealDebridDebugState.lastTorrentioParsedCount)
+                RealDebridDebugState.lastTorrentioUrl.takeIf { it.isNotBlank() }?.let {
+                    append(" torrentioUrl=")
+                    append(it)
+                }
+                torrentioPreview.takeIf { it.isNotBlank() }?.let {
+                    append(" torrentioPreview=")
+                    append(it)
+                }
+            }
+        )
         return sourceRanker.rank(shaped, SourceFilters())
     }
 }
