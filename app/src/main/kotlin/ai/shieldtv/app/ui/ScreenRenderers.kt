@@ -380,6 +380,7 @@ class SettingsScreenRenderer(
         onPoll: (DeviceCodeFlow) -> Unit,
         onTogglePlaybackMode: () -> Unit,
         onCopyDebugInfo: () -> Unit,
+        onBackToHome: () -> Unit,
         onFirstFocusTarget: (View) -> Unit = {}
     ) {
         host.addView(viewFactory.title("Settings / Accounts"))
@@ -434,5 +435,6 @@ class SettingsScreenRenderer(
             host.addView(viewFactory.button("Toggle Playback Mode", onTogglePlaybackMode))
         }
         host.addView(viewFactory.button("Copy Debug Info", onCopyDebugInfo))
+        host.addView(viewFactory.button("Back to Home", onBackToHome))
     }
 }

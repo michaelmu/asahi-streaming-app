@@ -77,6 +77,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var settingsRenderer: SettingsScreenRenderer
 
     private lateinit var root: LinearLayout
+    private lateinit var sidebar: LinearLayout
+    private lateinit var contentPane: LinearLayout
     private lateinit var statusText: android.widget.TextView
     private lateinit var loadingView: ProgressBar
     private lateinit var screenHost: LinearLayout
@@ -126,13 +128,13 @@ class MainActivity : ComponentActivity() {
             setPadding(48, 32, 48, 32)
         }
 
-        val sidebar = LinearLayout(this).apply {
+        sidebar = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.34f)
             setPadding(0, 0, 32, 0)
         }
 
-        val contentPane = LinearLayout(this).apply {
+        contentPane = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.66f)
         }
@@ -273,6 +275,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun renderCurrentScreen() {
+        if (coordinator.currentState().destination == AppDestination.PLAYER) {
+            showPlayerFullscreenShell()
+        } else {
+            showStandardShell()
+        }
         screenHost.removeAllViews()
         when (coordinator.currentState().destination) {
             AppDestination.HOME -> homeRenderer.render(
@@ -372,6 +379,7 @@ class MainActivity : ComponentActivity() {
                 onFirstFocusTarget = ::focusView
             )
             AppDestination.PLAYER -> {
+                showPlayerFullscreenShell()
                 playerView.visibility = View.VISIBLE
                 detachPlayerFromParent()
                 playerRenderer.render(
@@ -391,6 +399,10 @@ class MainActivity : ComponentActivity() {
                 onPoll = ::pollRealDebridLink,
                 onTogglePlaybackMode = ::toggleRenderMode,
                 onCopyDebugInfo = ::copyDebugInfoToClipboard,
+                onBackToHome = {
+                    coordinator.openHome()
+                    renderCurrentScreen()
+                },
                 onFirstFocusTarget = ::focusView
             )
         }
@@ -662,6 +674,22 @@ class MainActivity : ComponentActivity() {
     private fun setLoading(isLoading: Boolean, message: String) {
         loadingView.visibility = if (isLoading) View.VISIBLE else View.GONE
         statusText.text = message
+    }
+
+    private fun showPlayerFullscreenShell() {
+        root.orientation = LinearLayout.VERTICAL
+        sidebar.visibility = View.GONE
+        contentPane.layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.MATCH_PARENT
+        )
+    }
+
+    private fun showStandardShell() {
+        root.orientation = LinearLayout.HORIZONTAL
+        sidebar.visibility = View.VISIBLE
+        sidebar.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.34f)
+        contentPane.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.66f)
     }
 
     private fun buildPlaybackControls(): View {
