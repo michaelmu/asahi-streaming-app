@@ -36,6 +36,7 @@ import ai.shieldtv.app.integration.playback.media3.engine.Media3PlaybackEngine.R
 import ai.shieldtv.app.navigation.AppDestination
 import ai.shieldtv.app.ui.DetailsScreenRenderer
 import ai.shieldtv.app.ui.EpisodePickerScreenRenderer
+import ai.shieldtv.app.ui.HomeScreenRenderer
 import ai.shieldtv.app.ui.NavigationRailRenderer
 import ai.shieldtv.app.ui.PlayerScreenRenderer
 import ai.shieldtv.app.ui.ResultsScreenRenderer
@@ -73,6 +74,7 @@ class MainActivity : ComponentActivity() {
     private val coordinator = AppCoordinator()
     private lateinit var viewFactory: ScreenViewFactory
     private lateinit var navigationRailRenderer: NavigationRailRenderer
+    private lateinit var homeRenderer: HomeScreenRenderer
     private lateinit var searchRenderer: SearchScreenRenderer
     private lateinit var resultsRenderer: ResultsScreenRenderer
     private lateinit var detailsRenderer: DetailsScreenRenderer
@@ -225,6 +227,7 @@ class MainActivity : ComponentActivity() {
 
     private fun initializeRenderers() {
         navigationRailRenderer = NavigationRailRenderer(railHost, viewFactory)
+        homeRenderer = HomeScreenRenderer(screenHost, viewFactory)
         searchRenderer = SearchScreenRenderer(this, screenHost, viewFactory)
         resultsRenderer = ResultsScreenRenderer(this, screenHost, viewFactory)
         detailsRenderer = DetailsScreenRenderer(screenHost, viewFactory)
@@ -358,8 +361,32 @@ class MainActivity : ComponentActivity() {
         screenHost.removeAllViews()
         when (destination) {
             AppDestination.HOME -> {
-                screenHost.addView(viewFactory.title("Asahi"))
-                screenHost.addView(viewFactory.body("Pick Movies, TV Shows, or Settings from the left sidebar."))
+                homeRenderer.render(
+                    state = coordinator.currentState(),
+                    authLinked = authState.isLinked,
+                    statusMessage = statusText.text?.toString().orEmpty(),
+                    onOpenMovies = {
+                        coordinator.openSearch(SearchMode.MOVIES)
+                        renderCurrentScreen()
+                    },
+                    onOpenShows = {
+                        coordinator.openSearch(SearchMode.SHOWS)
+                        renderCurrentScreen()
+                    },
+                    onOpenSettings = {
+                        coordinator.openSettings()
+                        renderCurrentScreen()
+                    },
+                    onResumeSearch = coordinator.currentState().takeIf {
+                        it.query.isNotBlank() && (it.searchResults.isNotEmpty() || it.selectedMedia != null)
+                    }?.let {
+                        {
+                            coordinator.openSearch(it.searchMode)
+                            renderCurrentScreen()
+                        }
+                    },
+                    onFirstFocusTarget = ::focusView
+                )
             }
             AppDestination.SEARCH -> searchRenderer.render(
                 state = coordinator.currentState(),

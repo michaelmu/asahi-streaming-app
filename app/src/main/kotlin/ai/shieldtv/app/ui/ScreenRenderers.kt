@@ -57,6 +57,97 @@ class NavigationRailRenderer(
     }
 }
 
+class HomeScreenRenderer(
+    private val host: LinearLayout,
+    private val viewFactory: ScreenViewFactory
+) {
+    fun render(
+        state: AppState,
+        authLinked: Boolean,
+        statusMessage: String,
+        onOpenMovies: () -> Unit,
+        onOpenShows: () -> Unit,
+        onOpenSettings: () -> Unit,
+        onResumeSearch: (() -> Unit)?,
+        onFirstFocusTarget: (View) -> Unit = {}
+    ) {
+        host.addView(viewFactory.heroCard(
+            title = "Asahi",
+            subtitle = "A cleaner TV-first shell: browse, inspect, choose a source, then let playback take over the room."
+        ))
+        host.addView(viewFactory.spacer())
+
+        val actionRow = LinearLayout(host.context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.START
+        }
+        val moviesButton = actionButton("Browse Movies", onOpenMovies)
+        val showsButton = actionButton("Browse TV Shows", onOpenShows, startMarginDp = 12)
+        val settingsButton = actionButton("Settings / Accounts", onOpenSettings, startMarginDp = 12)
+        actionRow.addView(moviesButton)
+        actionRow.addView(showsButton)
+        actionRow.addView(settingsButton)
+        host.addView(actionRow)
+        host.addView(viewFactory.spacer())
+
+        val statusRow = LinearLayout(host.context).apply { orientation = LinearLayout.HORIZONTAL }
+        statusRow.addView(
+            viewFactory.statPill(
+                "Real-Debrid",
+                if (authLinked) "Linked" else "Not linked",
+                if (authLinked) StatTone.SUCCESS else StatTone.WARNING
+            )
+        )
+        statusRow.addView(horizontalGap())
+        statusRow.addView(viewFactory.statPill("Search Mode", state.searchMode.label, StatTone.ACCENT))
+        state.selectedMedia?.title?.takeIf { it.isNotBlank() }?.let {
+            statusRow.addView(horizontalGap())
+            statusRow.addView(viewFactory.statPill("Selected", it.take(18), StatTone.NORMAL))
+        }
+        host.addView(HorizontalScrollView(host.context).apply { addView(statusRow) })
+        host.addView(viewFactory.spacer())
+
+        host.addView(viewFactory.panel(elevated = true).apply {
+            addView(viewFactory.sectionTitle("What’s Ready"))
+            addView(viewFactory.spacer(12))
+            addView(viewFactory.body(statusMessage))
+            addView(viewFactory.spacer(12))
+            addView(viewFactory.caption("TMDb metadata, Torrentio source lookup, Real-Debrid auth/resolve, and Media3 playback are all in the loop."))
+        })
+        host.addView(viewFactory.spacer())
+
+        host.addView(viewFactory.panel(elevated = false).apply {
+            addView(viewFactory.sectionTitle("Suggested Next Step"))
+            addView(viewFactory.spacer(12))
+            addView(viewFactory.body(
+                when {
+                    !authLinked -> "Link Real-Debrid in Settings if you want the best cached-source path."
+                    onResumeSearch != null -> "Jump back into your last search flow or start a new browse pass from Movies / TV Shows."
+                    else -> "Start with Movies or TV Shows from the action row above."
+                }
+            ))
+            onResumeSearch?.let {
+                addView(viewFactory.spacer(16))
+                addView(viewFactory.button("Resume Last Flow", it))
+            }
+        })
+
+        moviesButton.post { onFirstFocusTarget(moviesButton) }
+    }
+
+    private fun actionButton(text: String, onClick: () -> Unit, startMarginDp: Int = 0): View {
+        return viewFactory.button(text, onClick).apply {
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
+                if (startMarginDp > 0) it.marginStart = viewFactory.dp(startMarginDp)
+            }
+        }
+    }
+
+    private fun horizontalGap(): View = View(host.context).apply {
+        layoutParams = LinearLayout.LayoutParams(viewFactory.dp(10), 1)
+    }
+}
+
 class SearchScreenRenderer(
     private val activity: android.app.Activity,
     private val host: LinearLayout,
@@ -150,8 +241,57 @@ class ResultsScreenRenderer(
             return
         }
 
-        state.searchResults.take(20).forEachIndexed { index, result ->
-            val card = viewFactory.panel(vertical = false, elevated = index < 3).apply {
+        val featured = state.searchResults.take(3)
+        val featuredRow = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.START
+        }
+        featured.forEachIndexed { index, result ->
+            val featuredCard = viewFactory.panel(elevated = true).apply {
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
+                    if (index > 0) it.marginStart = viewFactory.dp(14)
+                }
+                isFocusable = true
+                isClickable = true
+                setOnClickListener { onResultSelected(result) }
+                setOnFocusChangeListener { view, hasFocus ->
+                    view.scaleX = if (hasFocus) 1.02f else 1f
+                    view.scaleY = if (hasFocus) 1.02f else 1f
+                }
+            }
+            featuredCard.addView(TextView(activity).apply {
+                text = result.mediaRef.title
+                setTextColor(viewFactory.textPrimaryColor)
+                textSize = 22f
+                setTypeface(typeface, Typeface.BOLD)
+            })
+            featuredCard.addView(viewFactory.spacer(8))
+            featuredCard.addView(viewFactory.caption(
+                buildString {
+                    append(result.mediaRef.mediaType.name.lowercase().replaceFirstChar { it.uppercase() })
+                    result.mediaRef.year?.let {
+                        append(" • ")
+                        append(it)
+                    }
+                }
+            ))
+            result.subtitle?.takeIf { it.isNotBlank() }?.let {
+                featuredCard.addView(viewFactory.spacer(10))
+                featuredCard.addView(viewFactory.body(it.take(140)))
+            }
+            featuredRow.addView(featuredCard)
+            if (index == 0) {
+                featuredCard.post { onFirstFocusTarget(featuredCard) }
+            }
+        }
+        host.addView(featuredRow)
+        host.addView(viewFactory.spacer())
+
+        host.addView(viewFactory.sectionTitle("All Results"))
+        host.addView(viewFactory.spacer(12))
+
+        state.searchResults.drop(3).take(17).forEach { result ->
+            val card = viewFactory.panel(vertical = false, elevated = false).apply {
                 gravity = Gravity.CENTER_VERTICAL
                 isFocusable = true
                 isClickable = true
@@ -195,10 +335,6 @@ class ResultsScreenRenderer(
             card.addView(textColumn)
             host.addView(card)
             host.addView(viewFactory.spacer(14))
-
-            if (index == 0) {
-                card.post { onFirstFocusTarget(card) }
-            }
         }
 
         host.addView(viewFactory.button("New Search", onNewSearch))
@@ -230,6 +366,28 @@ class DetailsScreenRenderer(
         ))
         host.addView(viewFactory.spacer())
 
+        val topPanel = LinearLayout(host.context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.TOP
+        }
+        val posterPanel = viewFactory.panel(elevated = true).apply {
+            layoutParams = LinearLayout.LayoutParams(viewFactory.dp(250), LinearLayout.LayoutParams.WRAP_CONTENT)
+            addView(TextView(host.context).apply {
+                text = details.mediaRef.title.take(1).uppercase()
+                gravity = Gravity.CENTER
+                minHeight = viewFactory.dp(320)
+                setTextColor(viewFactory.textMutedColor)
+                textSize = 96f
+                setTypeface(typeface, Typeface.BOLD)
+            })
+        }
+        val infoPanel = LinearLayout(host.context).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
+                it.marginStart = viewFactory.dp(18)
+            }
+        }
+
         val statsRow = LinearLayout(host.context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.START
@@ -244,18 +402,21 @@ class DetailsScreenRenderer(
         details.seasonCount?.let {
             statsRow.addView(spacedStat(viewFactory.statPill("Seasons", it.toString(), StatTone.SUCCESS)))
         }
-        host.addView(HorizontalScrollView(host.context).apply { addView(statsRow) })
-        host.addView(viewFactory.spacer())
-
-        host.addView(viewFactory.panel(elevated = true).apply {
+        infoPanel.addView(HorizontalScrollView(host.context).apply { addView(statsRow) })
+        infoPanel.addView(viewFactory.spacer())
+        infoPanel.addView(viewFactory.panel(elevated = true).apply {
             addView(viewFactory.sectionTitle("Overview"))
             addView(viewFactory.spacer(12))
             addView(viewFactory.body(details.overview ?: "No overview yet."))
             if (details.genres.isNotEmpty()) {
                 addView(viewFactory.spacer(16))
-                addView(viewFactory.caption("Genres: ${details.genres.joinToString()}") )
+                addView(viewFactory.caption("Genres: ${details.genres.joinToString()}"))
             }
         })
+
+        topPanel.addView(posterPanel)
+        topPanel.addView(infoPanel)
+        host.addView(topPanel)
         host.addView(viewFactory.spacer())
 
         val primaryAction = if (details.mediaRef.mediaType == MediaType.SHOW) {
@@ -268,7 +429,6 @@ class DetailsScreenRenderer(
     }
 
     private fun spacedStat(view: View): View {
-        (view.layoutParams as? LinearLayout.LayoutParams)?.marginStart = viewFactory.dp(10)
         return view.apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -436,7 +596,48 @@ class SourcesScreenRenderer(
             return
         }
 
-        state.selectedSources.take(16).forEachIndexed { index, source ->
+        val topSources = state.selectedSources.take(3)
+        if (topSources.isNotEmpty()) {
+            host.addView(viewFactory.sectionTitle("Top Picks"))
+            host.addView(viewFactory.spacer(12))
+            val picksRow = LinearLayout(host.context).apply { orientation = LinearLayout.HORIZONTAL }
+            topSources.forEachIndexed { index, source ->
+                val pickCard = viewFactory.panel(elevated = true).apply {
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
+                        if (index > 0) it.marginStart = viewFactory.dp(12)
+                    }
+                    isFocusable = true
+                    isClickable = true
+                    setOnClickListener { onSourceSelected(source) }
+                    setOnFocusChangeListener { view, hasFocus ->
+                        view.scaleX = if (hasFocus) 1.02f else 1f
+                        view.scaleY = if (hasFocus) 1.02f else 1f
+                    }
+                }
+                pickCard.addView(TextView(host.context).apply {
+                    text = source.displayName.lineSequence().firstOrNull()?.take(42) ?: source.displayName.take(42)
+                    setTextColor(viewFactory.textPrimaryColor)
+                    textSize = 20f
+                    setTypeface(typeface, Typeface.BOLD)
+                })
+                pickCard.addView(viewFactory.spacer(8))
+                pickCard.addView(viewFactory.caption("${source.quality} • ${source.cacheStatus}"))
+                source.sizeLabel?.let {
+                    pickCard.addView(viewFactory.spacer(8))
+                    pickCard.addView(viewFactory.body(it))
+                }
+                picksRow.addView(pickCard)
+                if (index == 0) {
+                    pickCard.post { onFirstFocusTarget(pickCard) }
+                }
+            }
+            host.addView(picksRow)
+            host.addView(viewFactory.spacer())
+            host.addView(viewFactory.sectionTitle("All Sources"))
+            host.addView(viewFactory.spacer(12))
+        }
+
+        state.selectedSources.drop(3).take(13).forEach { source ->
             val card = viewFactory.panel(elevated = source.cacheStatus == CacheStatus.CACHED).apply {
                 isFocusable = true
                 isClickable = true
@@ -477,8 +678,6 @@ class SourcesScreenRenderer(
                 pillRow.addView(statSpacer())
                 pillRow.addView(viewFactory.statPill("Size", it, StatTone.NORMAL))
             }
-            host.addView(card)
-            card.addView(viewFactory.spacer(10))
             card.addView(HorizontalScrollView(host.context).apply { addView(pillRow) })
             card.addView(viewFactory.spacer(12))
             card.addView(viewFactory.caption("${source.providerDisplayName} • ${source.debridService.name.replace('_', ' ')}"))
@@ -495,11 +694,8 @@ class SourcesScreenRenderer(
                 card.addView(viewFactory.spacer(8))
                 card.addView(viewFactory.body(it.take(160)))
             }
+            host.addView(card)
             host.addView(viewFactory.spacer(12))
-
-            if (index == 0) {
-                card.post { onFirstFocusTarget(card) }
-            }
         }
     }
 
