@@ -148,5 +148,9 @@ object AppContainer {
         BuildPlaybackItemUseCase()
     }
 
+    fun clearRealDebridAuth() {
+        realDebridTokenStore.clear()
+    }
+
     fun realDebridTokenStoreDebugPath(): String = realDebridTokenStore.debugFilePath()
 }

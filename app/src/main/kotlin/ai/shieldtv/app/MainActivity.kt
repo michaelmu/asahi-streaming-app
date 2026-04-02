@@ -457,6 +457,7 @@ class MainActivity : ComponentActivity() {
                 updateSummary = latestUpdateMessage,
                 buildAuthUrl = ::buildRealDebridAuthUrl,
                 onStartLink = ::startRealDebridLink,
+                onResetAuth = ::resetRealDebridAuth,
                 onTogglePlaybackMode = ::toggleRenderMode,
                 onCopyDebugInfo = ::copyDebugInfoToClipboard,
                 onCheckForUpdates = ::checkForUpdates,
@@ -564,6 +565,16 @@ class MainActivity : ComponentActivity() {
             setLoading(false, state.error ?: "Found ${filteredSources.size} source(s) for $searchLabel.")
             renderCurrentScreen()
         }
+    }
+
+    private fun resetRealDebridAuth() {
+        AppContainer.clearRealDebridAuth()
+        activeDeviceFlow = null
+        authPollingJob?.cancel()
+        authState = RealDebridAuthState(isLinked = false, authInProgress = false, lastError = null)
+        latestSourcesError = null
+        statusText.text = "Real-Debrid auth reset."
+        renderCurrentScreen()
     }
 
     private fun startRealDebridLink() {

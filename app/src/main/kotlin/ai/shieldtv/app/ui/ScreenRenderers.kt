@@ -410,6 +410,7 @@ class SettingsScreenRenderer(
         updateSummary: String?,
         buildAuthUrl: (DeviceCodeFlow) -> String,
         onStartLink: () -> Unit,
+        onResetAuth: () -> Unit,
         onTogglePlaybackMode: () -> Unit,
         onCopyDebugInfo: () -> Unit,
         onCheckForUpdates: () -> Unit,
@@ -467,7 +468,9 @@ class SettingsScreenRenderer(
             host.addView(viewFactory.body("Auth error: $it"))
         }
 
-        if (!authState.isLinked) {
+        if (authState.isLinked) {
+            host.addView(viewFactory.button("Reset Real-Debrid Auth", onResetAuth))
+        } else {
             host.addView(viewFactory.button("Toggle Playback Mode", onTogglePlaybackMode))
         }
         host.addView(viewFactory.button("Check for Updates", onCheckForUpdates))
