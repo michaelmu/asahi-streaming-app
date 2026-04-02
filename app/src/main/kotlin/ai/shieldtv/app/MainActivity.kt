@@ -45,10 +45,12 @@ import ai.shieldtv.app.ui.SettingsScreenRenderer
 import ai.shieldtv.app.ui.SourcesScreenRenderer
 import ai.shieldtv.app.update.AppUpdateInfo
 import ai.shieldtv.app.update.GitHubReleaseUpdateChecker
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     private val searchViewModel by lazy {
@@ -769,11 +771,13 @@ class MainActivity : ComponentActivity() {
         setLoading(true, "Checking for updates…")
         lifecycleScope.launch {
             val result = runCatching {
-                GitHubReleaseUpdateChecker(
-                    owner = "michaelmu",
-                    repo = "asahi-streaming-app",
-                    currentVersionName = BuildConfig.VERSION_NAME
-                ).check()
+                withContext(Dispatchers.IO) {
+                    GitHubReleaseUpdateChecker(
+                        owner = "michaelmu",
+                        repo = "asahi-streaming-app",
+                        currentVersionName = BuildConfig.VERSION_NAME
+                    ).check()
+                }
             }
             result.onSuccess { checkResult ->
                 latestUpdateInfo = checkResult.updateInfo
