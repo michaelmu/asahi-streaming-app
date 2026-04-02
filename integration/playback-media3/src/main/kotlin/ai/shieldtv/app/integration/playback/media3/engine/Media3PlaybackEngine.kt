@@ -13,6 +13,11 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 
 class Media3PlaybackEngine : PlaybackEngine {
+    enum class RenderMode {
+        SURFACE_VIEW,
+        TEXTURE_VIEW
+    }
+
     private val playbackState = MutableStateFlow(
         PlaybackState(
             isBuffering = false,
@@ -25,6 +30,7 @@ class Media3PlaybackEngine : PlaybackEngine {
 
     private var currentItem: PlaybackItem? = null
     private var player: ExoPlayer? = null
+    private var renderMode: RenderMode = RenderMode.SURFACE_VIEW
 
     fun attach(context: Context): ExoPlayer {
         val existing = player
@@ -72,6 +78,12 @@ class Media3PlaybackEngine : PlaybackEngine {
             }
         }
     }
+
+    fun setRenderMode(mode: RenderMode) {
+        renderMode = mode
+    }
+
+    fun getRenderMode(): RenderMode = renderMode
 
     override suspend fun prepare(item: PlaybackItem) {
         currentItem = item

@@ -21,6 +21,7 @@ interface RealDebridApi {
 data class DeviceFlowResponse(
     val deviceCode: String,
     val verificationUrl: String,
+    val directVerificationUrl: String? = null,
     val userCode: String,
     val expiresInSeconds: Int,
     val pollIntervalSeconds: Int

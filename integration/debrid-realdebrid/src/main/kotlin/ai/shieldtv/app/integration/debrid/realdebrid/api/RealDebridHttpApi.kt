@@ -31,6 +31,7 @@ class RealDebridHttpApi(
             DeviceFlowResponse(
                 deviceCode = json.optString("device_code"),
                 verificationUrl = json.optString("verification_url"),
+                directVerificationUrl = json.optString("direct_verification_url").ifBlank { null },
                 userCode = json.optString("user_code"),
                 expiresInSeconds = json.optInt("expires_in"),
                 pollIntervalSeconds = json.optInt("interval").takeIf { it > 0 } ?: 5
@@ -40,6 +41,7 @@ class RealDebridHttpApi(
             DeviceFlowResponse(
                 deviceCode = "",
                 verificationUrl = "",
+                directVerificationUrl = null,
                 userCode = "",
                 expiresInSeconds = 0,
                 pollIntervalSeconds = 5

@@ -3,6 +3,7 @@ package ai.shieldtv.app.core.model.auth
 data class DeviceCodeFlow(
     val deviceCode: String,
     val verificationUrl: String,
+    val directVerificationUrl: String? = null,
     val userCode: String,
     val qrCodeUrl: String? = null,
     val expiresInSeconds: Int,

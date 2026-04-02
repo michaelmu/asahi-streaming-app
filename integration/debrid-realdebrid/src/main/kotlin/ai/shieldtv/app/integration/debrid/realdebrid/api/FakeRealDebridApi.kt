@@ -8,6 +8,7 @@ class FakeRealDebridApi : RealDebridApi {
         return DeviceFlowResponse(
             deviceCode = "device-code-asahi",
             verificationUrl = "https://real-debrid.example/device",
+            directVerificationUrl = "https://real-debrid.example/device/direct?code=ASAHI1",
             userCode = "ASAHI1",
             expiresInSeconds = 900,
             pollIntervalSeconds = 5

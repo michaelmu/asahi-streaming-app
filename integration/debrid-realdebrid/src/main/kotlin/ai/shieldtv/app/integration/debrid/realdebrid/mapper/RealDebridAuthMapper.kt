@@ -8,8 +8,9 @@ class RealDebridAuthMapper {
         return DeviceCodeFlow(
             deviceCode = response.deviceCode,
             verificationUrl = response.verificationUrl,
+            directVerificationUrl = response.directVerificationUrl,
             userCode = response.userCode,
-            qrCodeUrl = response.verificationUrl,
+            qrCodeUrl = response.directVerificationUrl ?: response.verificationUrl,
             expiresInSeconds = response.expiresInSeconds,
             pollIntervalSeconds = response.pollIntervalSeconds
         )

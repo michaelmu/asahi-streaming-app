@@ -37,6 +37,7 @@ import ai.shieldtv.app.feature.search.presentation.SearchViewModel
 import ai.shieldtv.app.feature.sources.presentation.SourcesPresenter
 import ai.shieldtv.app.feature.sources.presentation.SourcesViewModel
 import ai.shieldtv.app.integration.playback.media3.engine.Media3PlaybackEngine
+import ai.shieldtv.app.integration.playback.media3.engine.Media3PlaybackEngine.RenderMode
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -72,6 +73,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var sourcesContainer: LinearLayout
     private lateinit var playbackContainer: LinearLayout
     private lateinit var playbackControlsContainer: LinearLayout
+    private lateinit var playerHostContainer: LinearLayout
     private lateinit var playerView: PlayerView
 
     private var selectedMediaRef: MediaRef? = null
@@ -157,14 +159,10 @@ class MainActivity : ComponentActivity() {
         playbackControlsContainer = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
         }
-        playerView = PlayerView(this).apply {
-            useController = true
-            visibility = View.GONE
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                720
-            )
+        playerHostContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
         }
+        playerView = createPlayerView()
 
         searchRow.addView(queryInput)
         searchRow.addView(searchButton)
@@ -195,7 +193,7 @@ class MainActivity : ComponentActivity() {
             addView(space())
             addView(playbackControlsContainer)
             addView(space())
-            addView(playerView)
+            addView(playerHostContainer)
         }
 
         val scrollView = ScrollView(this).apply {
@@ -214,9 +212,24 @@ class MainActivity : ComponentActivity() {
         return root
     }
 
+    private fun createPlayerView(): PlayerView {
+        return PlayerView(this).apply {
+            useController = true
+            visibility = View.GONE
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                720
+            )
+        }
+    }
+
     private fun attachPlayerView() {
         val engine = AppContainer.playbackEngine as? Media3PlaybackEngine ?: return
-        playerView.player = engine.attach(this)
+        playerHostContainer.removeAllViews()
+        playerView = createPlayerView().apply {
+            player = engine.attach(this@MainActivity)
+        }
+        playerHostContainer.addView(playerView)
     }
 
     private fun verticalSection(title: String): LinearLayout {
@@ -267,6 +280,10 @@ class MainActivity : ComponentActivity() {
                 append(AppContainer.realDebridTokenStoreDebugPath())
             }
         )
+        authContainer.addView(Button(this).apply {
+            text = "Toggle Playback Render Mode (${currentRenderModeLabel()})"
+            setOnClickListener { toggleRenderMode() }
+        })
 
         activeDeviceFlow?.let { flow ->
             appendBody(
@@ -376,8 +393,29 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun buildRealDebridAuthUrl(flow: DeviceCodeFlow): String {
-        val base = flow.verificationUrl.ifBlank { "https://real-debrid.com/device" }
-        return "$base?user_code=${Uri.encode(flow.userCode)}&device_code=${Uri.encode(flow.deviceCode)}"
+        return flow.directVerificationUrl
+            ?.takeIf { it.isNotBlank() }
+            ?: flow.verificationUrl.ifBlank { "https://real-debrid.com/device" }
+    }
+
+    private fun currentRenderModeLabel(): String {
+        val engine = AppContainer.playbackEngine as? Media3PlaybackEngine ?: return "unknown"
+        return when (engine.getRenderMode()) {
+            RenderMode.SURFACE_VIEW -> "SurfaceView"
+            RenderMode.TEXTURE_VIEW -> "TextureView"
+        }
+    }
+
+    private fun toggleRenderMode() {
+        val engine = AppContainer.playbackEngine as? Media3PlaybackEngine ?: return
+        val nextMode = when (engine.getRenderMode()) {
+            RenderMode.SURFACE_VIEW -> RenderMode.TEXTURE_VIEW
+            RenderMode.TEXTURE_VIEW -> RenderMode.SURFACE_VIEW
+        }
+        engine.setRenderMode(nextMode)
+        attachPlayerView()
+        statusText.text = "Playback render mode: ${currentRenderModeLabel()}"
+        renderAuthPanel()
     }
 
     private fun observePlaybackState() {
