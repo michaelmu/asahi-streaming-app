@@ -268,21 +268,17 @@ class MainActivity : ComponentActivity() {
             })
         }
 
-        authContainer.addView(Button(this).apply {
-            text = "Copy Debug Info"
-            setOnClickListener { copyDebugInfoToClipboard() }
-        })
 
         appendBody(
             authContainer,
             buildString {
-                append("Token store path: ")
-                append(AppContainer.realDebridTokenStoreDebugPath())
+                append("Playback mode: ")
+                append(currentRenderModeLabel())
             }
         )
         authContainer.addView(Button(this).apply {
-            text = "Toggle Playback Render Mode (${currentRenderModeLabel()})"
-            setOnClickListener { toggleRenderMode() }
+            text = "Copy Debug Info"
+            setOnClickListener { copyDebugInfoToClipboard() }
         })
 
         activeDeviceFlow?.let { flow ->
@@ -772,15 +768,12 @@ class MainActivity : ComponentActivity() {
                 text = buildString {
                     append(source.displayName)
                     append("\n")
-                    append("provider=")
-                    append(source.providerId)
-                    append("/")
-                    append(source.providerDisplayName)
-                    append(" · quality=")
                     append(source.quality)
-                    append(" · cache=")
+                    append(" · ")
                     append(source.cacheStatus)
-                    append(" · debrid=")
+                    append(" · ")
+                    append(source.providerDisplayName)
+                    append(" · ")
                     append(source.debridService)
                     if (source.seasonNumber != null && source.episodeNumber != null) {
                         append(" · S")
@@ -789,18 +782,9 @@ class MainActivity : ComponentActivity() {
                         append(source.episodeNumber.toString().padStart(2, '0'))
                     }
                     source.sizeLabel?.let {
-                        append(" · size=")
+                        append(" · ")
                         append(it)
                     }
-                    append("\n")
-                    append("transport=")
-                    append(source.rawMetadata["transport"] ?: "none")
-                    append(" · fallback=")
-                    append(source.rawMetadata["fallbackMode"] ?: "false")
-                    append(" · raw_debrid=")
-                    append(source.rawMetadata["debrid"] ?: "none")
-                    append(" · raw_cache=")
-                    append(source.rawMetadata["cache_hint"] ?: "none")
                 }
                 setOnClickListener {
                     preparePlayback(
