@@ -2,6 +2,8 @@ package ai.shieldtv.app.update
 
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.BufferedReader
+import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -11,26 +13,22 @@ class GitHubReleaseUpdateChecker(
     private val currentVersionName: String
 ) {
     fun check(): AppUpdateInfo? {
-        val connection = URL("https://api.github.com/repos/$owner/$repo/releases/latest").openConnection() as HttpURLConnection
-        connection.requestMethod = "GET"
-        connection.setRequestProperty("Accept", "application/vnd.github+json")
-        connection.setRequestProperty("User-Agent", "AsahiUpdateChecker")
-        connection.connectTimeout = 10_000
-        connection.readTimeout = 10_000
+        val releases = fetchReleases()
+        if (releases.length() == 0) return null
 
-        return connection.inputStream.bufferedReader().use { reader ->
-            val json = JSONObject(reader.readText())
+        for (index in 0 until releases.length()) {
+            val json = releases.optJSONObject(index) ?: continue
             val latestVersion = json.optString("tag_name").ifBlank {
                 json.optString("name")
             }.removePrefix("v")
 
             if (latestVersion.isBlank() || !isNewerThanCurrent(latestVersion)) {
-                return@use null
+                continue
             }
 
             val assets = json.optJSONArray("assets") ?: JSONArray()
-            val apkAsset = findApkAsset(assets) ?: return@use null
-            AppUpdateInfo(
+            val apkAsset = findApkAsset(assets) ?: continue
+            return AppUpdateInfo(
                 versionName = latestVersion,
                 downloadUrl = apkAsset.optString("browser_download_url"),
                 pageUrl = json.optString("html_url"),
@@ -38,6 +36,29 @@ class GitHubReleaseUpdateChecker(
                 notes = json.optString("body")
             )
         }
+
+        return null
+    }
+
+    private fun fetchReleases(): JSONArray {
+        val connection = URL("https://api.github.com/repos/$owner/$repo/releases").openConnection() as HttpURLConnection
+        connection.requestMethod = "GET"
+        connection.setRequestProperty("Accept", "application/vnd.github+json")
+        connection.setRequestProperty("User-Agent", "AsahiUpdateChecker")
+        connection.connectTimeout = 10_000
+        connection.readTimeout = 10_000
+
+        val statusCode = connection.responseCode
+        val stream = if (statusCode in 200..299) connection.inputStream else connection.errorStream
+        val body = stream?.let { input ->
+            BufferedReader(InputStreamReader(input)).use { reader -> reader.readText() }
+        }.orEmpty()
+
+        if (statusCode !in 200..299) {
+            throw IllegalStateException("GitHub update check failed ($statusCode): ${body.take(120)}")
+        }
+
+        return JSONArray(body)
     }
 
     private fun findApkAsset(assets: JSONArray): JSONObject? {
