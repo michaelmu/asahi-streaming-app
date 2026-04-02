@@ -197,7 +197,7 @@ class MainActivity : ComponentActivity() {
             visibility = View.GONE
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                720
+                LinearLayout.LayoutParams.MATCH_PARENT
             )
         }
     }
@@ -361,6 +361,13 @@ class MainActivity : ComponentActivity() {
                             coordinator.currentState().selectedSeasonNumber ?: 1,
                             coordinator.currentState().selectedEpisodeNumber ?: 1
                         )
+                    }
+                },
+                onEpisodePlay = { episode ->
+                    coordinator.currentState().selectedDetails?.let { details ->
+                        val season = coordinator.currentState().selectedSeasonNumber ?: 1
+                        coordinator.showEpisodes(details, season, episode)
+                        loadSourcesFor(details.mediaRef, season, episode)
                     }
                 },
                 onFirstFocusTarget = ::focusView

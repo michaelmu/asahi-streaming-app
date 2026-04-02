@@ -184,6 +184,7 @@ class EpisodePickerScreenRenderer(
         onSeasonSelected: (Int) -> Unit,
         onEpisodeSelected: (Int) -> Unit,
         onFindSources: () -> Unit,
+        onEpisodePlay: (Int) -> Unit,
         onFirstFocusTarget: (View) -> Unit = {}
     ) {
         val details = state.selectedDetails
@@ -248,7 +249,10 @@ class EpisodePickerScreenRenderer(
                     }
                 }
                 gravity = Gravity.START or Gravity.CENTER_VERTICAL
-                setOnClickListener { onEpisodeSelected(episode.episodeNumber) }
+                setOnClickListener {
+                    onEpisodeSelected(episode.episodeNumber)
+                    onEpisodePlay(episode.episodeNumber)
+                }
                 if (isSelected || (selectedEpisode !in episodeChoices.map { it.episodeNumber } && index == 0)) {
                     post { onFirstFocusTarget(this) }
                 }
@@ -336,32 +340,21 @@ class PlayerScreenRenderer(
 ) {
     fun render(state: AppState, playbackMessage: String?, playbackError: String?, playerView: PlayerView, playbackControls: View) {
         val source = state.selectedSource
-        host.addView(viewFactory.title("Player"))
         if (source == null) {
+            host.addView(viewFactory.title("Player"))
             host.addView(viewFactory.body("No source selected."))
             return
         }
 
-        host.addView(
-            viewFactory.body(
-                buildString {
-                    appendLine("Selected source: ${source.displayName}")
-                    appendLine("Provider: ${source.providerDisplayName}")
-                    appendLine("Quality: ${source.quality}")
-                    appendLine("Cache: ${source.cacheStatus}")
-                    if (state.selectedSeasonNumber != null && state.selectedEpisodeNumber != null) {
-                        appendLine("Episode target: S${state.selectedSeasonNumber.toString().padStart(2, '0')}E${state.selectedEpisodeNumber.toString().padStart(2, '0')}")
-                    }
-                    appendLine()
-                    append(playbackMessage ?: "Preparing playback…")
-                }
-            )
-        )
-        playbackError?.let {
+        playbackError?.takeIf { it.isNotBlank() }?.let {
             host.addView(viewFactory.body("Playback error: $it"))
         }
+        playerView.layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            0,
+            1f
+        )
         host.addView(playerView)
-        host.addView(viewFactory.spacer())
         host.addView(playbackControls)
     }
 }
