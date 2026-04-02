@@ -5,6 +5,7 @@ import android.graphics.Typeface
 import android.net.Uri
 import android.text.InputType
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.View
 import android.widget.HorizontalScrollView
 import android.widget.ImageView
@@ -42,22 +43,29 @@ class NavigationRailRenderer(
         host.addView(viewFactory.sectionTitle("Library"))
         host.addView(viewFactory.spacer(12))
 
-        val movieButton = viewFactory.button(
+        val movieButton = focusableButton(
             if (!inSettings && selectedMode == SearchMode.MOVIES) "Movies •" else "Movies",
             onMovies
         )
         host.addView(movieButton)
         host.addView(viewFactory.spacer(10))
         host.addView(
-            viewFactory.button(
+            focusableButton(
                 if (!inSettings && selectedMode == SearchMode.SHOWS) "TV Shows •" else "TV Shows",
                 onShows
             )
         )
         host.addView(viewFactory.spacer(10))
-        host.addView(viewFactory.button(if (inSettings) "Settings •" else "Settings", onSettings))
+        host.addView(focusableButton(if (inSettings) "Settings •" else "Settings", onSettings))
 
         movieButton.post { onFirstFocusTarget(movieButton) }
+    }
+
+    private fun focusableButton(text: String, onClick: () -> Unit): View {
+        return viewFactory.button(text, onClick).apply {
+            isFocusable = true
+            isFocusableInTouchMode = true
+        }
     }
 }
 
@@ -125,7 +133,8 @@ class HomeScreenRenderer(
         onRecentQuery: (String) -> Unit,
         onFirstFocusTarget: (View) -> Unit = {}
     ) {
-        val featured = if (state.searchMode == SearchMode.SHOWS) featuredShows else featuredMovies
+        val libraryPicks = if (state.searchMode == SearchMode.SHOWS) featuredShows else featuredMovies
+        val featured = dynamicPicks(state, libraryPicks)
         val hero = featured.first()
         host.addView(viewFactory.artworkHero(
             title = hero.mediaRef.title,
@@ -183,7 +192,7 @@ class HomeScreenRenderer(
             addView(viewFactory.caption("TMDb metadata, Torrentio source lookup, Real-Debrid auth/resolve, and Media3 playback are all in the loop."))
             onResumeSearch?.let {
                 addView(viewFactory.spacer(16))
-                addView(viewFactory.button("Resume Last Flow", it))
+                addView(focusableAction("Resume Last Flow", it))
             }
         }
         val rightPanel = viewFactory.panel(elevated = false).apply {
@@ -196,7 +205,7 @@ class HomeScreenRenderer(
                 addView(viewFactory.body("Nothing recent yet. Search for a title and it’ll show up here."))
             } else {
                 state.recentQueries.take(6).forEachIndexed { index, query ->
-                    val button = viewFactory.button(query) { onRecentQuery(query) }
+                    val button = focusableAction(query) { onRecentQuery(query) }
                     addView(button)
                     if (index < state.recentQueries.take(6).lastIndex) {
                         addView(viewFactory.spacer(10))
@@ -211,6 +220,21 @@ class HomeScreenRenderer(
         moviesButton.post { onFirstFocusTarget(moviesButton) }
     }
 
+    private fun dynamicPicks(state: AppState, fallback: List<SearchResult>): List<SearchResult> {
+        val fromResults = state.searchResults.take(3)
+        if (fromResults.isNotEmpty()) return fromResults
+        val selected = state.selectedMedia?.let { media ->
+            SearchResult(
+                mediaRef = media,
+                subtitle = "Pick up where you left off.",
+                posterUrl = state.selectedDetails?.posterUrl,
+                backdropUrl = state.selectedDetails?.backdropUrl,
+                badges = listOf("Resume")
+            )
+        }
+        return listOfNotNull(selected).plus(fallback).distinctBy { it.mediaRef.title }.take(3)
+    }
+
     private fun buildQuickPickRow(
         items: List<SearchResult>,
         onQuickPick: (SearchResult) -> Unit,
@@ -219,16 +243,9 @@ class HomeScreenRenderer(
         return LinearLayout(host.context).apply {
             orientation = LinearLayout.HORIZONTAL
             items.forEachIndexed { index, item ->
-                val card = viewFactory.panel(elevated = true).apply {
+                val card = focusableCard(onClick = { onQuickPick(item) }).apply {
                     layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
                         if (index > 0) it.marginStart = viewFactory.dp(12)
-                    }
-                    isFocusable = true
-                    isClickable = true
-                    setOnClickListener { onQuickPick(item) }
-                    setOnFocusChangeListener { view, hasFocus ->
-                        view.scaleX = if (hasFocus) 1.02f else 1f
-                        view.scaleY = if (hasFocus) 1.02f else 1f
                     }
                 }
                 card.addView(ImageView(host.context).apply {
@@ -261,9 +278,37 @@ class HomeScreenRenderer(
     }
 
     private fun actionButton(text: String, onClick: () -> Unit, startMarginDp: Int = 0): View {
-        return viewFactory.button(text, onClick).apply {
+        return focusableAction(text, onClick).apply {
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
                 if (startMarginDp > 0) it.marginStart = viewFactory.dp(startMarginDp)
+            }
+        }
+    }
+
+    private fun focusableAction(text: String, onClick: () -> Unit): View {
+        return viewFactory.button(text, onClick).apply {
+            isFocusable = true
+            isFocusableInTouchMode = true
+        }
+    }
+
+    private fun focusableCard(onClick: () -> Unit): LinearLayout {
+        return viewFactory.panel(elevated = true).apply {
+            isFocusable = true
+            isFocusableInTouchMode = true
+            isClickable = true
+            setOnClickListener { onClick() }
+            setOnFocusChangeListener { view, hasFocus ->
+                view.scaleX = if (hasFocus) 1.02f else 1f
+                view.scaleY = if (hasFocus) 1.02f else 1f
+            }
+            setOnKeyListener { _, keyCode, event ->
+                if (event.action == KeyEvent.ACTION_DOWN && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)) {
+                    onClick()
+                    true
+                } else {
+                    false
+                }
             }
         }
     }
@@ -320,6 +365,8 @@ class SearchScreenRenderer(
                     viewFactory.dp(180),
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 ).also { it.marginStart = viewFactory.dp(16) }
+                isFocusable = true
+                isFocusableInTouchMode = true
             }
 
             searchRow.addView(queryInput)
@@ -332,7 +379,10 @@ class SearchScreenRenderer(
         host.addView(searchPanel)
         onBack?.let {
             host.addView(viewFactory.spacer())
-            host.addView(viewFactory.button("Back", it))
+            host.addView(viewFactory.button("Back", it).apply {
+                isFocusable = true
+                isFocusableInTouchMode = true
+            })
         }
     }
 }
@@ -384,16 +434,9 @@ class ResultsScreenRenderer(
             gravity = Gravity.START
         }
         featured.forEachIndexed { index, result ->
-            val featuredCard = viewFactory.panel(elevated = true).apply {
+            val featuredCard = focusableMediaCard(onClick = { onResultSelected(result) }).apply {
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
                     if (index > 0) it.marginStart = viewFactory.dp(14)
-                }
-                isFocusable = true
-                isClickable = true
-                setOnClickListener { onResultSelected(result) }
-                setOnFocusChangeListener { view, hasFocus ->
-                    view.scaleX = if (hasFocus) 1.02f else 1f
-                    view.scaleY = if (hasFocus) 1.02f else 1f
                 }
             }
             val poster = ImageView(activity).apply {
@@ -442,15 +485,9 @@ class ResultsScreenRenderer(
         host.addView(viewFactory.spacer(12))
 
         state.searchResults.drop(3).take(17).forEach { result ->
-            val card = viewFactory.panel(vertical = false, elevated = false).apply {
+            val card = focusableMediaCard(onClick = { onResultSelected(result) }, elevated = false).apply {
+                orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                isFocusable = true
-                isClickable = true
-                setOnClickListener { onResultSelected(result) }
-                setOnFocusChangeListener { view, hasFocus ->
-                    view.scaleX = if (hasFocus) 1.02f else 1f
-                    view.scaleY = if (hasFocus) 1.02f else 1f
-                }
             }
 
             val posterView = ImageView(activity).apply {
@@ -488,7 +525,31 @@ class ResultsScreenRenderer(
             host.addView(viewFactory.spacer(14))
         }
 
-        host.addView(viewFactory.button("New Search", onNewSearch))
+        host.addView(viewFactory.button("New Search", onNewSearch).apply {
+            isFocusable = true
+            isFocusableInTouchMode = true
+        })
+    }
+
+    private fun focusableMediaCard(onClick: () -> Unit, elevated: Boolean = true): LinearLayout {
+        return viewFactory.panel(elevated = elevated).apply {
+            isFocusable = true
+            isFocusableInTouchMode = true
+            isClickable = true
+            setOnClickListener { onClick() }
+            setOnFocusChangeListener { view, hasFocus ->
+                view.scaleX = if (hasFocus) 1.02f else 1f
+                view.scaleY = if (hasFocus) 1.02f else 1f
+            }
+            setOnKeyListener { _, keyCode, event ->
+                if (event.action == KeyEvent.ACTION_DOWN && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)) {
+                    onClick()
+                    true
+                } else {
+                    false
+                }
+            }
+        }
     }
 }
 
@@ -572,10 +633,12 @@ class DetailsScreenRenderer(
         host.addView(topPanel)
         host.addView(viewFactory.spacer())
 
-        val primaryAction = if (details.mediaRef.mediaType == MediaType.SHOW) {
-            viewFactory.button("Browse Episodes", onBrowseEpisodes)
-        } else {
-            viewFactory.button("Find Sources", onFindSources)
+        val primaryAction = viewFactory.button(
+            if (details.mediaRef.mediaType == MediaType.SHOW) "Browse Episodes" else "Find Sources",
+            if (details.mediaRef.mediaType == MediaType.SHOW) onBrowseEpisodes else onFindSources
+        ).apply {
+            isFocusable = true
+            isFocusableInTouchMode = true
         }
         host.addView(primaryAction)
         primaryAction.post { onFirstFocusTarget(primaryAction) }
@@ -633,6 +696,9 @@ class EpisodePickerScreenRenderer(
         (1..knownSeasonCount).forEach { season ->
             val chip = viewFactory.chip("Season $season", selected = season == selectedSeason) {
                 onSeasonSelected(season)
+            }.apply {
+                isFocusable = true
+                isFocusableInTouchMode = true
             }
             seasonStrip.addView(chip)
             if (season < knownSeasonCount) {
@@ -664,6 +730,7 @@ class EpisodePickerScreenRenderer(
             val isSelected = selectedEpisode == episode.episodeNumber
             val card = viewFactory.panel(elevated = isSelected).apply {
                 isFocusable = true
+                isFocusableInTouchMode = true
                 isClickable = true
                 setOnClickListener {
                     onEpisodeSelected(episode.episodeNumber)
@@ -702,7 +769,10 @@ class EpisodePickerScreenRenderer(
         host.addView(viewFactory.button(
             "Find Sources for S${selectedSeason.toString().padStart(2, '0')}E${selectedEpisode.toString().padStart(2, '0')}",
             onFindSources
-        ))
+        ).apply {
+            isFocusable = true
+            isFocusableInTouchMode = true
+        })
     }
 }
 
@@ -757,16 +827,9 @@ class SourcesScreenRenderer(
             host.addView(viewFactory.spacer(12))
             val picksRow = LinearLayout(host.context).apply { orientation = LinearLayout.HORIZONTAL }
             topSources.forEachIndexed { index, source ->
-                val pickCard = viewFactory.panel(elevated = true).apply {
+                val pickCard = focusableSourceCard(onClick = { onSourceSelected(source) }).apply {
                     layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
                         if (index > 0) it.marginStart = viewFactory.dp(12)
-                    }
-                    isFocusable = true
-                    isClickable = true
-                    setOnClickListener { onSourceSelected(source) }
-                    setOnFocusChangeListener { view, hasFocus ->
-                        view.scaleX = if (hasFocus) 1.02f else 1f
-                        view.scaleY = if (hasFocus) 1.02f else 1f
                     }
                 }
                 pickCard.addView(TextView(host.context).apply {
@@ -793,15 +856,7 @@ class SourcesScreenRenderer(
         }
 
         state.selectedSources.drop(3).take(13).forEach { source ->
-            val card = viewFactory.panel(elevated = source.cacheStatus == CacheStatus.CACHED).apply {
-                isFocusable = true
-                isClickable = true
-                setOnClickListener { onSourceSelected(source) }
-                setOnFocusChangeListener { view, hasFocus ->
-                    view.scaleX = if (hasFocus) 1.015f else 1f
-                    view.scaleY = if (hasFocus) 1.015f else 1f
-                }
-            }
+            val card = focusableSourceCard(onClick = { onSourceSelected(source) }, elevated = source.cacheStatus == CacheStatus.CACHED)
 
             val headRow = LinearLayout(host.context).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -863,6 +918,27 @@ class SourcesScreenRenderer(
             }
             host.addView(card)
             host.addView(viewFactory.spacer(12))
+        }
+    }
+
+    private fun focusableSourceCard(onClick: () -> Unit, elevated: Boolean = true): LinearLayout {
+        return viewFactory.panel(elevated = elevated).apply {
+            isFocusable = true
+            isFocusableInTouchMode = true
+            isClickable = true
+            setOnClickListener { onClick() }
+            setOnFocusChangeListener { view, hasFocus ->
+                view.scaleX = if (hasFocus) 1.015f else 1f
+                view.scaleY = if (hasFocus) 1.015f else 1f
+            }
+            setOnKeyListener { _, keyCode, event ->
+                if (event.action == KeyEvent.ACTION_DOWN && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)) {
+                    onClick()
+                    true
+                } else {
+                    false
+                }
+            }
         }
     }
 
@@ -1020,6 +1096,9 @@ class SettingsScreenRenderer(
                 addView(viewFactory.spacer(12))
                 addView(viewFactory.button("Open Real-Debrid Link Page") {
                     activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(buildAuthUrl(flow))))
+                }.apply {
+                    isFocusable = true
+                    isFocusableInTouchMode = true
                 })
             }
         }
@@ -1042,30 +1121,50 @@ class SettingsScreenRenderer(
         host.addView(updatePanel)
         host.addView(viewFactory.spacer())
 
-        val primaryButton = if (!authState.isLinked) {
-            viewFactory.button("Start Real-Debrid Link", onStartLink)
-        } else {
-            viewFactory.button("Toggle Playback Mode", onTogglePlaybackMode)
+        val primaryButton = viewFactory.button(
+            if (!authState.isLinked) "Start Real-Debrid Link" else "Toggle Playback Mode",
+            if (!authState.isLinked) onStartLink else onTogglePlaybackMode
+        ).apply {
+            isFocusable = true
+            isFocusableInTouchMode = true
         }
         host.addView(primaryButton)
         primaryButton.post { onFirstFocusTarget(primaryButton) }
         host.addView(viewFactory.spacer(10))
 
         if (authState.isLinked) {
-            host.addView(viewFactory.button("Reset Real-Debrid Auth", onResetAuth))
+            host.addView(viewFactory.button("Reset Real-Debrid Auth", onResetAuth).apply {
+                isFocusable = true
+                isFocusableInTouchMode = true
+            })
             host.addView(viewFactory.spacer(10))
         } else {
-            host.addView(viewFactory.button("Toggle Playback Mode", onTogglePlaybackMode))
+            host.addView(viewFactory.button("Toggle Playback Mode", onTogglePlaybackMode).apply {
+                isFocusable = true
+                isFocusableInTouchMode = true
+            })
             host.addView(viewFactory.spacer(10))
         }
-        host.addView(viewFactory.button("Check for Updates", onCheckForUpdates))
+        host.addView(viewFactory.button("Check for Updates", onCheckForUpdates).apply {
+            isFocusable = true
+            isFocusableInTouchMode = true
+        })
         host.addView(viewFactory.spacer(10))
         onOpenLatestUpdate?.let { openLatest ->
-            host.addView(viewFactory.button("Open Latest APK", openLatest))
+            host.addView(viewFactory.button("Open Latest APK", openLatest).apply {
+                isFocusable = true
+                isFocusableInTouchMode = true
+            })
             host.addView(viewFactory.spacer(10))
         }
-        host.addView(viewFactory.button("Copy Debug Info", onCopyDebugInfo))
+        host.addView(viewFactory.button("Copy Debug Info", onCopyDebugInfo).apply {
+            isFocusable = true
+            isFocusableInTouchMode = true
+        })
         host.addView(viewFactory.spacer(10))
-        host.addView(viewFactory.button("Back to Browse", onBackToHome))
+        host.addView(viewFactory.button("Back to Browse", onBackToHome).apply {
+            isFocusable = true
+            isFocusableInTouchMode = true
+        })
     }
 }
