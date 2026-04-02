@@ -1,5 +1,7 @@
 package ai.shieldtv.app
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -245,6 +247,11 @@ class MainActivity : ComponentActivity() {
             })
         }
 
+        authContainer.addView(Button(this).apply {
+            text = "Copy Debug Info"
+            setOnClickListener { copyDebugInfoToClipboard() }
+        })
+
         appendBody(
             authContainer,
             buildString {
@@ -265,7 +272,7 @@ class MainActivity : ComponentActivity() {
             authContainer.addView(Button(this).apply {
                 text = "Open Real-Debrid Link Page"
                 setOnClickListener {
-                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(flow.verificationUrl)))
+                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(buildRealDebridAuthUrl(flow))))
                 }
             })
             authContainer.addView(Button(this).apply {
@@ -358,6 +365,35 @@ class MainActivity : ComponentActivity() {
                 renderAuthPanel()
             }
         }
+    }
+
+    private fun buildRealDebridAuthUrl(flow: DeviceCodeFlow): String {
+        val base = flow.verificationUrl.ifBlank { "https://real-debrid.com/device" }
+        return "$base?user_code=${Uri.encode(flow.userCode)}&device_code=${Uri.encode(flow.deviceCode)}"
+    }
+
+    private fun copyDebugInfoToClipboard() {
+        val clipboard = getSystemService(ClipboardManager::class.java)
+        val debugText = buildString {
+            appendLine("build=${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) ${BuildConfig.GIT_SHA}")
+            appendLine("auth_linked=${authState.isLinked}")
+            appendLine("auth_user=${authState.username ?: "none"}")
+            appendLine("auth_in_progress=${authState.authInProgress}")
+            appendLine("auth_error=${authState.lastError ?: "none"}")
+            appendLine("token_path=${AppContainer.realDebridTokenStoreDebugPath()}")
+            activeDeviceFlow?.let { flow ->
+                appendLine("verification_url=${flow.verificationUrl}")
+                appendLine("auth_url=${buildRealDebridAuthUrl(flow)}")
+                appendLine("user_code=${flow.userCode}")
+                appendLine("device_code=${flow.deviceCode}")
+            }
+            appendLine("selected_media=${selectedMediaRef?.title ?: "none"}")
+            appendLine("selected_season=${selectedSeasonNumber ?: "none"}")
+            appendLine("selected_episode=${selectedEpisodeNumber ?: "none"}")
+            appendLine("status=${statusText.text}")
+        }
+        clipboard?.setPrimaryClip(ClipData.newPlainText("Asahi Debug Info", debugText))
+        statusText.text = "Debug info copied to clipboard"
     }
 
     private fun runInitialSearch() {
