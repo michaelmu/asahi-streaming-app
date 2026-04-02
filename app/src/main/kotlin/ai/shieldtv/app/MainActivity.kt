@@ -105,6 +105,10 @@ class MainActivity : ComponentActivity() {
             text = "Minimal in-app search → details → sources → playback flow"
             textSize = 16f
         }
+        val buildInfo = TextView(this).apply {
+            text = "${ai.shieldtv.app.BuildConfig.VERSION_NAME} (${ai.shieldtv.app.BuildConfig.VERSION_CODE}) · ${ai.shieldtv.app.BuildConfig.GIT_SHA}"
+            textSize = 14f
+        }
 
         val searchRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -155,6 +159,7 @@ class MainActivity : ComponentActivity() {
 
         root.addView(title)
         root.addView(subtitle)
+        root.addView(buildInfo)
         root.addView(space())
         root.addView(searchRow)
         root.addView(space())
@@ -680,6 +685,15 @@ class MainActivity : ComponentActivity() {
                         append(" · size=")
                         append(it)
                     }
+                    append("\n")
+                    append("transport=")
+                    append(source.rawMetadata["transport"] ?: "none")
+                    append(" · fallback=")
+                    append(source.rawMetadata["fallbackMode"] ?: "false")
+                    append(" · raw_debrid=")
+                    append(source.rawMetadata["debrid"] ?: "none")
+                    append(" · raw_cache=")
+                    append(source.rawMetadata["cache_hint"] ?: "none")
                 }
                 setOnClickListener {
                     preparePlayback(

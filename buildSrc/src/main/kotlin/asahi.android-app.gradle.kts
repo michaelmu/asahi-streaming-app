@@ -17,7 +17,13 @@ android {
         val tmdbApiKey = (project.findProperty("TMDB_API_KEY") as String?)
             ?: System.getenv("TMDB_API_KEY")
             ?: ""
+        val gitSha = runCatching {
+            providers.exec {
+                commandLine("git", "rev-parse", "--short", "HEAD")
+            }.standardOutput.asText.get().trim()
+        }.getOrDefault("unknown")
         buildConfigField("String", "TMDB_API_KEY", "\"$tmdbApiKey\"")
+        buildConfigField("String", "GIT_SHA", "\"$gitSha\"")
     }
 
     buildFeatures {
