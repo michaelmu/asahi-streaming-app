@@ -7,7 +7,9 @@ import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.HorizontalScrollView
+import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.media3.ui.PlayerView
 import ai.shieldtv.app.AppState
 import ai.shieldtv.app.SearchMode
@@ -16,6 +18,7 @@ import ai.shieldtv.app.core.model.auth.RealDebridAuthState
 import ai.shieldtv.app.core.model.media.EpisodeSummary
 import ai.shieldtv.app.core.model.media.MediaType
 import ai.shieldtv.app.core.model.source.SourceResult
+import coil.load
 
 class NavigationRailRenderer(
     private val host: LinearLayout,
@@ -105,21 +108,49 @@ class ResultsScreenRenderer(
             host.addView(viewFactory.body(emptyMessage))
         } else {
             state.searchResults.take(20).forEachIndexed { index, result ->
-                host.addView(Button(activity).apply {
-                    text = buildString {
-                        append(result.mediaRef.title)
-                        result.mediaRef.year?.let { append(" ($it)") }
-                        result.subtitle?.takeIf { it.isNotBlank() }?.let {
-                            append(" — ")
-                            append(it)
-                        }
-                    }
-                    gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                val row = LinearLayout(activity).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    isFocusable = true
+                    isClickable = true
+                    setPadding(12, 12, 12, 12)
                     setOnClickListener { onResultSelected(result) }
                     if (index == 0) {
                         post { onFirstFocusTarget(this) }
                     }
+                }
+
+                val posterView = ImageView(activity).apply {
+                    layoutParams = LinearLayout.LayoutParams(120, 180).apply {
+                        marginEnd = 24
+                    }
+                    scaleType = ImageView.ScaleType.CENTER_CROP
+                    result.posterUrl?.takeIf { it.isNotBlank() }?.let { url ->
+                        load(url)
+                    }
+                }
+
+                val textColumn = LinearLayout(activity).apply {
+                    orientation = LinearLayout.VERTICAL
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                }
+                textColumn.addView(TextView(activity).apply {
+                    text = buildString {
+                        append(result.mediaRef.title)
+                        result.mediaRef.year?.let { append(" ($it)") }
+                    }
+                    textSize = 18f
                 })
+                result.subtitle?.takeIf { it.isNotBlank() }?.let { subtitle ->
+                    textColumn.addView(TextView(activity).apply {
+                        text = subtitle
+                        textSize = 14f
+                    })
+                }
+
+                row.addView(posterView)
+                row.addView(textColumn)
+                host.addView(row)
             }
         }
 
