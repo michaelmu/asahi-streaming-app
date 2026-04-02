@@ -9,12 +9,14 @@ class PlayerViewModel(
     suspend fun prepare(
         source: SourceResult,
         seasonNumber: Int? = source.seasonNumber,
-        episodeNumber: Int? = source.episodeNumber
+        episodeNumber: Int? = source.episodeNumber,
+        startPositionMs: Long = 0L
     ): PlayerUiState {
         return playerPresenter.prepare(
             source = source,
             seasonNumber = seasonNumber,
-            episodeNumber = episodeNumber
+            episodeNumber = episodeNumber,
+            startPositionMs = startPositionMs
         )
     }
 }

@@ -31,6 +31,7 @@ class Media3PlaybackEngine : PlaybackEngine {
     private var currentItem: PlaybackItem? = null
     private var player: ExoPlayer? = null
     private var renderMode: RenderMode = RenderMode.SURFACE_VIEW
+    private var pendingStartPositionMs: Long = 0L
 
     fun attach(context: Context): ExoPlayer {
         val existing = player
@@ -74,6 +75,9 @@ class Media3PlaybackEngine : PlaybackEngine {
             player = exoPlayer
             currentItem?.let { item ->
                 exoPlayer.setMediaItem(MediaItem.fromUri(item.stream.url))
+                if (pendingStartPositionMs > 0L) {
+                    exoPlayer.seekTo(pendingStartPositionMs)
+                }
                 exoPlayer.prepare()
             }
         }
@@ -85,16 +89,20 @@ class Media3PlaybackEngine : PlaybackEngine {
 
     fun getRenderMode(): RenderMode = renderMode
 
-    override suspend fun prepare(item: PlaybackItem) {
+    override suspend fun prepare(item: PlaybackItem, startPositionMs: Long) {
         currentItem = item
+        pendingStartPositionMs = startPositionMs.coerceAtLeast(0L)
         player?.apply {
             setMediaItem(MediaItem.fromUri(item.stream.url))
+            if (pendingStartPositionMs > 0L) {
+                seekTo(pendingStartPositionMs)
+            }
             prepare()
         }
         playbackState.value = PlaybackState(
             isBuffering = false,
             isPlaying = false,
-            positionMs = 0,
+            positionMs = startPositionMs,
             durationMs = C.TIME_UNSET,
             playerStateLabel = "preparing",
             videoFormat = null,

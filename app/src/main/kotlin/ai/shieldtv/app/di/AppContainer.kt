@@ -35,6 +35,7 @@ import ai.shieldtv.app.integration.scrapers.provider.torrentio.TorrentioSourcePr
 import ai.shieldtv.app.integration.scrapers.ranking.DefaultSourceRanker
 import ai.shieldtv.app.integration.scrapers.ranking.RealDebridSourceCacheMarker
 import ai.shieldtv.app.integration.scrapers.repository.SourceRepositoryImpl
+import ai.shieldtv.app.playback.PlaybackSessionStore
 import java.io.File
 
 object AppContainer {
@@ -115,6 +116,10 @@ object AppContainer {
     }
 
     val playbackEngine by lazy { Media3PlaybackEngine() }
+
+    val playbackSessionStore by lazy {
+        PlaybackSessionStore(requireContext())
+    }
 
     val searchTitlesUseCase by lazy {
         SearchTitlesUseCase(metadataRepository)

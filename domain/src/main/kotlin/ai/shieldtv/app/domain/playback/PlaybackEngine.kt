@@ -5,7 +5,7 @@ import ai.shieldtv.app.core.model.playback.PlaybackState
 import kotlinx.coroutines.flow.Flow
 
 interface PlaybackEngine {
-    suspend fun prepare(item: PlaybackItem)
+    suspend fun prepare(item: PlaybackItem, startPositionMs: Long = 0L)
     fun play()
     fun pause()
     fun stop()

@@ -33,6 +33,7 @@ import ai.shieldtv.app.feature.sources.presentation.SourcesPresenter
 import ai.shieldtv.app.feature.sources.presentation.SourcesViewModel
 import ai.shieldtv.app.integration.playback.media3.engine.Media3PlaybackEngine
 import ai.shieldtv.app.integration.playback.media3.engine.Media3PlaybackEngine.RenderMode
+import ai.shieldtv.app.playback.PlaybackSessionRecord
 import ai.shieldtv.app.navigation.AppDestination
 import ai.shieldtv.app.ui.DetailsScreenRenderer
 import ai.shieldtv.app.ui.EpisodePickerScreenRenderer
@@ -108,6 +109,7 @@ class MainActivity : ComponentActivity() {
     private var latestPlaybackError: String? = null
     private var latestUpdateInfo: AppUpdateInfo? = null
     private var latestUpdateMessage: String? = null
+    private var persistedPlaybackSession: PlaybackSessionRecord? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -117,6 +119,7 @@ class MainActivity : ComponentActivity() {
         attachPlayerView()
         observePlaybackState()
         refreshAuthState()
+        persistedPlaybackSession = AppContainer.playbackSessionStore.load()
         val restored = savedInstanceState?.getStringArrayList("appStateEntries")
             ?.mapNotNull {
                 val parts = it.split('=', limit = 2)
@@ -128,6 +131,8 @@ class MainActivity : ComponentActivity() {
         } else {
             coordinator.openHome()
         }
+        hydrateContinueWatchingFromPersistedSession()
+        reconcileRestoredState()
         renderCurrentScreen()
     }
 
@@ -141,6 +146,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         authPollingJob?.cancel()
+        AppContainer.playbackEngine.getCurrentItem()?.let { currentItem ->
+            AppContainer.playbackSessionStore.save(
+                item = currentItem,
+                state = latestPlaybackState,
+                seasonNumber = coordinator.currentState().selectedSeasonNumber,
+                episodeNumber = coordinator.currentState().selectedEpisodeNumber
+            )
+        }
         super.onDestroy()
         AppContainer.playbackEngine.release()
     }
@@ -264,6 +277,19 @@ class MainActivity : ComponentActivity() {
             AppDestination.SEARCH,
             AppDestination.RESULTS,
             AppDestination.SETTINGS -> false
+            AppDestination.RESUME_PROMPT -> {
+                coordinator.showSources(
+                    mediaRef = coordinator.currentState().selectedMedia
+                        ?: coordinator.currentState().selectedSource?.mediaRef
+                        ?: return false,
+                    details = coordinator.currentState().selectedDetails,
+                    seasonNumber = coordinator.currentState().selectedSeasonNumber,
+                    episodeNumber = coordinator.currentState().selectedEpisodeNumber,
+                    sources = coordinator.currentState().selectedSources
+                )
+                renderCurrentScreen()
+                true
+            }
             AppDestination.DETAILS -> {
                 coordinator.showResults(
                     query = coordinator.currentState().query,
@@ -306,6 +332,69 @@ class MainActivity : ComponentActivity() {
                     true
                 } ?: false
             }
+        }
+    }
+
+    private fun hydrateContinueWatchingFromPersistedSession() {
+        persistedPlaybackSession?.takeIf { it.progressPercent in 3..92 }?.let { record ->
+            coordinator.recordContinueWatching(
+                mediaRef = coordinator.currentState().selectedMedia
+                    ?: ai.shieldtv.app.core.model.media.MediaRef(
+                        mediaType = coordinator.currentState().searchMode.mediaType,
+                        ids = ai.shieldtv.app.core.model.media.MediaIds(tmdbId = null, imdbId = null, tvdbId = null),
+                        title = record.mediaTitle,
+                        year = null
+                    ),
+                artworkUrl = record.artworkUrl,
+                seasonNumber = record.seasonNumber,
+                episodeNumber = record.episodeNumber,
+                progressPercent = record.progressPercent
+            )
+        }
+    }
+
+    private fun resumePositionFor(source: SourceResult, seasonNumber: Int?, episodeNumber: Int?): Long {
+        val record = persistedPlaybackSession ?: return 0L
+        val titleMatches = record.mediaTitle.equals(source.mediaRef.title, ignoreCase = true)
+        val episodeMatches = if (source.mediaRef.mediaType == ai.shieldtv.app.core.model.media.MediaType.SHOW) {
+            record.seasonNumber == (seasonNumber ?: source.seasonNumber) &&
+                record.episodeNumber == (episodeNumber ?: source.episodeNumber)
+        } else {
+            true
+        }
+        val progressOk = record.progressPercent in 3..92
+        return if (titleMatches && episodeMatches && progressOk) record.positionMs else 0L
+    }
+
+    private fun reconcileRestoredState() {
+        val state = coordinator.currentState()
+        if (state.destination == AppDestination.PLAYER && state.selectedSource == null) {
+            val fallbackSource = state.selectedSources.firstOrNull()
+            when {
+                fallbackSource != null -> coordinator.showSources(
+                    mediaRef = state.selectedMedia ?: fallbackSource.mediaRef,
+                    details = state.selectedDetails,
+                    seasonNumber = state.selectedSeasonNumber,
+                    episodeNumber = state.selectedEpisodeNumber,
+                    sources = state.selectedSources
+                )
+                state.selectedDetails != null && state.selectedDetails?.mediaRef?.mediaType == ai.shieldtv.app.core.model.media.MediaType.SHOW -> {
+                    coordinator.showEpisodes(
+                        details = state.selectedDetails,
+                        seasonNumber = state.selectedSeasonNumber ?: 1,
+                        episodeNumber = state.selectedEpisodeNumber ?: 1
+                    )
+                }
+                state.selectedDetails != null -> coordinator.showDetails(
+                    mediaRef = state.selectedDetails.mediaRef,
+                    details = state.selectedDetails
+                )
+                state.searchResults.isNotEmpty() -> coordinator.showResults(state.query, state.searchResults)
+                else -> coordinator.openHome()
+            }
+            latestPlaybackError = null
+            latestPlaybackMessage = null
+            AppContainer.playbackEngine.stop()
         }
     }
 
@@ -489,14 +578,88 @@ class MainActivity : ComponentActivity() {
                 diagnostics = latestSourceDiagnostics,
                 error = latestSourcesError,
                 onSourceSelected = { source ->
-                    preparePlayback(
-                        source = source,
-                        seasonNumber = coordinator.currentState().selectedSeasonNumber,
-                        episodeNumber = coordinator.currentState().selectedEpisodeNumber
+                    val resumePosition = resumePositionFor(
+                        source,
+                        coordinator.currentState().selectedSeasonNumber,
+                        coordinator.currentState().selectedEpisodeNumber
                     )
+                    if (resumePosition > 0L) {
+                        coordinator.showResumePrompt(source)
+                        renderCurrentScreen()
+                    } else {
+                        preparePlayback(
+                            source = source,
+                            seasonNumber = coordinator.currentState().selectedSeasonNumber,
+                            episodeNumber = coordinator.currentState().selectedEpisodeNumber
+                        )
+                    }
                 },
                 onFirstFocusTarget = ::focusView
             )
+            AppDestination.RESUME_PROMPT -> {
+                val source = coordinator.currentState().selectedSource
+                val resumePosition = source?.let {
+                    resumePositionFor(
+                        it,
+                        coordinator.currentState().selectedSeasonNumber,
+                        coordinator.currentState().selectedEpisodeNumber
+                    )
+                } ?: 0L
+                screenHost.addView(viewFactory.title("Resume Playback"))
+                screenHost.addView(viewFactory.spacer(8))
+                screenHost.addView(viewFactory.body(
+                    if (resumePosition > 0L) {
+                        "Continue from ${(resumePosition / 60000)}m ${(resumePosition / 1000) % 60}s, or start over?"
+                    } else {
+                        "Resume point unavailable. Start over?"
+                    }
+                ))
+                screenHost.addView(viewFactory.spacer(18))
+                val resumeButton = viewFactory.button("Resume") {
+                    source?.let {
+                        preparePlayback(
+                            source = it,
+                            seasonNumber = coordinator.currentState().selectedSeasonNumber,
+                            episodeNumber = coordinator.currentState().selectedEpisodeNumber
+                        )
+                    }
+                }.apply {
+                    isFocusable = true
+                    isFocusableInTouchMode = true
+                }
+                val startOverButton = viewFactory.button("Start Over") {
+                    source?.let {
+                        preparePlayback(
+                            source = it,
+                            seasonNumber = coordinator.currentState().selectedSeasonNumber,
+                            episodeNumber = coordinator.currentState().selectedEpisodeNumber,
+                            forceStartAtZero = true
+                        )
+                    }
+                }.apply {
+                    isFocusable = true
+                    isFocusableInTouchMode = true
+                }
+                val backButton = viewFactory.button("Back to Sources") {
+                    coordinator.showSources(
+                        mediaRef = coordinator.currentState().selectedMedia ?: source?.mediaRef ?: return@button,
+                        details = coordinator.currentState().selectedDetails,
+                        seasonNumber = coordinator.currentState().selectedSeasonNumber,
+                        episodeNumber = coordinator.currentState().selectedEpisodeNumber,
+                        sources = coordinator.currentState().selectedSources
+                    )
+                    renderCurrentScreen()
+                }.apply {
+                    isFocusable = true
+                    isFocusableInTouchMode = true
+                }
+                screenHost.addView(resumeButton)
+                screenHost.addView(viewFactory.spacer(12))
+                screenHost.addView(startOverButton)
+                screenHost.addView(viewFactory.spacer(12))
+                screenHost.addView(backButton)
+                focusView(resumeButton)
+            }
             AppDestination.PLAYER -> {
                 playerView.visibility = View.VISIBLE
                 detachPlayerFromParent()
@@ -729,7 +892,8 @@ class MainActivity : ComponentActivity() {
     private fun preparePlayback(
         source: SourceResult,
         seasonNumber: Int? = source.seasonNumber,
-        episodeNumber: Int? = source.episodeNumber
+        episodeNumber: Int? = source.episodeNumber,
+        forceStartAtZero: Boolean = false
     ) {
         if (source.debridService == DebridService.REAL_DEBRID && !authState.isLinked) {
             latestPlaybackError = "Real-Debrid link required before playback."
@@ -748,7 +912,8 @@ class MainActivity : ComponentActivity() {
             val state = playerViewModel.prepare(
                 source = source,
                 seasonNumber = seasonNumber,
-                episodeNumber = episodeNumber
+                episodeNumber = episodeNumber,
+                startPositionMs = if (forceStartAtZero) 0L else resumePositionFor(source, seasonNumber, episodeNumber)
             )
             latestPlaybackError = state.error
             latestPlaybackMessage = buildString {
@@ -774,6 +939,15 @@ class MainActivity : ComponentActivity() {
                     episodeNumber = episodeNumber,
                     progressPercent = progressPercent
                 )
+                AppContainer.playbackEngine.getCurrentItem()?.let { currentItem ->
+                    AppContainer.playbackSessionStore.save(
+                        item = currentItem,
+                        state = latestPlaybackState,
+                        seasonNumber = seasonNumber,
+                        episodeNumber = episodeNumber
+                    )
+                    persistedPlaybackSession = AppContainer.playbackSessionStore.load()
+                }
                 coordinator.showPlayer(source)
             }
             renderCurrentScreen()

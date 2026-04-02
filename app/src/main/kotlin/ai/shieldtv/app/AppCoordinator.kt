@@ -101,6 +101,14 @@ class AppCoordinator(
         navigator.goTo(AppDestination.SOURCES)
     }
 
+    fun showResumePrompt(sourceResult: SourceResult) {
+        state = state.copy(
+            destination = AppDestination.RESUME_PROMPT,
+            selectedSource = sourceResult
+        )
+        navigator.goTo(AppDestination.RESUME_PROMPT)
+    }
+
     fun showPlayer(sourceResult: SourceResult) {
         state = state.copy(
             destination = AppDestination.PLAYER,

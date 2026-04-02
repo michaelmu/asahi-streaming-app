@@ -7,6 +7,7 @@ enum class AppDestination {
     DETAILS,
     EPISODES,
     SOURCES,
+    RESUME_PROMPT,
     PLAYER,
     SETTINGS
 }

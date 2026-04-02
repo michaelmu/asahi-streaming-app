@@ -278,12 +278,20 @@ class HomeScreenRenderer(
                     setTypeface(typeface, Typeface.BOLD)
                 })
                 card.addView(viewFactory.spacer(6))
-                card.addView(viewFactory.caption("${item.subtitle} • ${item.progressPercent}% watched"))
+                card.addView(viewFactory.caption("${item.subtitle} • Resume from ${formatProgress(item.progressPercent)}"))
                 addView(card)
                 if (index == 0) {
                     card.post { onFirstFocusTarget(card) }
                 }
             }
+        }
+    }
+
+    private fun formatProgress(progressPercent: Int): String {
+        return when {
+            progressPercent <= 0 -> "start"
+            progressPercent >= 95 -> "near end"
+            else -> "$progressPercent%"
         }
     }
 
@@ -453,23 +461,10 @@ class ResultsScreenRenderer(
         onNewSearch: () -> Unit,
         onFirstFocusTarget: (View) -> Unit = {}
     ) {
-        val featuredPrimary = state.searchResults.firstOrNull()
-        host.addView(
-            if (featuredPrimary != null) {
-                viewFactory.artworkHero(
-                    title = featuredPrimary.mediaRef.title,
-                    subtitle = featuredPrimary.subtitle?.take(180) ?: "Top search hit for \"${state.query}\".",
-                    imageUrl = featuredPrimary.backdropUrl ?: featuredPrimary.posterUrl,
-                    imageHeightDp = 300
-                )
-            } else {
-                viewFactory.heroCard(
-                    title = "Results for \"${state.query}\"",
-                    subtitle = "${state.searchResults.size} match(es) across ${state.searchMode.label.lowercase()}."
-                )
-            }
-        )
-        host.addView(viewFactory.spacer())
+        host.addView(viewFactory.title("Results for \"${state.query}\""))
+        host.addView(viewFactory.spacer(6))
+        host.addView(viewFactory.caption("${state.searchResults.size} match(es) in ${state.searchMode.label.lowercase()}."))
+        host.addView(viewFactory.spacer(16))
 
         if (state.searchResults.isEmpty()) {
             host.addView(viewFactory.panel(elevated = true).apply {
