@@ -122,8 +122,19 @@ class MainActivity : ComponentActivity() {
 
     private fun buildContentView(): View {
         root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
+            orientation = LinearLayout.HORIZONTAL
             setPadding(48, 32, 48, 32)
+        }
+
+        val sidebar = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.34f)
+            setPadding(0, 0, 32, 0)
+        }
+
+        val contentPane = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.66f)
         }
 
         val title = viewFactory.title("Asahi")
@@ -143,23 +154,25 @@ class MainActivity : ComponentActivity() {
             orientation = LinearLayout.VERTICAL
         }
 
-        root.addView(title)
-        root.addView(subtitle)
-        root.addView(buildInfo)
-        root.addView(viewFactory.spacer())
-        root.addView(loadingView)
-        root.addView(statusText)
-        root.addView(viewFactory.spacer())
-        root.addView(
+        sidebar.addView(title)
+        sidebar.addView(subtitle)
+        sidebar.addView(buildInfo)
+        sidebar.addView(viewFactory.spacer())
+        sidebar.addView(loadingView)
+        sidebar.addView(statusText)
+
+        contentPane.addView(
             ScrollView(this).apply {
                 addView(screenHost)
             },
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1f
+                LinearLayout.LayoutParams.MATCH_PARENT
             )
         )
+
+        root.addView(sidebar)
+        root.addView(contentPane)
 
         return root
     }
