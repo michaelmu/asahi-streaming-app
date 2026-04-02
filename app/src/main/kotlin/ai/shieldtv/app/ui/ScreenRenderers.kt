@@ -69,14 +69,20 @@ class ResultsScreenRenderer(
     private val host: LinearLayout,
     private val viewFactory: ScreenViewFactory
 ) {
-    fun render(state: AppState, emptyMessage: String, onResultSelected: (ai.shieldtv.app.core.model.media.SearchResult) -> Unit, onNewSearch: () -> Unit) {
+    fun render(
+        state: AppState,
+        emptyMessage: String,
+        onResultSelected: (ai.shieldtv.app.core.model.media.SearchResult) -> Unit,
+        onNewSearch: () -> Unit,
+        onFirstFocusTarget: (View) -> Unit = {}
+    ) {
         host.addView(viewFactory.title("Results"))
         host.addView(viewFactory.body("Query: ${state.query}"))
 
         if (state.searchResults.isEmpty()) {
             host.addView(viewFactory.body(emptyMessage))
         } else {
-            state.searchResults.take(20).forEach { result ->
+            state.searchResults.take(20).forEachIndexed { index, result ->
                 host.addView(Button(activity).apply {
                     text = buildString {
                         append(result.mediaRef.title)
@@ -88,6 +94,9 @@ class ResultsScreenRenderer(
                     }
                     gravity = Gravity.START or Gravity.CENTER_VERTICAL
                     setOnClickListener { onResultSelected(result) }
+                    if (index == 0) {
+                        post { onFirstFocusTarget(this) }
+                    }
                 })
             }
         }
@@ -138,7 +147,13 @@ class EpisodePickerScreenRenderer(
     private val host: LinearLayout,
     private val viewFactory: ScreenViewFactory
 ) {
-    fun render(state: AppState, onSeasonSelected: (Int) -> Unit, onEpisodeSelected: (Int) -> Unit, onFindSources: () -> Unit) {
+    fun render(
+        state: AppState,
+        onSeasonSelected: (Int) -> Unit,
+        onEpisodeSelected: (Int) -> Unit,
+        onFindSources: () -> Unit,
+        onFirstFocusTarget: (View) -> Unit = {}
+    ) {
         val details = state.selectedDetails
         if (details == null) {
             host.addView(viewFactory.title("Episodes"))
@@ -157,10 +172,13 @@ class EpisodePickerScreenRenderer(
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-        (1..knownSeasonCount).forEach { season ->
+        (1..knownSeasonCount).forEachIndexed { index, season ->
             seasonStrip.addView(Button(activity).apply {
                 text = if (season == selectedSeason) "• S${season.toString().padStart(2, '0')}" else "S${season.toString().padStart(2, '0')}"
                 setOnClickListener { onSeasonSelected(season) }
+                if (index == 0) {
+                    post { onFirstFocusTarget(this) }
+                }
             })
         }
         host.addView(HorizontalScrollView(activity).apply { addView(seasonStrip) })
@@ -220,7 +238,13 @@ class SourcesScreenRenderer(
     private val host: LinearLayout,
     private val viewFactory: ScreenViewFactory
 ) {
-    fun render(state: AppState, diagnostics: String?, error: String?, onSourceSelected: (SourceResult) -> Unit) {
+    fun render(
+        state: AppState,
+        diagnostics: String?,
+        error: String?,
+        onSourceSelected: (SourceResult) -> Unit,
+        onFirstFocusTarget: (View) -> Unit = {}
+    ) {
         val mediaRef = state.selectedMedia
         host.addView(viewFactory.title("Sources"))
         if (mediaRef != null) {
@@ -236,7 +260,7 @@ class SourcesScreenRenderer(
             host.addView(viewFactory.body("Source lookup failed: $it"))
         }
         diagnostics?.let {
-            host.addView(viewFactory.body("Diagnostics: $it"))
+            host.addView(viewFactory.body("Debug summary: $it"))
         }
 
         if (state.selectedSources.isEmpty()) {
@@ -244,7 +268,7 @@ class SourcesScreenRenderer(
             return
         }
 
-        state.selectedSources.take(12).forEach { source ->
+        state.selectedSources.take(12).forEachIndexed { index, source ->
             host.addView(Button(activity).apply {
                 text = buildString {
                     append(source.displayName)
@@ -256,11 +280,19 @@ class SourcesScreenRenderer(
                         append(" · ")
                         append(it)
                     }
-                    append("\nProvider: ")
+                    append("\n")
+                    append("Provider: ")
                     append(source.providerDisplayName)
+                    source.debridService.name.takeIf { it.isNotBlank() }?.let {
+                        append(" · Debrid: ")
+                        append(it)
+                    }
                 }
                 gravity = Gravity.START or Gravity.CENTER_VERTICAL
                 setOnClickListener { onSourceSelected(source) }
+                if (index == 0) {
+                    post { onFirstFocusTarget(this) }
+                }
             })
         }
     }

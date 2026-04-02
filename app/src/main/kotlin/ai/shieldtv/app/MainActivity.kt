@@ -291,7 +291,8 @@ class MainActivity : ComponentActivity() {
                 onNewSearch = {
                     coordinator.openSearch(coordinator.currentState().searchMode)
                     renderCurrentScreen()
-                }
+                },
+                onFirstFocusTarget = ::focusView
             )
             AppDestination.DETAILS -> detailsRenderer.render(
                 state = coordinator.currentState(),
@@ -337,7 +338,8 @@ class MainActivity : ComponentActivity() {
                             coordinator.currentState().selectedEpisodeNumber ?: 1
                         )
                     }
-                }
+                },
+                onFirstFocusTarget = ::focusView
             )
             AppDestination.SOURCES -> sourcesRenderer.render(
                 state = coordinator.currentState(),
@@ -349,7 +351,8 @@ class MainActivity : ComponentActivity() {
                         seasonNumber = coordinator.currentState().selectedSeasonNumber,
                         episodeNumber = coordinator.currentState().selectedEpisodeNumber
                     )
-                }
+                },
+                onFirstFocusTarget = ::focusView
             )
             AppDestination.PLAYER -> {
                 playerView.visibility = View.VISIBLE
@@ -711,5 +714,11 @@ class MainActivity : ComponentActivity() {
 
     private fun detachPlayerFromParent() {
         (playerView.parent as? LinearLayout)?.removeView(playerView)
+    }
+
+    private fun focusView(view: View) {
+        view.isFocusable = true
+        view.isFocusableInTouchMode = true
+        view.requestFocus()
     }
 }
