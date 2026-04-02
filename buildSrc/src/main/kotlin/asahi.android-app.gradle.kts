@@ -13,6 +13,15 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "0.1.0"
+
+        val tmdbApiKey = (project.findProperty("TMDB_API_KEY") as String?)
+            ?: System.getenv("TMDB_API_KEY")
+            ?: ""
+        buildConfigField("String", "TMDB_API_KEY", "\"$tmdbApiKey\"")
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     compileOptions {

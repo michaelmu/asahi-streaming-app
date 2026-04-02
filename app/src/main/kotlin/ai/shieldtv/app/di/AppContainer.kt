@@ -1,6 +1,7 @@
 package ai.shieldtv.app.di
 
 import android.content.Context
+import ai.shieldtv.app.BuildConfig
 import ai.shieldtv.app.domain.usecase.auth.GetRealDebridAuthStateUseCase
 import ai.shieldtv.app.domain.usecase.auth.PollRealDebridDeviceFlowUseCase
 import ai.shieldtv.app.domain.usecase.auth.StartRealDebridDeviceFlowUseCase
@@ -47,7 +48,11 @@ object AppContainer {
         return checkNotNull(appContext) { "AppContainer not initialized" }
     }
 
-    private val tmdbApi by lazy { TmdbFactory.createRealApi() }
+    private val tmdbApi by lazy {
+        TmdbFactory.createRealApi {
+            BuildConfig.TMDB_API_KEY.takeIf { it.isNotBlank() }
+        }
+    }
     private val fallbackTmdbApi by lazy { FakeTmdbApi() }
     private val tmdbSearchMapper by lazy { TmdbSearchMapper() }
     private val tmdbDetailsMapper by lazy { TmdbDetailsMapper() }
