@@ -14,7 +14,6 @@ import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.ScrollView
-import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.ui.PlayerView
@@ -40,6 +39,7 @@ import ai.shieldtv.app.feature.sources.presentation.SourcesViewModel
 import ai.shieldtv.app.integration.playback.media3.engine.Media3PlaybackEngine
 import ai.shieldtv.app.integration.playback.media3.engine.Media3PlaybackEngine.RenderMode
 import ai.shieldtv.app.navigation.AppDestination
+import ai.shieldtv.app.ui.ScreenViewFactory
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -66,9 +66,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private val coordinator = AppCoordinator()
+    private lateinit var viewFactory: ScreenViewFactory
 
     private lateinit var root: LinearLayout
-    private lateinit var statusText: TextView
+    private lateinit var statusText: android.widget.TextView
     private lateinit var loadingView: ProgressBar
     private lateinit var screenHost: LinearLayout
     private lateinit var playerView: PlayerView
@@ -89,6 +90,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        viewFactory = ScreenViewFactory(this)
         setContentView(buildContentView())
         attachPlayerView()
         observePlaybackState()
@@ -115,24 +117,15 @@ class MainActivity : ComponentActivity() {
             setPadding(48, 32, 48, 32)
         }
 
-        val title = TextView(this).apply {
-            text = "Asahi"
-            textSize = 28f
-        }
-        val subtitle = TextView(this).apply {
-            text = "Page-based in-app search → details → sources → playback flow"
-            textSize = 16f
-        }
-        val buildInfo = TextView(this).apply {
-            text = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) · ${BuildConfig.GIT_SHA}"
-            textSize = 14f
-        }
+        val title = viewFactory.title("Asahi")
+        val subtitle = viewFactory.body("Page-based in-app search → details → sources → playback flow")
+        val buildInfo = viewFactory.body("${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) · ${BuildConfig.GIT_SHA}")
 
         loadingView = ProgressBar(this).apply {
             visibility = View.GONE
         }
 
-        statusText = TextView(this).apply {
+        statusText = android.widget.TextView(this).apply {
             text = "Ready"
             textSize = 15f
         }
@@ -144,10 +137,10 @@ class MainActivity : ComponentActivity() {
         root.addView(title)
         root.addView(subtitle)
         root.addView(buildInfo)
-        root.addView(space())
+        root.addView(viewFactory.spacer())
         root.addView(loadingView)
         root.addView(statusText)
-        root.addView(space())
+        root.addView(viewFactory.spacer())
         root.addView(
             ScrollView(this).apply {
                 addView(screenHost)
@@ -260,17 +253,17 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun renderHomeScreen() {
-        screenHost.addView(screenTitle("Home"))
-        screenHost.addView(bodyText("Start with a content mode, or open settings/accounts."))
-        screenHost.addView(primaryButton("Movies") {
+        screenHost.addView(viewFactory.title("Home"))
+        screenHost.addView(viewFactory.body("Start with a content mode, or open settings/accounts."))
+        screenHost.addView(viewFactory.button("Movies") {
             coordinator.openSearch(SearchMode.MOVIES)
             renderCurrentScreen()
         })
-        screenHost.addView(primaryButton("TV Shows") {
+        screenHost.addView(viewFactory.button("TV Shows") {
             coordinator.openSearch(SearchMode.SHOWS)
             renderCurrentScreen()
         })
-        screenHost.addView(primaryButton(settingsLabel()) {
+        screenHost.addView(viewFactory.button(settingsLabel()) {
             coordinator.openSettings()
             renderCurrentScreen()
         })
@@ -278,8 +271,8 @@ class MainActivity : ComponentActivity() {
 
     private fun renderSearchScreen() {
         val state = coordinator.currentState()
-        screenHost.addView(screenTitle("Search ${state.searchMode.label}"))
-        screenHost.addView(bodyText("Enter a title to search ${state.searchMode.label.lowercase()}."))
+        screenHost.addView(viewFactory.title("Search ${state.searchMode.label}"))
+        screenHost.addView(viewFactory.body("Enter a title to search ${state.searchMode.label.lowercase()}."))
 
         val searchRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -301,8 +294,8 @@ class MainActivity : ComponentActivity() {
         searchRow.addView(searchButton)
 
         screenHost.addView(searchRow)
-        screenHost.addView(space())
-        screenHost.addView(primaryButton("Back to Home") {
+        screenHost.addView(viewFactory.spacer())
+        screenHost.addView(viewFactory.button("Back to Home") {
             coordinator.openHome()
             renderCurrentScreen()
         })
@@ -310,11 +303,11 @@ class MainActivity : ComponentActivity() {
 
     private fun renderResultsScreen() {
         val state = coordinator.currentState()
-        screenHost.addView(screenTitle("Results"))
-        screenHost.addView(bodyText("Query: ${state.query}"))
+        screenHost.addView(viewFactory.title("Results"))
+        screenHost.addView(viewFactory.body("Query: ${state.query}"))
 
         if (state.searchResults.isEmpty()) {
-            screenHost.addView(bodyText(latestSourcesError ?: "No results."))
+            screenHost.addView(viewFactory.body(latestSourcesError ?: "No results."))
         } else {
             state.searchResults.take(20).forEach { result ->
                 screenHost.addView(Button(this).apply {
@@ -332,8 +325,8 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        screenHost.addView(space())
-        screenHost.addView(primaryButton("New Search") {
+        screenHost.addView(viewFactory.spacer())
+        screenHost.addView(viewFactory.button("New Search") {
             coordinator.openSearch(state.searchMode)
             renderCurrentScreen()
         })
@@ -342,14 +335,14 @@ class MainActivity : ComponentActivity() {
     private fun renderDetailsScreen() {
         val details = coordinator.currentState().selectedDetails
         if (details == null) {
-            screenHost.addView(screenTitle("Details"))
-            screenHost.addView(bodyText("No details loaded."))
+            screenHost.addView(viewFactory.title("Details"))
+            screenHost.addView(viewFactory.body("No details loaded."))
             return
         }
 
-        screenHost.addView(screenTitle(details.mediaRef.title))
+        screenHost.addView(viewFactory.title(details.mediaRef.title))
         screenHost.addView(
-            bodyText(
+            viewFactory.body(
                 buildString {
                     appendLine("Type: ${details.mediaRef.mediaType}")
                     details.mediaRef.year?.let { appendLine("Year: $it") }
@@ -364,7 +357,7 @@ class MainActivity : ComponentActivity() {
         )
 
         if (details.mediaRef.mediaType == MediaType.SHOW) {
-            screenHost.addView(primaryButton("Browse Episodes") {
+            screenHost.addView(viewFactory.button("Browse Episodes") {
                 coordinator.showEpisodes(
                     details = details,
                     seasonNumber = coordinator.currentState().selectedSeasonNumber ?: 1,
@@ -373,7 +366,7 @@ class MainActivity : ComponentActivity() {
                 renderCurrentScreen()
             })
         } else {
-            screenHost.addView(primaryButton("Find Sources") {
+            screenHost.addView(viewFactory.button("Find Sources") {
                 loadSourcesFor(details.mediaRef, null, null)
             })
         }
@@ -383,13 +376,13 @@ class MainActivity : ComponentActivity() {
         val state = coordinator.currentState()
         val details = state.selectedDetails
         if (details == null) {
-            screenHost.addView(screenTitle("Episodes"))
-            screenHost.addView(bodyText("No show loaded."))
+            screenHost.addView(viewFactory.title("Episodes"))
+            screenHost.addView(viewFactory.body("No show loaded."))
             return
         }
 
-        screenHost.addView(screenTitle("${details.mediaRef.title} Episodes"))
-        screenHost.addView(bodyText("Pick a season and episode, then load sources."))
+        screenHost.addView(viewFactory.title("${details.mediaRef.title} Episodes"))
+        screenHost.addView(viewFactory.body("Pick a season and episode, then load sources."))
 
         val knownSeasonCount = (details.seasonCount ?: 3).coerceAtMost(12)
         val selectedSeason = state.selectedSeasonNumber ?: 1
@@ -457,8 +450,8 @@ class MainActivity : ComponentActivity() {
             })
         }
 
-        screenHost.addView(space())
-        screenHost.addView(primaryButton("Find Sources for S${selectedSeason.toString().padStart(2, '0')}E${selectedEpisode.toString().padStart(2, '0')}") {
+        screenHost.addView(viewFactory.spacer())
+        screenHost.addView(viewFactory.button("Find Sources for S${selectedSeason.toString().padStart(2, '0')}E${selectedEpisode.toString().padStart(2, '0')}") {
             loadSourcesFor(details.mediaRef, selectedSeason, selectedEpisode)
         })
     }
@@ -466,25 +459,25 @@ class MainActivity : ComponentActivity() {
     private fun renderSourcesScreen() {
         val state = coordinator.currentState()
         val mediaRef = state.selectedMedia
-        screenHost.addView(screenTitle("Sources"))
+        screenHost.addView(viewFactory.title("Sources"))
         if (mediaRef != null) {
             val label = if (state.selectedSeasonNumber != null && state.selectedEpisodeNumber != null) {
                 "${mediaRef.title} S${state.selectedSeasonNumber.toString().padStart(2, '0')}E${state.selectedEpisodeNumber.toString().padStart(2, '0')}"
             } else {
                 mediaRef.title
             }
-            screenHost.addView(bodyText(label))
+            screenHost.addView(viewFactory.body(label))
         }
 
         latestSourcesError?.let {
-            screenHost.addView(bodyText("Source lookup failed: $it"))
+            screenHost.addView(viewFactory.body("Source lookup failed: $it"))
         }
         latestSourceDiagnostics?.let {
-            screenHost.addView(bodyText("Diagnostics: $it"))
+            screenHost.addView(viewFactory.body("Diagnostics: $it"))
         }
 
         if (state.selectedSources.isEmpty()) {
-            screenHost.addView(bodyText("No sources."))
+            screenHost.addView(viewFactory.body("No sources."))
             return
         }
 
@@ -496,12 +489,12 @@ class MainActivity : ComponentActivity() {
                     append(source.quality)
                     append(" · ")
                     append(source.cacheStatus)
-                    append(" · ")
-                    append(source.providerDisplayName)
                     source.sizeLabel?.let {
                         append(" · ")
                         append(it)
                     }
+                    append("\nProvider: ")
+                    append(source.providerDisplayName)
                 }
                 gravity = Gravity.START or Gravity.CENTER_VERTICAL
                 setOnClickListener {
@@ -518,14 +511,14 @@ class MainActivity : ComponentActivity() {
     private fun renderPlayerScreen() {
         val state = coordinator.currentState()
         val source = state.selectedSource
-        screenHost.addView(screenTitle("Player"))
+        screenHost.addView(viewFactory.title("Player"))
         if (source == null) {
-            screenHost.addView(bodyText("No source selected."))
+            screenHost.addView(viewFactory.body("No source selected."))
             return
         }
 
         screenHost.addView(
-            bodyText(
+            viewFactory.body(
                 buildString {
                     appendLine("Selected source: ${source.displayName}")
                     appendLine("Provider: ${source.providerDisplayName}")
@@ -542,20 +535,20 @@ class MainActivity : ComponentActivity() {
             )
         )
         latestPlaybackError?.let {
-            screenHost.addView(bodyText("Playback error: $it"))
+            screenHost.addView(viewFactory.body("Playback error: $it"))
         }
 
-        playerView.visibility = if (source != null) View.VISIBLE else View.GONE
+        playerView.visibility = View.VISIBLE
         detachPlayerFromParent()
         screenHost.addView(playerView)
-        screenHost.addView(space())
+        screenHost.addView(viewFactory.spacer())
         screenHost.addView(buildPlaybackControls())
     }
 
     private fun renderSettingsScreen() {
-        screenHost.addView(screenTitle("Settings / Accounts"))
+        screenHost.addView(viewFactory.title("Settings / Accounts"))
         screenHost.addView(
-            bodyText(
+            viewFactory.body(
                 if (authState.isLinked) {
                     "Real-Debrid linked${authState.username?.let { " as $it" } ?: ""}."
                 } else {
@@ -563,17 +556,17 @@ class MainActivity : ComponentActivity() {
                 }
             )
         )
-        screenHost.addView(bodyText("Playback mode: ${currentRenderModeLabel()}"))
+        screenHost.addView(viewFactory.body("Playback mode: ${currentRenderModeLabel()}"))
 
         if (!authState.isLinked) {
-            screenHost.addView(primaryButton("Start Real-Debrid Link") {
+            screenHost.addView(viewFactory.button("Start Real-Debrid Link") {
                 startRealDebridLink()
             })
         }
 
         activeDeviceFlow?.let { flow ->
             screenHost.addView(
-                bodyText(
+                viewFactory.body(
                     buildString {
                         appendLine("Open: ${flow.verificationUrl}")
                         appendLine("Code: ${flow.userCode}")
@@ -581,22 +574,22 @@ class MainActivity : ComponentActivity() {
                     }
                 )
             )
-            screenHost.addView(primaryButton("Open Real-Debrid Link Page") {
+            screenHost.addView(viewFactory.button("Open Real-Debrid Link Page") {
                 startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(buildRealDebridAuthUrl(flow))))
             })
-            screenHost.addView(primaryButton("Poll Link Status") {
+            screenHost.addView(viewFactory.button("Poll Link Status") {
                 pollRealDebridLink(flow)
             })
         }
 
         authState.lastError?.takeIf { it.isNotBlank() }?.let {
-            screenHost.addView(bodyText("Auth error: $it"))
+            screenHost.addView(viewFactory.body("Auth error: $it"))
         }
 
-        screenHost.addView(primaryButton("Toggle Playback Mode") {
+        screenHost.addView(viewFactory.button("Toggle Playback Mode") {
             toggleRenderMode()
         })
-        screenHost.addView(primaryButton("Copy Debug Info") {
+        screenHost.addView(viewFactory.button("Copy Debug Info") {
             copyDebugInfoToClipboard()
         })
     }
@@ -681,7 +674,7 @@ class MainActivity : ComponentActivity() {
                     episodeNumber = episodeNumber
                 )
             )
-            latestSourceDiagnostics = buildSourceDiagnostics(state.sources)
+            latestSourceDiagnostics = state.diagnostics ?: buildSourceDiagnostics(state.sources)
             latestSourcesError = state.error
             coordinator.showSources(
                 mediaRef = mediaRef,
@@ -938,27 +931,4 @@ class MainActivity : ComponentActivity() {
     private fun detachPlayerFromParent() {
         (playerView.parent as? LinearLayout)?.removeView(playerView)
     }
-
-    private fun screenTitle(text: String): View {
-        return TextView(this).apply {
-            this.text = text
-            textSize = 24f
-        }
-    }
-
-    private fun bodyText(text: String): View {
-        return TextView(this).apply {
-            this.text = text
-            textSize = 16f
-        }
-    }
-
-    private fun primaryButton(text: String, onClick: () -> Unit): View {
-        return Button(this).apply {
-            this.text = text
-            setOnClickListener { onClick() }
-        }
-    }
-
-    private fun space(): View = TextView(this).apply { text = "" }
 }
