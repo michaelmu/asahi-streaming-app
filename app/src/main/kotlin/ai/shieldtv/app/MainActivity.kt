@@ -83,6 +83,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var sidebar: LinearLayout
     private lateinit var contentPane: LinearLayout
     private lateinit var railHost: LinearLayout
+    private lateinit var contentScrollView: ScrollView
     private lateinit var statusText: android.widget.TextView
     private lateinit var loadingView: ProgressBar
     private lateinit var screenHost: LinearLayout
@@ -112,7 +113,7 @@ class MainActivity : ComponentActivity() {
         attachPlayerView()
         observePlaybackState()
         refreshAuthState()
-        coordinator.openSearch(SearchMode.MOVIES)
+        coordinator.openHome()
         renderCurrentScreen()
     }
 
@@ -176,11 +177,12 @@ class MainActivity : ComponentActivity() {
         sidebar.addView(loadingView)
         sidebar.addView(statusText)
 
+        contentScrollView = ScrollView(this).apply {
+            isFillViewport = true
+            addView(screenHost)
+        }
         contentPane.addView(
-            ScrollView(this).apply {
-                isFillViewport = true
-                addView(screenHost)
-            },
+            contentScrollView,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.MATCH_PARENT
@@ -199,7 +201,7 @@ class MainActivity : ComponentActivity() {
         resultsRenderer = ResultsScreenRenderer(this, screenHost, viewFactory)
         detailsRenderer = DetailsScreenRenderer(screenHost, viewFactory)
         episodesRenderer = EpisodePickerScreenRenderer(this, screenHost, viewFactory)
-        sourcesRenderer = SourcesScreenRenderer(this, screenHost, viewFactory)
+        sourcesRenderer = SourcesScreenRenderer(screenHost, viewFactory)
         playerRenderer = PlayerScreenRenderer(screenHost, viewFactory)
         settingsRenderer = SettingsScreenRenderer(this, screenHost, viewFactory)
     }
@@ -208,6 +210,7 @@ class MainActivity : ComponentActivity() {
         return PlayerView(this).apply {
             useController = true
             visibility = View.GONE
+            setPadding(0, 0, 0, 0)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.MATCH_PARENT
@@ -224,11 +227,7 @@ class MainActivity : ComponentActivity() {
 
     private fun handleBackPress(): Boolean {
         return when (coordinator.currentState().destination) {
-            AppDestination.HOME -> {
-                coordinator.openSearch(coordinator.currentState().searchMode)
-                renderCurrentScreen()
-                true
-            }
+            AppDestination.HOME -> false
             AppDestination.SEARCH,
             AppDestination.RESULTS,
             AppDestination.SETTINGS -> false
@@ -318,7 +317,10 @@ class MainActivity : ComponentActivity() {
 
         screenHost.removeAllViews()
         when (destination) {
-            AppDestination.HOME,
+            AppDestination.HOME -> {
+                screenHost.addView(viewFactory.title("Asahi"))
+                screenHost.addView(viewFactory.body("Pick Movies, TV Shows, or Settings from the left sidebar."))
+            }
             AppDestination.SEARCH -> searchRenderer.render(
                 state = coordinator.currentState(),
                 onSearch = ::runSearch,
@@ -349,6 +351,7 @@ class MainActivity : ComponentActivity() {
                 },
                 onFindSources = {
                     coordinator.currentState().selectedDetails?.let { details ->
+                        if (!ensureRealDebridLinkedForSources()) return@let
                         loadSourcesFor(details.mediaRef, null, null)
                     }
                 },
@@ -374,6 +377,7 @@ class MainActivity : ComponentActivity() {
                 },
                 onFindSources = {
                     coordinator.currentState().selectedDetails?.let { details ->
+                        if (!ensureRealDebridLinkedForSources()) return@let
                         loadSourcesFor(
                             details.mediaRef,
                             coordinator.currentState().selectedSeasonNumber ?: 1,
@@ -383,6 +387,7 @@ class MainActivity : ComponentActivity() {
                 },
                 onEpisodePlay = { episode ->
                     coordinator.currentState().selectedDetails?.let { details ->
+                        if (!ensureRealDebridLinkedForSources()) return@let
                         val season = coordinator.currentState().selectedSeasonNumber ?: 1
                         coordinator.showEpisodes(details, season, episode)
                         loadSourcesFor(details.mediaRef, season, episode)
@@ -410,8 +415,7 @@ class MainActivity : ComponentActivity() {
                     state = coordinator.currentState(),
                     playbackMessage = latestPlaybackMessage,
                     playbackError = latestPlaybackError,
-                    playerView = playerView,
-                    playbackControls = View(this)
+                    playerView = playerView
                 )
             }
             AppDestination.SETTINGS -> settingsRenderer.render(
@@ -421,13 +425,12 @@ class MainActivity : ComponentActivity() {
                 updateSummary = latestUpdateMessage,
                 buildAuthUrl = ::buildRealDebridAuthUrl,
                 onStartLink = ::startRealDebridLink,
-                onPoll = ::pollRealDebridLink,
                 onTogglePlaybackMode = ::toggleRenderMode,
                 onCopyDebugInfo = ::copyDebugInfoToClipboard,
                 onCheckForUpdates = ::checkForUpdates,
                 onOpenLatestUpdate = latestUpdateInfo?.let { { openLatestUpdate(it) } },
                 onBackToHome = {
-                    coordinator.openSearch(coordinator.currentState().searchMode)
+                    coordinator.openHome()
                     renderCurrentScreen()
                 },
                 onFirstFocusTarget = ::focusView
@@ -480,6 +483,15 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun ensureRealDebridLinkedForSources(): Boolean {
+        if (authState.isLinked) return true
+        latestSourcesError = "Real-Debrid link required before finding sources."
+        statusText.text = "Link Real-Debrid in Settings before finding sources."
+        coordinator.openSettings()
+        renderCurrentScreen()
+        return false
+    }
+
     private fun loadSourcesFor(
         mediaRef: MediaRef,
         seasonNumber: Int? = null,
@@ -507,16 +519,17 @@ class MainActivity : ComponentActivity() {
                     episodeNumber = episodeNumber
                 )
             )
-            latestSourceDiagnostics = state.diagnostics ?: buildSourceDiagnostics(state.sources)
+            val filteredSources = state.sources.filter { it.debridService != DebridService.NONE || authState.isLinked }
+            latestSourceDiagnostics = state.diagnostics ?: buildSourceDiagnostics(filteredSources)
             latestSourcesError = state.error
             coordinator.showSources(
                 mediaRef = mediaRef,
                 details = coordinator.currentState().selectedDetails,
                 seasonNumber = seasonNumber,
                 episodeNumber = episodeNumber,
-                sources = state.sources
+                sources = filteredSources
             )
-            setLoading(false, state.error ?: "Found ${state.sources.size} source(s) for $searchLabel.")
+            setLoading(false, state.error ?: "Found ${filteredSources.size} source(s) for $searchLabel.")
             renderCurrentScreen()
         }
     }
@@ -536,29 +549,6 @@ class MainActivity : ComponentActivity() {
                 authPollingJob?.cancel()
                 authState = RealDebridAuthState(isLinked = false, authInProgress = false, lastError = error.message)
                 setLoading(false, "Failed to start Real-Debrid link flow.")
-                refreshAuthUiOnly()
-            }
-        }
-    }
-
-    private fun pollRealDebridLink(flow: DeviceCodeFlow) {
-        setLoading(true, "Polling Real-Debrid link status…")
-        lifecycleScope.launch {
-            runCatching {
-                AppContainer.pollRealDebridDeviceFlowUseCase(flow)
-            }.onSuccess { state ->
-                authState = state
-                if (state.isLinked) {
-                    authPollingJob?.cancel()
-                    activeDeviceFlow = null
-                    setLoading(false, "Real-Debrid linked successfully.")
-                } else {
-                    setLoading(false, "Real-Debrid still waiting for authorization.")
-                }
-                refreshAuthUiOnly()
-            }.onFailure { error ->
-                authState = RealDebridAuthState(isLinked = false, authInProgress = true, lastError = error.message)
-                setLoading(false, "Polling Real-Debrid link failed.")
                 refreshAuthUiOnly()
             }
         }
@@ -697,7 +687,10 @@ class MainActivity : ComponentActivity() {
 
     private fun showPlayerFullscreenShell() {
         root.orientation = LinearLayout.VERTICAL
+        root.setPadding(0, 0, 0, 0)
         sidebar.visibility = View.GONE
+        contentPane.setPadding(0, 0, 0, 0)
+        contentScrollView.setPadding(0, 0, 0, 0)
         contentPane.layoutParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
             LinearLayout.LayoutParams.MATCH_PARENT
@@ -706,7 +699,10 @@ class MainActivity : ComponentActivity() {
 
     private fun showStandardShell() {
         root.orientation = LinearLayout.HORIZONTAL
+        root.setPadding(48, 32, 48, 32)
         sidebar.visibility = View.VISIBLE
+        contentPane.setPadding(0, 0, 0, 0)
+        contentScrollView.setPadding(0, 0, 0, 0)
         sidebar.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.28f)
         contentPane.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.72f)
     }

@@ -52,7 +52,7 @@ class SearchScreenRenderer(
     fun render(
         state: AppState,
         onSearch: (SearchMode, String) -> Unit,
-        onBack: () -> Unit,
+        onBack: (() -> Unit)?,
         onFirstFocusTarget: (View) -> Unit = {}
     ) {
         host.addView(viewFactory.title("Search ${state.searchMode.label}"))
@@ -79,9 +79,9 @@ class SearchScreenRenderer(
         searchRow.addView(searchButton)
 
         host.addView(searchRow)
-        if (onBack !== {}) {
+        onBack?.let {
             host.addView(viewFactory.spacer())
-            host.addView(viewFactory.button("Back", onBack))
+            host.addView(viewFactory.button("Back", it))
         }
     }
 }
@@ -276,7 +276,6 @@ class EpisodePickerScreenRenderer(
 }
 
 class SourcesScreenRenderer(
-    private val activity: android.app.Activity,
     private val host: LinearLayout,
     private val viewFactory: ScreenViewFactory
 ) {
@@ -311,7 +310,7 @@ class SourcesScreenRenderer(
         }
 
         state.selectedSources.take(10).forEachIndexed { index, source ->
-            host.addView(Button(activity).apply {
+            host.addView(Button(host.context).apply {
                 text = buildString {
                     append(source.displayName.lineSequence().firstOrNull()?.take(52) ?: source.displayName.take(52))
                     append("\n")
@@ -344,7 +343,12 @@ class PlayerScreenRenderer(
     private val host: LinearLayout,
     private val viewFactory: ScreenViewFactory
 ) {
-    fun render(state: AppState, playbackMessage: String?, playbackError: String?, playerView: PlayerView, playbackControls: View) {
+    fun render(
+        state: AppState,
+        playbackMessage: String?,
+        playbackError: String?,
+        playerView: PlayerView
+    ) {
         val source = state.selectedSource
         if (source == null) {
             host.addView(viewFactory.title("Player"))
@@ -352,8 +356,8 @@ class PlayerScreenRenderer(
             return
         }
 
-        playbackError?.takeIf { it.isNotBlank() }?.let {
-            host.addView(viewFactory.body("Playback error: $it"))
+        if (!playbackError.isNullOrBlank()) {
+            host.addView(viewFactory.body("Playback error: $playbackError"))
         }
         playerView.layoutParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
@@ -375,7 +379,6 @@ class SettingsScreenRenderer(
         updateSummary: String?,
         buildAuthUrl: (DeviceCodeFlow) -> String,
         onStartLink: () -> Unit,
-        onPoll: (DeviceCodeFlow) -> Unit,
         onTogglePlaybackMode: () -> Unit,
         onCopyDebugInfo: () -> Unit,
         onCheckForUpdates: () -> Unit,
@@ -420,14 +423,13 @@ class SettingsScreenRenderer(
                     buildString {
                         appendLine("Open: ${flow.verificationUrl}")
                         appendLine("Code: ${flow.userCode}")
-                        append("Polling starts automatically for up to 2 minutes after you begin linking.")
+                        append("Polling runs automatically in the background after you begin linking.")
                     }
                 )
             )
             host.addView(viewFactory.button("Open Real-Debrid Link Page") {
                 activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(buildAuthUrl(flow))))
             })
-            host.addView(viewFactory.button("Poll Link Status") { onPoll(flow) })
         }
 
         authState.lastError?.takeIf { it.isNotBlank() }?.let {
