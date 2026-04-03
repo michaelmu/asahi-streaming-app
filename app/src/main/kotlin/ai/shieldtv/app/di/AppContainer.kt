@@ -28,6 +28,8 @@ import ai.shieldtv.app.integration.scrapers.provider.ProviderRegistry
 import ai.shieldtv.app.integration.scrapers.provider.bitsearch.BitSearchConfig
 import ai.shieldtv.app.integration.scrapers.provider.bitsearch.BitSearchSourceProvider
 import ai.shieldtv.app.integration.scrapers.provider.comet.CometConfig
+import ai.shieldtv.app.integration.scrapers.provider.knaben.KnabenConfig
+import ai.shieldtv.app.integration.scrapers.provider.knaben.KnabenSourceProvider
 import ai.shieldtv.app.integration.scrapers.provider.comet.CometSourceProvider
 import ai.shieldtv.app.integration.scrapers.provider.torrentio.TorrentioConfig
 import ai.shieldtv.app.integration.scrapers.provider.torrentio.TorrentioSourceProvider
@@ -96,6 +98,9 @@ object AppContainer {
             }
             if (BitSearchConfig.isEnabled()) {
                 add(BitSearchSourceProvider())
+            }
+            if (KnabenConfig.isEnabled()) {
+                add(KnabenSourceProvider())
             }
         }
         ProviderRegistry(providers = providers)
