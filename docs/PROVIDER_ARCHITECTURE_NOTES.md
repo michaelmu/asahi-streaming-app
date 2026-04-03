@@ -126,12 +126,26 @@ The codebase will likely benefit from recognizing provider families:
 4. add provider capability metadata
 5. then start porting new providers
 
+## Current state after cleanup and first provider wave
+
+Completed:
+- production registry cleaned up to exclude fake/sample providers by default
+- provider capability metadata added
+- generic source flow decoupled from Torrentio-specific shaping
+- additional validated providers added successfully using the same architecture:
+  - Comet
+  - BitSearch
+  - Knaben
+
+This is a good sign that the refined architecture is holding up under real provider expansion.
+
 ## Immediate recommendation
 
-Before porting Comet / MediaFusion / BitSearch:
+Before porting more providers:
 
-- clean up provider registration
-- make the generic layers truly generic
-- keep provider-specific debug data local to providers or a dedicated diagnostics layer
+- improve provider visibility in the UI
+- add provider diagnostics/toggles in settings
+- keep requiring smoke coverage plus live integration validation for new providers when feasible
+- avoid adding providers that require extra provider-specific auth/config unless there is a strong product reason
 
-That should make future provider additions much more mechanical and much less brittle.
+That should keep the provider stack high-signal and maintainable.

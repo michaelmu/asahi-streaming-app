@@ -819,11 +819,7 @@ class SourcesScreenRenderer(
                     layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 })
                 row.addView(TextView(host.context).apply {
-                    text = listOfNotNull(
-                        SourcePresentation.sourceLabel(source),
-                        SourcePresentation.qualityLabel(source.quality),
-                        source.sizeLabel
-                    ).joinToString(" • ")
+                    text = SourcePresentation.detailLabel(source)
                     setTextColor(
                         when (source.cacheStatus) {
                             CacheStatus.CACHED -> viewFactory.accentAltColor
@@ -836,6 +832,10 @@ class SourcesScreenRenderer(
                     maxLines = 1
                 })
                 card.addView(row)
+                source.rawMetadata["flags"]?.takeIf { it.isNotBlank() }?.let { flags ->
+                    card.addView(viewFactory.spacer(6))
+                    card.addView(viewFactory.caption(flags.replace(",", " • ")))
+                }
                 host.addView(card)
                 host.addView(viewFactory.spacer(8))
                 if (groupTitle == "Cached Picks" && index == 0) card.post { onFirstFocusTarget(card) }
@@ -1017,6 +1017,7 @@ class SettingsScreenRenderer(
         activeDeviceFlow: DeviceCodeFlow?,
         playbackModeLabel: String,
         updateSummary: String?,
+        providerSummary: String?,
         buildAuthUrl: (DeviceCodeFlow) -> String,
         onStartLink: () -> Unit,
         onResetAuth: () -> Unit,
@@ -1087,6 +1088,16 @@ class SettingsScreenRenderer(
             addView(viewFactory.caption("If install fails, the most likely causes are signature mismatch or a non-incrementing version code on the downloaded APK."))
         }
         host.addView(updatePanel)
+        host.addView(viewFactory.spacer())
+
+        val providersPanel = viewFactory.panel(elevated = false).apply {
+            addView(viewFactory.sectionTitle("Providers"))
+            addView(viewFactory.spacer(10))
+            addView(viewFactory.body(providerSummary ?: "No provider diagnostics yet."))
+            addView(viewFactory.spacer(10))
+            addView(viewFactory.caption("Current build includes validated providers only. More granular toggles can come next."))
+        }
+        host.addView(providersPanel)
         host.addView(viewFactory.spacer())
 
         val primaryButton = viewFactory.button(

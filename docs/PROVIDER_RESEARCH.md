@@ -35,6 +35,21 @@ From the local cocoscrapers checkout, the following torrent providers were ident
 - isohunt2
 - torrentfunk
 
+## Current validated status in Asahi
+
+Implemented and validated locally:
+- Torrentio
+- Comet
+- BitSearch
+- Knaben
+
+Notes:
+- Comet has smoke coverage plus env-gated live integration coverage.
+- BitSearch has smoke coverage plus live integration coverage and required parser adjustments against the current live site markup.
+- Knaben has smoke coverage plus live integration coverage.
+- MediaFusion was explored but deprioritized because it appears to require extra provider-specific `encoded_user_data` configuration beyond the desired low-friction Real-Debrid flow.
+- YTSMX was explored but abandoned for now because the upstream host was not resolvable from the current environment, so it did not meet the smoke + live validation bar.
+
 ## Recommended RD-first ranking
 
 ### 1. Comet
@@ -48,17 +63,7 @@ Why:
 Recommendation:
 - highest priority port candidate
 
-### 2. MediaFusion
-
-Why:
-- also debrid-centric / structured response model
-- useful complement to Torrentio and Comet
-- better long-term fit than scraping many low-quality public torrent mirrors
-
-Recommendation:
-- second priority, after Comet
-
-### 3. BitSearch
+### 2. BitSearch
 
 Why:
 - broad torrent coverage
@@ -71,7 +76,7 @@ Caveat:
 Recommendation:
 - strong secondary source after structured RD-first providers
 
-### 4. Knaben
+### 3. Knaben
 
 Why:
 - broad torrent meta-index behavior
@@ -84,7 +89,7 @@ Caveat:
 Recommendation:
 - worth porting after BitSearch
 
-### 5. YTSMX
+### 4. YTSMX
 
 Why:
 - easy movie-only specialist
@@ -98,7 +103,7 @@ Caveat:
 Recommendation:
 - useful specialist, but not part of the main multi-content backbone
 
-### 6. TorrentGalaxy
+### 5. TorrentGalaxy
 
 Why:
 - historically high-value torrent source
@@ -136,14 +141,16 @@ These appear more like brittle mirror roulette / long-tail maintenance burden th
 
 ## Recommended port order for Asahi
 
-If staying focused on Real-Debrid-compatible value:
+If staying focused on Real-Debrid-compatible value with minimal extra provider-specific setup:
 
-1. Comet
-2. MediaFusion
-3. BitSearch
-4. Knaben
-5. YTSMX
-6. TorrentGalaxy (optional later)
+1. Comet ✅
+2. BitSearch ✅
+3. Knaben ✅
+4. YTSMX (deferred)
+5. TorrentGalaxy (optional later)
+
+Deprioritized:
+- MediaFusion (requires extra provider-specific auth/config)
 
 ## Strategic recommendation
 
@@ -153,10 +160,9 @@ A lean high-signal Asahi provider stack is likely better:
 
 - Torrentio
 - Comet
-- MediaFusion
 - BitSearch
-- maybe Knaben
-- maybe YTSMX
+- Knaben
+- maybe YTSMX later if the upstream becomes reliably reachable
 
 This gives:
 - strong RD-friendly structured sources

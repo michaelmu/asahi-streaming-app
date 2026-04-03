@@ -22,6 +22,7 @@ import ai.shieldtv.app.core.model.auth.RealDebridAuthState
 import ai.shieldtv.app.core.model.media.MediaRef
 import ai.shieldtv.app.core.model.media.SearchResult
 import ai.shieldtv.app.core.model.source.DebridService
+import ai.shieldtv.app.core.model.source.CacheStatus
 import ai.shieldtv.app.core.model.source.SourceResult
 import ai.shieldtv.app.core.model.source.SourceSearchRequest
 import ai.shieldtv.app.di.AppContainer
@@ -698,6 +699,7 @@ class MainActivity : ComponentActivity() {
                 activeDeviceFlow = activeDeviceFlow,
                 playbackModeLabel = currentRenderModeLabel(),
                 updateSummary = latestUpdateMessage,
+                providerSummary = buildProviderSummary(),
                 buildAuthUrl = ::buildRealDebridAuthUrl,
                 onStartLink = ::startRealDebridLink,
                 onResetAuth = ::resetRealDebridAuth,
@@ -1054,15 +1056,24 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun buildSourceDiagnostics(sources: List<SourceResult>): String {
-        if (sources.isEmpty()) return "providers=none | live=0 | fallback=0"
-        val providerSummary = sources.groupBy { it.providerId }
+        if (sources.isEmpty()) return "providers=none | results=0"
+        val providerSummary = sources.groupBy { it.providerDisplayName.ifBlank { it.providerId } }
             .entries
-            .joinToString(",") { (providerId, items) -> "$providerId:${items.size}" }
-        val liveCount = sources.count {
-            it.providerId == "torrentio" || it.rawMetadata["transport"] == "torrentio"
-        }
-        val fallbackCount = sources.count { it.rawMetadata["fallbackMode"] == "true" }
-        return "providers=$providerSummary | live=$liveCount | fallback=$fallbackCount"
+            .sortedByDescending { it.value.size }
+            .joinToString(", ") { (providerId, items) -> "$providerId:${items.size}" }
+        val cachedCount = sources.count { it.cacheStatus == CacheStatus.CACHED }
+        val directCount = sources.count { it.cacheStatus == CacheStatus.DIRECT }
+        val fallbackCount = sources.count { it.cacheStatus == CacheStatus.UNCACHED || it.cacheStatus == CacheStatus.UNCHECKED }
+        return "providers=$providerSummary | cached=$cachedCount | direct=$directCount | fallback=$fallbackCount | results=${sources.size}"
+    }
+
+    private fun buildProviderSummary(): String {
+        return listOf(
+            "Torrentio",
+            "Comet",
+            "BitSearch",
+            "Knaben"
+        ).joinToString(" • ")
     }
 
     private fun setLoading(isLoading: Boolean, message: String) {

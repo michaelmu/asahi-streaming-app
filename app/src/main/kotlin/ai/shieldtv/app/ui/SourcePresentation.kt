@@ -35,4 +35,22 @@ object SourcePresentation {
         CacheStatus.UNCHECKED -> "Unchecked"
         CacheStatus.DIRECT -> "Direct"
     }
+
+    fun providerChip(source: SourceResult): String = buildString {
+        append(source.providerDisplayName.ifBlank { source.providerId })
+        source.sourceSite?.takeIf { it.isNotBlank() }?.let {
+            append(" · ")
+            append(it)
+        }
+    }
+
+    fun detailLabel(source: SourceResult): String = listOfNotNull(
+        sourceLabel(source),
+        qualityLabel(source.quality),
+        source.sizeLabel,
+        source.seedInfo(),
+        providerChip(source)
+    ).joinToString(" • ")
+
+    private fun SourceResult.seedInfo(): String? = rawMetadata["seeders"] ?: score?.let { null }
 }
