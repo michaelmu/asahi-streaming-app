@@ -696,7 +696,9 @@ class EpisodePickerScreenRenderer(
 
         episodeChoices.forEachIndexed { index, episode ->
             val isSelected = selectedEpisode == episode.episodeNumber
-            val card = viewFactory.panel(elevated = isSelected).apply {
+            val card = viewFactory.panel(vertical = false, elevated = isSelected).apply {
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(viewFactory.dp(16), viewFactory.dp(12), viewFactory.dp(16), viewFactory.dp(12))
                 isFocusable = true
                 isFocusableInTouchMode = true
                 isClickable = true
@@ -705,27 +707,40 @@ class EpisodePickerScreenRenderer(
                     onEpisodePlay(episode.episodeNumber)
                 }
                 setOnFocusChangeListener { view, hasFocus ->
-                    view.scaleX = if (hasFocus) 1.04f else 1f
-                    view.scaleY = if (hasFocus) 1.04f else 1f
+                    view.scaleX = if (hasFocus) 1.03f else 1f
+                    view.scaleY = if (hasFocus) 1.03f else 1f
                     view.alpha = if (hasFocus) 1f else 0.97f
                 }
             }
             card.addView(TextView(activity).apply {
-                text = "Episode ${episode.episodeNumber.toString().padStart(2, '0')}"
-                setTextColor(viewFactory.textPrimaryColor)
-                textSize = 20f
+                text = episode.episodeNumber.toString().padStart(2, '0')
+                setTextColor(if (isSelected) viewFactory.accentAltColor else viewFactory.textPrimaryColor)
+                textSize = 18f
                 setTypeface(typeface, Typeface.BOLD)
+                layoutParams = LinearLayout.LayoutParams(viewFactory.dp(42), LinearLayout.LayoutParams.WRAP_CONTENT)
             })
-            episode.title?.takeIf { it.isNotBlank() }?.let {
-                card.addView(viewFactory.spacer(8))
-                card.addView(viewFactory.body(it))
-            }
-            episode.airDate?.let {
-                card.addView(viewFactory.spacer(8))
-                card.addView(viewFactory.caption(it))
-            }
+            card.addView(TextView(activity).apply {
+                text = episode.title?.takeIf { it.isNotBlank() } ?: "Episode ${episode.episodeNumber.toString().padStart(2, '0')}"
+                setTextColor(viewFactory.textPrimaryColor)
+                textSize = 17f
+                setTypeface(typeface, Typeface.BOLD)
+                maxLines = 1
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            })
+            card.addView(TextView(activity).apply {
+                text = buildString {
+                    append("S${selectedSeason.toString().padStart(2, '0')}E${episode.episodeNumber.toString().padStart(2, '0')}")
+                    episode.airDate?.takeIf { it.isNotBlank() }?.let {
+                        append(" • ")
+                        append(it)
+                    }
+                }
+                setTextColor(viewFactory.textSecondaryColor)
+                textSize = 13f
+                maxLines = 1
+            })
             host.addView(card)
-            host.addView(viewFactory.spacer(12))
+            host.addView(viewFactory.spacer(8))
             if (isSelected || (selectedEpisode !in episodeNumbers && index == 0)) {
                 card.post { onFirstFocusTarget(card) }
             }
@@ -948,9 +963,11 @@ class PlayerScreenRenderer(
                             append(" • S${season.toString().padStart(2, '0')}E${episode.toString().padStart(2, '0')}")
                         }
                     }))
-                    playbackMessage?.lineSequence()?.firstOrNull()?.takeIf { it.isNotBlank() }?.let {
-                        addView(viewFactory.spacer(6))
-                        addView(viewFactory.caption(it))
+                    if (!playbackState.isPlaying) {
+                        playbackMessage?.lineSequence()?.firstOrNull()?.takeIf { it.isNotBlank() }?.let {
+                            addView(viewFactory.spacer(6))
+                            addView(viewFactory.caption(it))
+                        }
                     }
                 }
                 playerFrame.addView(subtleOverlay)

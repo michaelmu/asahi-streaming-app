@@ -209,7 +209,7 @@ class MainActivity : ComponentActivity() {
 
         val title = viewFactory.railTitle("Asahi")
         val subtitle = viewFactory.caption("TV-first streaming shell")
-        val buildInfo = viewFactory.caption("${BuildConfig.VERSION_NAME}")
+        val buildInfo = viewFactory.caption("v${BuildConfig.VERSION_NAME} • #${BuildConfig.VERSION_CODE} • ${BuildConfig.GIT_SHA}")
 
         railHost = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -966,8 +966,8 @@ class MainActivity : ComponentActivity() {
                 startPositionMs = if (forceStartAtZero) 0L else resumePositionFor(source, seasonNumber, episodeNumber)
             )
             latestPlaybackError = state.error
-            latestPlaybackMessage = buildString {
-                appendLine(if (state.prepared) "Playback preparation succeeded." else "Playback preparation failed.")
+            latestPlaybackMessage = if (state.prepared) null else buildString {
+                appendLine("Playback preparation failed.")
                 appendLine("Current item: ${AppContainer.playbackEngine.getCurrentItem()?.title ?: source.displayName}")
                 appendLine("Stream URL: ${state.playbackUrl ?: AppContainer.playbackEngine.getCurrentUrl() ?: source.url}")
                 appendLine("Player state: ${latestPlaybackState.playerStateLabel}")
