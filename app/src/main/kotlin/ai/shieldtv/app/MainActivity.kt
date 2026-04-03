@@ -44,6 +44,7 @@ import ai.shieldtv.app.update.ApkInstaller
 import ai.shieldtv.app.ui.DetailsScreenRenderer
 import ai.shieldtv.app.ui.EpisodePickerScreenRenderer
 import ai.shieldtv.app.ui.HomeScreenRenderer
+import ai.shieldtv.app.ui.ModalDefaultAction
 import ai.shieldtv.app.ui.NavigationRailRenderer
 import ai.shieldtv.app.ui.OverlayPopup
 import ai.shieldtv.app.ui.PlayerScreenRenderer
@@ -457,7 +458,8 @@ class MainActivity : ComponentActivity() {
         onSecondary: (() -> Unit)? = null,
         tertiaryLabel: String? = null,
         onTertiary: (() -> Unit)? = null,
-        dismissOnBack: Boolean = true
+        dismissOnBack: Boolean = true,
+        defaultAction: ModalDefaultAction = ModalDefaultAction.PRIMARY
     ) {
         showModal(
             overlayPopup.build(
@@ -478,7 +480,8 @@ class MainActivity : ComponentActivity() {
                     dismissModal()
                     onTertiary?.invoke()
                 },
-                dismissOnBack = dismissOnBack
+                dismissOnBack = dismissOnBack,
+                defaultAction = defaultAction
             )
         )
     }
@@ -876,7 +879,8 @@ class MainActivity : ComponentActivity() {
                         showInfoModal(
                             title = "Real-Debrid Linked",
                             message = state.username?.let { "Connected as $it." } ?: "Real-Debrid linked successfully.",
-                            primaryLabel = "Nice"
+                            primaryLabel = "Back to Settings",
+                            defaultAction = ModalDefaultAction.PRIMARY
                         )
                         refreshAuthUiOnly()
                         return@launch
@@ -900,7 +904,11 @@ class MainActivity : ComponentActivity() {
                 showInfoModal(
                     title = "Real-Debrid Link Timed Out",
                     message = authState.lastError ?: "The device link flow expired before authorization completed.",
-                    primaryLabel = "OK"
+                    primaryLabel = "Try Again",
+                    onPrimary = ::startRealDebridLink,
+                    secondaryLabel = "Close",
+                    onSecondary = {},
+                    defaultAction = ModalDefaultAction.PRIMARY
                 )
                 refreshAuthUiOnly()
             }
@@ -1124,12 +1132,13 @@ class MainActivity : ComponentActivity() {
             },
             primaryLabel = "Install Update",
             onPrimary = { openLatestUpdate(updateInfo) },
-            secondaryLabel = "Open Release Page",
+            secondaryLabel = "View Release Notes",
             onSecondary = {
                 startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(updateInfo.pageUrl)))
             },
             tertiaryLabel = "Later",
-            onTertiary = {}
+            onTertiary = {},
+            defaultAction = ModalDefaultAction.PRIMARY
         )
     }
 
@@ -1162,8 +1171,9 @@ class MainActivity : ComponentActivity() {
                         onPrimary = {
                             startActivity(apkInstaller.buildManageUnknownAppsIntent())
                         },
-                        secondaryLabel = "Cancel",
-                        onSecondary = {}
+                        secondaryLabel = "Not Now",
+                        onSecondary = {},
+                        defaultAction = ModalDefaultAction.PRIMARY
                     )
                     return@launch
                 }
@@ -1181,7 +1191,12 @@ class MainActivity : ComponentActivity() {
                 showInfoModal(
                     title = "Installer Launched",
                     message = "If Android does not show the installer, check the unknown apps permission for Asahi.",
-                    primaryLabel = "OK"
+                    primaryLabel = "Done",
+                    secondaryLabel = "Open Settings",
+                    onSecondary = {
+                        startActivity(apkInstaller.buildManageUnknownAppsIntent())
+                    },
+                    defaultAction = ModalDefaultAction.PRIMARY
                 )
             } catch (error: Throwable) {
                 setLoading(false, "Update download/install failed: ${error.message ?: error::class.simpleName}")

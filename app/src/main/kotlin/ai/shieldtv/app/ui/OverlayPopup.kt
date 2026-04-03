@@ -9,6 +9,12 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 
+enum class ModalDefaultAction {
+    PRIMARY,
+    SECONDARY,
+    TERTIARY
+}
+
 class OverlayPopup(
     private val context: Context,
     private val viewFactory: ScreenViewFactory
@@ -22,7 +28,8 @@ class OverlayPopup(
         onSecondary: (() -> Unit)? = null,
         tertiaryLabel: String? = null,
         onTertiary: (() -> Unit)? = null,
-        dismissOnBack: Boolean = true
+        dismissOnBack: Boolean = true,
+        defaultAction: ModalDefaultAction = ModalDefaultAction.PRIMARY
     ): View {
         val root = FrameLayout(context)
         root.layoutParams = FrameLayout.LayoutParams(
@@ -64,24 +71,33 @@ class OverlayPopup(
         primary.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         buttonRow.addView(primary)
 
+        var secondaryView: View? = null
         if (secondaryLabel != null && onSecondary != null) {
             val secondary = viewFactory.button(secondaryLabel, onSecondary)
             secondary.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
                 it.marginStart = viewFactory.dp(12)
             }
             buttonRow.addView(secondary)
+            secondaryView = secondary
         }
 
+        var tertiaryView: View? = null
         if (tertiaryLabel != null && onTertiary != null) {
             val tertiary = viewFactory.button(tertiaryLabel, onTertiary)
             tertiary.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
                 it.marginStart = viewFactory.dp(12)
             }
             buttonRow.addView(tertiary)
+            tertiaryView = tertiary
         }
 
         card.addView(buttonRow)
-        primary.post { primary.requestFocus() }
+        val defaultFocusView = when (defaultAction) {
+            ModalDefaultAction.PRIMARY -> primary
+            ModalDefaultAction.SECONDARY -> secondaryView ?: primary
+            ModalDefaultAction.TERTIARY -> tertiaryView ?: secondaryView ?: primary
+        }
+        defaultFocusView.post { defaultFocusView.requestFocus() }
 
         root.addView(card)
         root.setOnKeyListener { _, keyCode, event ->
