@@ -1,0 +1,9 @@
+# Example local.properties entries for local release signing
+# Do not commit real secrets.
+
+TMDB_API_KEY=
+
+ASAHI_RELEASE_STORE_FILE=keystores/asahi-release.keystore
+ASAHI_RELEASE_STORE_PASSWORD=change-me
+ASAHI_RELEASE_KEY_ALIAS=asahi
+ASAHI_RELEASE_KEY_PASSWORD=change-me

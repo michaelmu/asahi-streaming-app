@@ -2,7 +2,29 @@ plugins {
     id("asahi.android-app")
 }
 
+import java.util.Properties
 import org.gradle.api.tasks.JavaExec
+
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) {
+        file.inputStream().use(::load)
+    }
+}
+
+fun localOrEnv(name: String): String? =
+    (project.findProperty(name) as String?)
+        ?: localProperties.getProperty(name)
+        ?: System.getenv(name)
+
+val releaseStoreFile = localOrEnv("ASAHI_RELEASE_STORE_FILE")
+val releaseStorePassword = localOrEnv("ASAHI_RELEASE_STORE_PASSWORD")
+val releaseKeyAlias = localOrEnv("ASAHI_RELEASE_KEY_ALIAS")
+val releaseKeyPassword = localOrEnv("ASAHI_RELEASE_KEY_PASSWORD")
+val hasReleaseSigning = !releaseStoreFile.isNullOrBlank() &&
+    !releaseStorePassword.isNullOrBlank() &&
+    !releaseKeyAlias.isNullOrBlank() &&
+    !releaseKeyPassword.isNullOrBlank()
 
 android {
     namespace = "ai.shieldtv.app"
@@ -10,6 +32,27 @@ android {
     defaultConfig {
         applicationId = "ai.shieldtv.app"
         versionName = "0.1.0-asahi"
+    }
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = rootProject.file(requireNotNull(releaseStoreFile))
+                storePassword = requireNotNull(releaseStorePassword)
+                keyAlias = requireNotNull(releaseKeyAlias)
+                keyPassword = requireNotNull(releaseKeyPassword)
+            }
+        }
+    }
+
+    buildTypes {
+        getByName("release") {
+            isMinifyEnabled = false
+            isShrinkResources = false
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
     }
 }
 

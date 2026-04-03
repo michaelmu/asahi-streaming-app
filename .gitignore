@@ -1,6 +1,10 @@
 .gradle/
 build/
 local.properties
+.tmp-release-signing.env
+*.keystore
+*.jks
+keystores/
 *.iml
 .idea/
 .DS_Store
