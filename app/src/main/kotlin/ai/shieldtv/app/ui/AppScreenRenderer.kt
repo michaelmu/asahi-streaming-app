@@ -12,7 +12,6 @@ class AppScreenRenderer {
             AppDestination.DETAILS -> "Details Screen"
             AppDestination.EPISODES -> "Episode Picker Screen"
             AppDestination.SOURCES -> "Sources Screen"
-            AppDestination.RESUME_PROMPT -> "Resume Prompt Screen"
             AppDestination.PLAYER -> "Player Screen"
             AppDestination.SETTINGS -> "Settings Screen"
         }

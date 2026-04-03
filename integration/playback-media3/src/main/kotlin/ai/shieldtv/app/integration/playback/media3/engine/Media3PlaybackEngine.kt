@@ -41,13 +41,10 @@ class Media3PlaybackEngine : PlaybackEngine {
             exoPlayer.addListener(object : Player.Listener {
                 override fun onPlaybackStateChanged(playbackStateValue: Int) {
                     updateState(
-                        playerStateLabel = when (playbackStateValue) {
-                            Player.STATE_IDLE -> if (exoPlayer.isPlaying) "playing" else "idle"
-                            Player.STATE_BUFFERING -> "buffering"
-                            Player.STATE_READY -> if (exoPlayer.isPlaying) "playing" else "paused"
-                            Player.STATE_ENDED -> "ended"
-                            else -> "unknown"
-                        },
+                        playerStateLabel = PlaybackStateLabelMapper.fromPlaybackState(
+                            playbackState = playbackStateValue,
+                            isPlaying = exoPlayer.isPlaying
+                        ),
                         isBuffering = playbackStateValue == Player.STATE_BUFFERING,
                         isPlaying = exoPlayer.isPlaying,
                         errorMessage = null
@@ -57,13 +54,12 @@ class Media3PlaybackEngine : PlaybackEngine {
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
                     updateState(
                         isPlaying = isPlaying,
-                        playerStateLabel = when {
-                            playbackState.value.isBuffering -> "buffering"
-                            isPlaying -> "playing"
-                            (player?.playbackState ?: Player.STATE_IDLE) == Player.STATE_ENDED -> "ended"
-                            (player?.playbackState ?: Player.STATE_IDLE) == Player.STATE_READY -> "paused"
-                            else -> playbackState.value.playerStateLabel
-                        }
+                        playerStateLabel = PlaybackStateLabelMapper.fromIsPlayingChange(
+                            isPlaying = isPlaying,
+                            isBuffering = playbackState.value.isBuffering,
+                            playbackState = player?.playbackState ?: Player.STATE_IDLE,
+                            currentLabel = playbackState.value.playerStateLabel
+                        )
                     )
                 }
 
