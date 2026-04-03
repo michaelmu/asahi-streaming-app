@@ -39,6 +39,8 @@ import ai.shieldtv.app.playback.PlaybackResumeDecider
 import ai.shieldtv.app.playback.RestoreTarget
 import ai.shieldtv.app.playback.PlaybackSessionRecord
 import ai.shieldtv.app.navigation.AppDestination
+import ai.shieldtv.app.update.ApkDownloadManager
+import ai.shieldtv.app.update.ApkInstaller
 import ai.shieldtv.app.ui.DetailsScreenRenderer
 import ai.shieldtv.app.ui.EpisodePickerScreenRenderer
 import ai.shieldtv.app.ui.HomeScreenRenderer
@@ -77,6 +79,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private val coordinator = AppCoordinator()
+    private val apkDownloadManager by lazy { ApkDownloadManager() }
+    private val apkInstaller by lazy { ApkInstaller(this) }
     private lateinit var viewFactory: ScreenViewFactory
     private lateinit var navigationRailRenderer: NavigationRailRenderer
     private lateinit var homeRenderer: HomeScreenRenderer
@@ -1051,7 +1055,22 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun openLatestUpdate(updateInfo: AppUpdateInfo) {
-        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(updateInfo.downloadUrl.ifBlank { updateInfo.pageUrl })))
+        val url = updateInfo.downloadUrl.ifBlank { updateInfo.pageUrl }
+        if (url.isBlank()) {
+            setLoading(false, "No APK URL available for this update.")
+            return
+        }
+        lifecycleScope.launch {
+            try {
+                setLoading(true, "Downloading update APK…")
+                val apkFile = java.io.File(cacheDir, "updates/asahi-update.apk")
+                apkDownloadManager.download(url, apkFile)
+                setLoading(false, "Launching package installer…")
+                startActivity(apkInstaller.buildInstallIntent(apkFile))
+            } catch (error: Throwable) {
+                setLoading(false, "Update download/install failed: ${error.message ?: error::class.simpleName}")
+            }
+        }
     }
 
     private fun copyDebugInfoToClipboard() {
