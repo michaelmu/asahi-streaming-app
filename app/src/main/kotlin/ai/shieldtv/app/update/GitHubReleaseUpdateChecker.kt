@@ -17,7 +17,8 @@ data class UpdateCheckResult(
 class GitHubReleaseUpdateChecker(
     private val owner: String,
     private val repo: String,
-    private val currentVersionName: String
+    private val currentVersionName: String,
+    private val currentVersionCode: Int
 ) {
     suspend fun check(): UpdateCheckResult = withContext(Dispatchers.IO) {
         runCheck()
@@ -41,15 +42,16 @@ class GitHubReleaseUpdateChecker(
             val apkAsset = findApkAsset(assets) ?: return UpdateCheckResult(
                 statusMessage = "Release $latestVersion found, but no APK asset was attached."
             )
-            val isDebugRollingRelease = latestVersion.equals("latest-debug", ignoreCase = true)
-            if (!isDebugRollingRelease && !isNewerThanCurrent(latestVersion)) {
+            val remoteVersionCode = extractVersionCodeHint(json.optString("body"))?.toIntOrNull()
+            val isHigherVersionCode = remoteVersionCode?.let { it > currentVersionCode } == true
+            if (!isHigherVersionCode) {
                 continue
             }
 
             return UpdateCheckResult(
                 updateInfo = AppUpdateInfo(
                     versionName = latestVersion,
-                    versionCodeHint = extractVersionCodeHint(json.optString("body")),
+                    versionCodeHint = remoteVersionCode?.toString(),
                     downloadUrl = apkAsset.optString("browser_download_url"),
                     pageUrl = json.optString("html_url"),
                     publishedAt = json.optString("published_at"),
@@ -58,16 +60,18 @@ class GitHubReleaseUpdateChecker(
                 statusMessage = buildString {
                     append("Update available: ")
                     append(latestVersion)
-                    extractVersionCodeHint(json.optString("body"))?.let {
+                    remoteVersionCode?.let {
                         append(" (versionCode ")
                         append(it)
+                        append(", current ")
+                        append(currentVersionCode)
                         append(")")
                     }
                 }
             )
         }
 
-        return UpdateCheckResult(statusMessage = "No newer release found.")
+        return UpdateCheckResult(statusMessage = "No newer release found for current build #$currentVersionCode.")
     }
 
     private fun fetchReleases(): JSONArray {

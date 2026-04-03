@@ -1115,7 +1115,8 @@ class MainActivity : ComponentActivity() {
                 GitHubReleaseUpdateChecker(
                     owner = "michaelmu",
                     repo = "asahi-streaming-app",
-                    currentVersionName = BuildConfig.VERSION_NAME
+                    currentVersionName = BuildConfig.VERSION_NAME,
+                    currentVersionCode = BuildConfig.VERSION_CODE
                 ).check()
             }
             result.onSuccess { checkResult ->
