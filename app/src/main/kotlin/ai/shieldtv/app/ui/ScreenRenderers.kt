@@ -1066,6 +1066,8 @@ class SettingsScreenRenderer(
             addView(viewFactory.sectionTitle("Updates"))
             addView(viewFactory.spacer(10))
             addView(viewFactory.body(updateSummary ?: "No update check run yet."))
+            addView(viewFactory.spacer(10))
+            addView(viewFactory.caption("If install fails, the most likely causes are signature mismatch or a non-incrementing version code on the downloaded APK."))
         }
         host.addView(updatePanel)
         host.addView(viewFactory.spacer())
