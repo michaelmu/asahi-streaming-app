@@ -54,10 +54,12 @@ import ai.shieldtv.app.ui.SettingsScreenRenderer
 import ai.shieldtv.app.ui.SourcesScreenRenderer
 import ai.shieldtv.app.update.AppUpdateInfo
 import ai.shieldtv.app.update.GitHubReleaseUpdateChecker
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     private val searchViewModel by lazy {
@@ -1146,8 +1148,10 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             try {
                 setLoading(true, "Downloading update APK…")
-                val apkFile = java.io.File(cacheDir, "updates/asahi-update.apk")
-                apkDownloadManager.download(url, apkFile)
+                val apkFile = withContext(Dispatchers.IO) {
+                    val destination = java.io.File(cacheDir, "updates/asahi-update.apk")
+                    apkDownloadManager.download(url, destination)
+                }
                 val installIntent = apkInstaller.buildInstallIntent(apkFile)
                 if (!apkInstaller.canRequestPackageInstalls()) {
                     setLoading(false, "Enable install unknown apps for Asahi.")
