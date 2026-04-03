@@ -25,6 +25,8 @@ import ai.shieldtv.app.integration.metadata.tmdb.repository.TmdbMetadataReposito
 import ai.shieldtv.app.integration.playback.media3.engine.Media3PlaybackEngine
 import ai.shieldtv.app.integration.scrapers.normalize.DefaultSourceNormalizer
 import ai.shieldtv.app.integration.scrapers.provider.ProviderRegistry
+import ai.shieldtv.app.integration.scrapers.provider.bitsearch.BitSearchConfig
+import ai.shieldtv.app.integration.scrapers.provider.bitsearch.BitSearchSourceProvider
 import ai.shieldtv.app.integration.scrapers.provider.comet.CometConfig
 import ai.shieldtv.app.integration.scrapers.provider.comet.CometSourceProvider
 import ai.shieldtv.app.integration.scrapers.provider.torrentio.TorrentioConfig
@@ -91,6 +93,9 @@ object AppContainer {
             }
             if (CometConfig.isEnabled()) {
                 add(CometSourceProvider(realDebridTokenProvider))
+            }
+            if (BitSearchConfig.isEnabled()) {
+                add(BitSearchSourceProvider())
             }
         }
         ProviderRegistry(providers = providers)
