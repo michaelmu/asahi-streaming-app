@@ -787,21 +787,28 @@ class SourcesScreenRenderer(
         grouped.forEach { (groupTitle, items) ->
             host.addView(viewFactory.sectionTitle(groupTitle))
             host.addView(viewFactory.spacer(12))
-            items.take(8).forEachIndexed { index, source ->
-                val card = focusableSourceCard(onClick = { onSourceSelected(source) }, elevated = source.cacheStatus == CacheStatus.CACHED)
-                val headRow = LinearLayout(host.context).apply {
+            items.take(10).forEachIndexed { index, source ->
+                val card = focusableSourceCard(onClick = { onSourceSelected(source) }, elevated = source.cacheStatus == CacheStatus.CACHED).apply {
+                    setPadding(viewFactory.dp(18), viewFactory.dp(14), viewFactory.dp(18), viewFactory.dp(14))
+                }
+                val row = LinearLayout(host.context).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
                 }
-                headRow.addView(TextView(host.context).apply {
-                    text = source.displayName.lineSequence().firstOrNull()?.take(52) ?: source.displayName.take(52)
+                row.addView(TextView(host.context).apply {
+                    text = source.displayName.lineSequence().firstOrNull()?.replace('\n', ' ')?.take(58) ?: source.displayName.take(58)
                     setTextColor(viewFactory.textPrimaryColor)
-                    textSize = 20f
+                    textSize = 18f
                     setTypeface(typeface, Typeface.BOLD)
+                    maxLines = 1
                     layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 })
-                headRow.addView(TextView(host.context).apply {
-                    text = SourcePresentation.sourceLabel(source)
+                row.addView(TextView(host.context).apply {
+                    text = listOfNotNull(
+                        SourcePresentation.sourceLabel(source),
+                        SourcePresentation.qualityLabel(source.quality),
+                        source.sizeLabel
+                    ).joinToString(" • ")
                     setTextColor(
                         when (source.cacheStatus) {
                             CacheStatus.CACHED -> viewFactory.accentAltColor
@@ -809,39 +816,13 @@ class SourcesScreenRenderer(
                             CacheStatus.UNCACHED, CacheStatus.UNCHECKED -> viewFactory.warningColor
                         }
                     )
-                    textSize = 14f
+                    textSize = 13f
                     setTypeface(typeface, Typeface.BOLD)
+                    maxLines = 1
                 })
-                card.addView(headRow)
-                card.addView(viewFactory.spacer(8))
-
-                val pillRow = LinearLayout(host.context).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.START
-                }
-                pillRow.addView(viewFactory.statPill("Quality", SourcePresentation.qualityLabel(source.quality), StatTone.ACCENT))
-                pillRow.addView(statSpacer())
-                pillRow.addView(
-                    viewFactory.statPill(
-                        "Cache",
-                        SourcePresentation.cacheLabel(source.cacheStatus),
-                        when (source.cacheStatus) {
-                            CacheStatus.CACHED -> StatTone.SUCCESS
-                            CacheStatus.UNCACHED -> StatTone.WARNING
-                            CacheStatus.UNCHECKED,
-                            CacheStatus.DIRECT -> StatTone.NORMAL
-                        }
-                    )
-                )
-                source.sizeLabel?.let {
-                    pillRow.addView(statSpacer())
-                    pillRow.addView(viewFactory.statPill("Size", it, StatTone.NORMAL))
-                }
-                card.addView(HorizontalScrollView(host.context).apply { addView(pillRow) })
-                card.addView(viewFactory.spacer(10))
-                card.addView(viewFactory.caption("${source.providerDisplayName} • ${source.debridService.name.replace('_', ' ')}"))
+                card.addView(row)
                 host.addView(card)
-                host.addView(viewFactory.spacer(10))
+                host.addView(viewFactory.spacer(8))
                 if (groupTitle == "Cached Picks" && index == 0) card.post { onFirstFocusTarget(card) }
             }
             host.addView(viewFactory.spacer(8))
@@ -936,7 +917,11 @@ class PlayerScreenRenderer(
             }
             playerFrame.addView(errorOverlay)
         } else {
-            val shouldShowOverlay = !playbackState.isPlaying || playbackState.isBuffering
+            val shouldShowOverlay = playbackState.isBuffering ||
+                playbackState.errorMessage != null ||
+                playbackState.playerStateLabel.equals("paused", ignoreCase = true) ||
+                playbackState.playerStateLabel.equals("ended", ignoreCase = true) ||
+                (playbackState.playerStateLabel.equals("idle", ignoreCase = true) && !playbackState.isPlaying)
             if (shouldShowOverlay) {
                 val subtleOverlay = LinearLayout(host.context).apply {
                     orientation = LinearLayout.VERTICAL

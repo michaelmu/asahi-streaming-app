@@ -960,6 +960,7 @@ class MainActivity : ComponentActivity() {
                     persistedPlaybackSession = AppContainer.playbackSessionStore.load()
                 }
                 coordinator.showPlayer(source)
+                AppContainer.playbackEngine.play()
             }
             renderCurrentScreen()
         }
