@@ -94,6 +94,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var screenHost: LinearLayout
     private lateinit var playerView: PlayerView
 
+    private val playerControllerVisibilityTimeoutMs = 3500
+
     private var authState: RealDebridAuthState = RealDebridAuthState(isLinked = false)
     private var activeDeviceFlow: DeviceCodeFlow? = null
     private var authPollingJob: Job? = null
@@ -255,6 +257,10 @@ class MainActivity : ComponentActivity() {
     private fun createPlayerView(): PlayerView {
         return PlayerView(this).apply {
             useController = true
+            controllerAutoShow = true
+            controllerHideOnTouch = false
+            controllerShowTimeoutMs = playerControllerVisibilityTimeoutMs
+            setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
             visibility = View.GONE
             setPadding(0, 0, 0, 0)
             layoutParams = LinearLayout.LayoutParams(
@@ -268,6 +274,7 @@ class MainActivity : ComponentActivity() {
         val engine = AppContainer.playbackEngine as? Media3PlaybackEngine ?: return
         playerView = createPlayerView().apply {
             player = engine.attach(this@MainActivity)
+            showController()
         }
     }
 

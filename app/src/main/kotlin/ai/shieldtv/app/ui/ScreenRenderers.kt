@@ -939,6 +939,7 @@ class PlayerScreenRenderer(
             FrameLayout.LayoutParams.MATCH_PARENT
         )
         playerView.useController = true
+        playerView.controllerShowTimeoutMs = 3500
         playerFrame.addView(playerView)
 
         if (!playbackError.isNullOrBlank()) {
