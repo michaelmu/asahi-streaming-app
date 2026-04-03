@@ -10,3 +10,6 @@ local.properties
 
 app/debug/
 /app/app/
+
+# local hook logs / temp
+.pre-commit-cache/
