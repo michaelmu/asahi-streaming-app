@@ -3,6 +3,8 @@ package ai.shieldtv.app
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.view.KeyEvent
@@ -55,6 +57,8 @@ import ai.shieldtv.app.ui.SettingsScreenRenderer
 import ai.shieldtv.app.ui.SourcesScreenRenderer
 import ai.shieldtv.app.update.AppUpdateInfo
 import ai.shieldtv.app.update.GitHubReleaseUpdateChecker
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.qrcode.QRCodeWriter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -459,7 +463,8 @@ class MainActivity : ComponentActivity() {
         tertiaryLabel: String? = null,
         onTertiary: (() -> Unit)? = null,
         dismissOnBack: Boolean = true,
-        defaultAction: ModalDefaultAction = ModalDefaultAction.PRIMARY
+        defaultAction: ModalDefaultAction = ModalDefaultAction.PRIMARY,
+        customContent: View? = null
     ) {
         showModal(
             overlayPopup.build(
@@ -481,7 +486,8 @@ class MainActivity : ComponentActivity() {
                     onTertiary?.invoke()
                 },
                 dismissOnBack = dismissOnBack,
-                defaultAction = defaultAction
+                defaultAction = defaultAction,
+                customContent = customContent
             )
         )
     }
@@ -842,22 +848,24 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun showRealDebridFlowModal(flow: DeviceCodeFlow) {
+        val authUrl = buildRealDebridAuthUrl(flow)
         showInfoModal(
             title = "Link Real-Debrid",
             message = buildString {
-                appendLine("Open: ${buildRealDebridAuthUrl(flow)}")
+                appendLine("Open: $authUrl")
                 appendLine()
                 append("Code: ${flow.userCode}")
             },
             primaryLabel = "Open Link Page",
             onPrimary = {
-                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(buildRealDebridAuthUrl(flow))))
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(authUrl)))
                 showRealDebridFlowModal(flow)
             },
             secondaryLabel = "Copy Debug Info",
             onSecondary = ::copyDebugInfoToClipboard,
             tertiaryLabel = "Close",
-            onTertiary = {}
+            onTertiary = {},
+            customContent = buildQrCodeView(flow.qrCodeUrl ?: authUrl)
         )
     }
 
@@ -913,6 +921,36 @@ class MainActivity : ComponentActivity() {
                 refreshAuthUiOnly()
             }
         }
+    }
+
+    private fun buildQrCodeView(value: String): View {
+        val size = viewFactory.dp(180)
+        val image = android.widget.ImageView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(size, size).apply {
+                gravity = android.view.Gravity.CENTER_HORIZONTAL
+            }
+            setImageBitmap(generateQrBitmap(value, size))
+            setBackgroundColor(Color.WHITE)
+            setPadding(viewFactory.dp(8), viewFactory.dp(8), viewFactory.dp(8), viewFactory.dp(8))
+        }
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = android.view.Gravity.CENTER_HORIZONTAL
+            addView(image)
+            addView(viewFactory.spacer(10))
+            addView(viewFactory.caption("Scan to open the Real-Debrid link on your phone."))
+        }
+    }
+
+    private fun generateQrBitmap(value: String, size: Int): Bitmap {
+        val matrix = QRCodeWriter().encode(value, BarcodeFormat.QR_CODE, size, size)
+        val pixels = IntArray(size * size)
+        for (y in 0 until size) {
+            for (x in 0 until size) {
+                pixels[y * size + x] = if (matrix[x, y]) Color.BLACK else Color.WHITE
+            }
+        }
+        return Bitmap.createBitmap(pixels, size, size, Bitmap.Config.RGB_565)
     }
 
     private fun buildRealDebridAuthUrl(flow: DeviceCodeFlow): String {

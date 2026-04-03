@@ -29,7 +29,8 @@ class OverlayPopup(
         tertiaryLabel: String? = null,
         onTertiary: (() -> Unit)? = null,
         dismissOnBack: Boolean = true,
-        defaultAction: ModalDefaultAction = ModalDefaultAction.PRIMARY
+        defaultAction: ModalDefaultAction = ModalDefaultAction.PRIMARY,
+        customContent: View? = null
     ): View {
         val root = FrameLayout(context)
         root.layoutParams = FrameLayout.LayoutParams(
@@ -61,6 +62,11 @@ class OverlayPopup(
         messageView.textSize = 17f
         messageView.setLineSpacing(viewFactory.dp(3).toFloat(), 1f)
         card.addView(messageView)
+
+        customContent?.let {
+            card.addView(viewFactory.spacer(18))
+            card.addView(it)
+        }
 
         card.addView(viewFactory.spacer(20))
 
