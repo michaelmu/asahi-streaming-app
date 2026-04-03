@@ -24,6 +24,7 @@ import ai.shieldtv.app.core.model.media.MediaIds
 import ai.shieldtv.app.core.model.media.MediaRef
 import ai.shieldtv.app.core.model.media.MediaType
 import ai.shieldtv.app.core.model.media.SearchResult
+import ai.shieldtv.app.core.model.playback.PlaybackState
 import ai.shieldtv.app.core.model.source.CacheStatus
 import ai.shieldtv.app.core.model.source.Quality
 import ai.shieldtv.app.core.model.source.SourceResult
@@ -884,9 +885,7 @@ class PlayerScreenRenderer(
         playbackMessage: String?,
         playbackError: String?,
         playerView: PlayerView,
-        playbackStateLabel: String,
-        playbackPositionMs: Long,
-        playbackDurationMs: Long
+        playbackState: PlaybackState
     ) {
         val source = state.selectedSource
         if (source == null) {
@@ -911,6 +910,10 @@ class PlayerScreenRenderer(
         playerView.controllerShowTimeoutMs = 3500
         playerFrame.addView(playerView)
 
+        val playbackStateLabel = playbackState.playerStateLabel
+        val playbackPositionMs = playbackState.positionMs
+        val playbackDurationMs = playbackState.durationMs
+
         if (!playbackError.isNullOrBlank()) {
             val errorOverlay = viewFactory.panel(elevated = true).apply {
                 layoutParams = FrameLayout.LayoutParams(
@@ -933,10 +936,7 @@ class PlayerScreenRenderer(
             }
             playerFrame.addView(errorOverlay)
         } else {
-            val shouldShowOverlay = when (playbackStateLabel.lowercase()) {
-                "paused", "buffering", "ended", "idle" -> true
-                else -> false
-            }
+            val shouldShowOverlay = !playbackState.isPlaying || playbackState.isBuffering
             if (shouldShowOverlay) {
                 val subtleOverlay = LinearLayout(host.context).apply {
                     orientation = LinearLayout.VERTICAL

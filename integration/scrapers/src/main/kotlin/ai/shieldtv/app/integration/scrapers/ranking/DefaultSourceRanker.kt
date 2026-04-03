@@ -17,9 +17,9 @@ class DefaultSourceRanker(
 
     private fun rankScore(source: SourceResult): Long {
         val qualityScore = when (source.quality) {
+            Quality.UHD_4K -> if ((source.sizeBytes ?: 0L) <= 22L * 1024L * 1024L * 1024L) 4600L else 3000L
             Quality.FHD_1080P -> 4200L
             Quality.HD_720P -> 3200L
-            Quality.UHD_4K -> 2500L
             Quality.SD -> 1200L
             Quality.SCR -> 200L
             Quality.CAM -> 100L
@@ -34,7 +34,9 @@ class DefaultSourceRanker(
         }
         val seederScore = (source.rawMetadata["seeders"]?.toIntOrNull() ?: 0).coerceAtMost(500).toLong()
         val sizePenalty = sizePenalty(source)
-        val remuxPenalty = if (source.displayName.contains("remux", ignoreCase = true)) 1200L else 0L
+        val remuxPenalty = if (source.displayName.contains("remux", ignoreCase = true)) {
+            if (source.quality == Quality.UHD_4K) 600L else 1200L
+        } else 0L
         return cacheScore + qualityScore + seederScore - sizePenalty - remuxPenalty
     }
 

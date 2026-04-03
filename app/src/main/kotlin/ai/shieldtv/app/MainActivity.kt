@@ -674,9 +674,7 @@ class MainActivity : ComponentActivity() {
                     playbackMessage = latestPlaybackMessage,
                     playbackError = latestPlaybackError,
                     playerView = playerView,
-                    playbackStateLabel = latestPlaybackState.playerStateLabel,
-                    playbackPositionMs = latestPlaybackState.positionMs,
-                    playbackDurationMs = latestPlaybackState.durationMs
+                    playbackState = latestPlaybackState
                 )
             }
             AppDestination.SETTINGS -> settingsRenderer.render(
