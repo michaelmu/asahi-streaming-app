@@ -1,4 +1,4 @@
-name: Build Android Debug APK
+name: Build Android Release APK
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 jobs:
-  build-debug-apk:
+  build-release-apk:
     runs-on: ubuntu-latest
 
     steps:
@@ -33,34 +33,43 @@ jobs:
       - name: Grant gradlew execute permission
         run: chmod +x ./gradlew
 
-      - name: Build debug APK
+      - name: Decode release keystore
+        run: |
+          mkdir -p keystores
+          echo "${{ secrets.ASAHI_RELEASE_KEYSTORE_B64 }}" | base64 -d > keystores/asahi-release.keystore
+
+      - name: Build signed release APK
         env:
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
           ASAHI_VERSION_CODE: ${{ github.run_number }}
-        run: ./gradlew --stacktrace assembleDebug
+          ASAHI_RELEASE_STORE_FILE: keystores/asahi-release.keystore
+          ASAHI_RELEASE_STORE_PASSWORD: ${{ secrets.ASAHI_RELEASE_STORE_PASSWORD }}
+          ASAHI_RELEASE_KEY_ALIAS: ${{ secrets.ASAHI_RELEASE_KEY_ALIAS }}
+          ASAHI_RELEASE_KEY_PASSWORD: ${{ secrets.ASAHI_RELEASE_KEY_PASSWORD }}
+        run: ./gradlew --stacktrace assembleRelease
 
       - name: Prepare release asset
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk asahi-debug.apk
+          cp app/build/outputs/apk/release/app-release.apk asahi-release.apk
 
-      - name: Upload debug APK artifact
+      - name: Upload release APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: asahi-debug-apk
-          path: asahi-debug.apk
+          name: asahi-release-apk
+          path: asahi-release.apk
           if-no-files-found: error
 
-      - name: Publish rolling debug release
+      - name: Publish rolling release build
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: latest-debug
-          name: Latest Debug Build
+          tag_name: latest-release
+          name: Latest Release Build
           body: |
-            Rolling debug APK build from `${{ github.sha }}`.
+            Rolling signed release APK build from `${{ github.sha }}`.
 
             Version code: `${{ github.run_number }}`
 
-            Install/update using the attached `asahi-debug.apk`.
-          files: asahi-debug.apk
+            Install/update using the attached `asahi-release.apk`.
+          files: asahi-release.apk
           prerelease: true
           make_latest: false
