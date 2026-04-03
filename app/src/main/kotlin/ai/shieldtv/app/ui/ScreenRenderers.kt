@@ -938,86 +938,70 @@ class PlayerScreenRenderer(
             FrameLayout.LayoutParams.MATCH_PARENT,
             FrameLayout.LayoutParams.MATCH_PARENT
         )
+        playerView.useController = true
         playerFrame.addView(playerView)
 
-        val topOverlay = LinearLayout(host.context).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                Gravity.TOP
-            )
-            setPadding(viewFactory.dp(24))
-        }
-        topOverlay.addView(TextView(host.context).apply {
-            text = source.mediaRef.title
-            setTextColor(viewFactory.textPrimaryColor)
-            textSize = 28f
-            setTypeface(typeface, Typeface.BOLD)
-        })
-        topOverlay.addView(viewFactory.caption(buildString {
-            append(source.providerDisplayName)
-            append(" • ")
-            append(qualityLabel(source.quality))
-            source.seasonNumber?.let { season ->
-                val episode = source.episodeNumber ?: 1
-                append(" • S${season.toString().padStart(2, '0')}E${episode.toString().padStart(2, '0')}")
+        if (!playbackError.isNullOrBlank()) {
+            val errorOverlay = viewFactory.panel(elevated = true).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    Gravity.BOTTOM
+                ).also {
+                    it.marginStart = viewFactory.dp(24)
+                    it.marginEnd = viewFactory.dp(24)
+                    it.bottomMargin = viewFactory.dp(24)
+                }
+                alpha = 0.94f
+                addView(viewFactory.sectionTitle("Playback Error"))
+                addView(viewFactory.spacer(10))
+                addView(TextView(host.context).apply {
+                    text = playbackError
+                    setTextColor(viewFactory.errorColor)
+                    textSize = 16f
+                })
             }
-        }))
-        playbackError?.takeIf { it.isNotBlank() }?.let {
-            topOverlay.addView(viewFactory.spacer(10))
-            topOverlay.addView(TextView(host.context).apply {
-                text = it
-                setTextColor(viewFactory.errorColor)
-                textSize = 15f
-            })
-        }
-
-        val bottomChrome = viewFactory.panel(elevated = true).apply {
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                Gravity.BOTTOM
-            ).also {
-                it.marginStart = viewFactory.dp(24)
-                it.marginEnd = viewFactory.dp(24)
-                it.bottomMargin = viewFactory.dp(24)
+            playerFrame.addView(errorOverlay)
+        } else {
+            val subtleOverlay = LinearLayout(host.context).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    Gravity.TOP or Gravity.START
+                )
+                setPadding(viewFactory.dp(20))
+                addView(TextView(host.context).apply {
+                    text = source.mediaRef.title
+                    setTextColor(viewFactory.textPrimaryColor)
+                    textSize = 20f
+                    setTypeface(typeface, Typeface.BOLD)
+                })
+                addView(viewFactory.caption(buildString {
+                    append(stateLabel(playbackStateLabel))
+                    append(" • ")
+                    append(formatTime(playbackPositionMs))
+                    append(" / ")
+                    append(formatTime(playbackDurationMs))
+                    source.seasonNumber?.let { season ->
+                        val episode = source.episodeNumber ?: 1
+                        append(" • S${season.toString().padStart(2, '0')}E${episode.toString().padStart(2, '0')}")
+                    }
+                }))
+                playbackMessage?.lineSequence()?.firstOrNull()?.takeIf { it.isNotBlank() }?.let {
+                    addView(viewFactory.spacer(6))
+                    addView(viewFactory.caption(it))
+                }
             }
-            alpha = 0.94f
-            addView(viewFactory.sectionTitle("Playback"))
-            addView(viewFactory.spacer(10))
-            addView(TextView(host.context).apply {
-                text = source.displayName.take(70)
-                setTextColor(viewFactory.textPrimaryColor)
-                textSize = 20f
-                setTypeface(typeface, Typeface.BOLD)
-            })
-            addView(viewFactory.spacer(8))
-            addView(viewFactory.progressBar(
-                if (playbackDurationMs > 0) ((playbackPositionMs * 100) / playbackDurationMs).toInt() else 0
-            ))
-            addView(viewFactory.spacer(10))
-            addView(TextView(host.context).apply {
-                text = "${formatTime(playbackPositionMs)} / ${formatTime(playbackDurationMs)} • ${stateLabel(playbackStateLabel)}"
-                setTextColor(viewFactory.textPrimaryColor)
-                textSize = 18f
-                setTypeface(typeface, Typeface.BOLD)
-            })
-            addView(viewFactory.spacer(8))
-            addView(viewFactory.caption("Center: player controls • Back: source picker • Left/Right: seek"))
-            playbackMessage?.takeIf { it.isNotBlank() }?.let {
-                addView(viewFactory.spacer(8))
-                addView(viewFactory.caption(it.lineSequence().firstOrNull() ?: it))
-            }
+            playerFrame.addView(subtleOverlay)
         }
 
-        playerFrame.addView(topOverlay)
-        playerFrame.addView(bottomChrome)
         host.addView(playerFrame)
     }
 
     private fun stateLabel(label: String): String = when (label.lowercase()) {
-        "ready" -> "Playing"
+        "playing" -> "Playing"
+        "paused" -> "Paused"
         "buffering" -> "Buffering"
         "ended" -> "Ended"
         "idle" -> "Idle"

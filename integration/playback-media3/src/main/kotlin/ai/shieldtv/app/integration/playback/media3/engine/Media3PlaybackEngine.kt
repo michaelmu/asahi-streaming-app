@@ -42,9 +42,9 @@ class Media3PlaybackEngine : PlaybackEngine {
                 override fun onPlaybackStateChanged(playbackStateValue: Int) {
                     updateState(
                         playerStateLabel = when (playbackStateValue) {
-                            Player.STATE_IDLE -> "idle"
+                            Player.STATE_IDLE -> if (exoPlayer.isPlaying) "playing" else "idle"
                             Player.STATE_BUFFERING -> "buffering"
-                            Player.STATE_READY -> "ready"
+                            Player.STATE_READY -> if (exoPlayer.isPlaying) "playing" else "paused"
                             Player.STATE_ENDED -> "ended"
                             else -> "unknown"
                         },
@@ -55,7 +55,16 @@ class Media3PlaybackEngine : PlaybackEngine {
                 }
 
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
-                    updateState(isPlaying = isPlaying)
+                    updateState(
+                        isPlaying = isPlaying,
+                        playerStateLabel = when {
+                            playbackState.value.isBuffering -> "buffering"
+                            isPlaying -> "playing"
+                            (player?.playbackState ?: Player.STATE_IDLE) == Player.STATE_ENDED -> "ended"
+                            (player?.playbackState ?: Player.STATE_IDLE) == Player.STATE_READY -> "paused"
+                            else -> playbackState.value.playerStateLabel
+                        }
+                    )
                 }
 
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
@@ -131,7 +140,7 @@ class Media3PlaybackEngine : PlaybackEngine {
             isPlaying = false,
             positionMs = 0,
             durationMs = 0,
-            playerStateLabel = "stopped"
+            playerStateLabel = "idle"
         )
     }
 
