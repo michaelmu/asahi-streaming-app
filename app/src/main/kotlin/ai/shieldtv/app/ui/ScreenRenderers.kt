@@ -781,13 +781,7 @@ class SourcesScreenRenderer(
             return
         }
 
-        val grouped = state.selectedSources.groupBy {
-            when (it.cacheStatus) {
-                CacheStatus.CACHED -> "Cached Picks"
-                CacheStatus.DIRECT -> "Direct Links"
-                CacheStatus.UNCACHED, CacheStatus.UNCHECKED -> "Fallback Sources"
-            }
-        }
+        val grouped = state.selectedSources.groupBy { SourcePresentation.groupTitle(it) }
 
         grouped.forEach { (groupTitle, items) ->
             host.addView(viewFactory.sectionTitle(groupTitle))
@@ -806,7 +800,7 @@ class SourcesScreenRenderer(
                     layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 })
                 headRow.addView(TextView(host.context).apply {
-                    text = sourceLabel(source)
+                    text = SourcePresentation.sourceLabel(source)
                     setTextColor(
                         when (source.cacheStatus) {
                             CacheStatus.CACHED -> viewFactory.accentAltColor
@@ -824,12 +818,12 @@ class SourcesScreenRenderer(
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.START
                 }
-                pillRow.addView(viewFactory.statPill("Quality", qualityLabel(source.quality), StatTone.ACCENT))
+                pillRow.addView(viewFactory.statPill("Quality", SourcePresentation.qualityLabel(source.quality), StatTone.ACCENT))
                 pillRow.addView(statSpacer())
                 pillRow.addView(
                     viewFactory.statPill(
                         "Cache",
-                        cacheLabel(source.cacheStatus),
+                        SourcePresentation.cacheLabel(source.cacheStatus),
                         when (source.cacheStatus) {
                             CacheStatus.CACHED -> StatTone.SUCCESS
                             CacheStatus.UNCACHED -> StatTone.WARNING
@@ -874,31 +868,6 @@ class SourcesScreenRenderer(
                 }
             }
         }
-    }
-
-    private fun sourceLabel(source: SourceResult): String = when {
-        source.cacheStatus == CacheStatus.CACHED && source.quality == Quality.UHD_4K -> "BEST"
-        source.cacheStatus == CacheStatus.CACHED -> "CACHED"
-        source.cacheStatus == CacheStatus.DIRECT -> "DIRECT"
-        else -> "FALLBACK"
-    }
-
-    private fun qualityLabel(quality: Quality): String = when (quality) {
-        Quality.UHD_4K -> "4K"
-        Quality.FHD_1080P -> "1080p"
-        Quality.HD_720P -> "720p"
-        Quality.SD -> "SD"
-        Quality.SCR -> "SCR"
-        Quality.CAM -> "CAM"
-        Quality.TELE -> "TELE"
-        Quality.UNKNOWN -> "Unknown"
-    }
-
-    private fun cacheLabel(cacheStatus: CacheStatus): String = when (cacheStatus) {
-        CacheStatus.CACHED -> "Cached"
-        CacheStatus.UNCACHED -> "Uncached"
-        CacheStatus.UNCHECKED -> "Unchecked"
-        CacheStatus.DIRECT -> "Direct"
     }
 
     private fun statSpacer(): View = View(host.context).apply {

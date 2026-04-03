@@ -33,6 +33,9 @@ import ai.shieldtv.app.feature.sources.presentation.SourcesPresenter
 import ai.shieldtv.app.feature.sources.presentation.SourcesViewModel
 import ai.shieldtv.app.integration.playback.media3.engine.Media3PlaybackEngine
 import ai.shieldtv.app.integration.playback.media3.engine.Media3PlaybackEngine.RenderMode
+import ai.shieldtv.app.playback.PlaybackRestoreDecider
+import ai.shieldtv.app.playback.PlaybackResumeDecider
+import ai.shieldtv.app.playback.RestoreTarget
 import ai.shieldtv.app.playback.PlaybackSessionRecord
 import ai.shieldtv.app.navigation.AppDestination
 import ai.shieldtv.app.ui.DetailsScreenRenderer
@@ -361,48 +364,43 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun resumePositionFor(source: SourceResult, seasonNumber: Int?, episodeNumber: Int?): Long {
-        val record = persistedPlaybackSession ?: return 0L
-        val titleMatches = record.mediaTitle.equals(source.mediaRef.title, ignoreCase = true)
-        val episodeMatches = if (source.mediaRef.mediaType == ai.shieldtv.app.core.model.media.MediaType.SHOW) {
-            record.seasonNumber == (seasonNumber ?: source.seasonNumber) &&
-                record.episodeNumber == (episodeNumber ?: source.episodeNumber)
-        } else {
-            true
-        }
-        val progressOk = record.progressPercent in 3..92
-        return if (titleMatches && episodeMatches && progressOk) record.positionMs else 0L
+        return PlaybackResumeDecider.resumePositionFor(
+            record = persistedPlaybackSession,
+            source = source,
+            seasonNumber = seasonNumber,
+            episodeNumber = episodeNumber
+        )
     }
 
     private fun reconcileRestoredState() {
         val state = coordinator.currentState()
-        if (state.destination == AppDestination.PLAYER && state.selectedSource == null) {
-            val fallbackSource = state.selectedSources.firstOrNull()
-            when {
-                fallbackSource != null -> coordinator.showSources(
+        when (PlaybackRestoreDecider.decide(state)) {
+            RestoreTarget.KEEP_PLAYER -> return
+            RestoreTarget.SOURCES -> {
+                val fallbackSource = state.selectedSources.firstOrNull() ?: return
+                coordinator.showSources(
                     mediaRef = state.selectedMedia ?: fallbackSource.mediaRef,
                     details = state.selectedDetails,
                     seasonNumber = state.selectedSeasonNumber,
                     episodeNumber = state.selectedEpisodeNumber,
                     sources = state.selectedSources
                 )
-                state.selectedDetails != null && state.selectedDetails?.mediaRef?.mediaType == ai.shieldtv.app.core.model.media.MediaType.SHOW -> {
-                    coordinator.showEpisodes(
-                        details = state.selectedDetails,
-                        seasonNumber = state.selectedSeasonNumber ?: 1,
-                        episodeNumber = state.selectedEpisodeNumber ?: 1
-                    )
-                }
-                state.selectedDetails != null -> coordinator.showDetails(
-                    mediaRef = state.selectedDetails.mediaRef,
-                    details = state.selectedDetails
-                )
-                state.searchResults.isNotEmpty() -> coordinator.showResults(state.query, state.searchResults)
-                else -> coordinator.openHome()
             }
-            latestPlaybackError = null
-            latestPlaybackMessage = null
-            AppContainer.playbackEngine.stop()
+            RestoreTarget.EPISODES -> coordinator.showEpisodes(
+                details = state.selectedDetails ?: return,
+                seasonNumber = state.selectedSeasonNumber ?: 1,
+                episodeNumber = state.selectedEpisodeNumber ?: 1
+            )
+            RestoreTarget.DETAILS -> coordinator.showDetails(
+                mediaRef = state.selectedDetails?.mediaRef ?: return,
+                details = state.selectedDetails
+            )
+            RestoreTarget.RESULTS -> coordinator.showResults(state.query, state.searchResults)
+            RestoreTarget.HOME -> coordinator.openHome()
         }
+        latestPlaybackError = null
+        latestPlaybackMessage = null
+        AppContainer.playbackEngine.stop()
     }
 
     private fun refreshAuthState() {
