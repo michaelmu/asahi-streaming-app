@@ -3,6 +3,8 @@ package ai.shieldtv.app.update
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import androidx.core.content.FileProvider
 import java.io.File
 
@@ -24,5 +26,18 @@ class ApkInstaller(
 
     fun canResolveInstallIntent(intent: Intent): Boolean {
         return intent.resolveActivity(context.packageManager) != null
+    }
+
+    fun canRequestPackageInstalls(): Boolean {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.O || context.packageManager.canRequestPackageInstalls()
+    }
+
+    fun buildManageUnknownAppsIntent(): Intent {
+        return Intent(
+            Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+            Uri.parse("package:${context.packageName}")
+        ).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
     }
 }

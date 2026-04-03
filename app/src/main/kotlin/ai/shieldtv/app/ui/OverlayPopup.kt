@@ -19,7 +19,10 @@ class OverlayPopup(
         primaryLabel: String,
         onPrimary: () -> Unit,
         secondaryLabel: String? = null,
-        onSecondary: (() -> Unit)? = null
+        onSecondary: (() -> Unit)? = null,
+        tertiaryLabel: String? = null,
+        onTertiary: (() -> Unit)? = null,
+        dismissOnBack: Boolean = true
     ): View {
         val root = FrameLayout(context)
         root.layoutParams = FrameLayout.LayoutParams(
@@ -69,14 +72,28 @@ class OverlayPopup(
             buttonRow.addView(secondary)
         }
 
+        if (tertiaryLabel != null && onTertiary != null) {
+            val tertiary = viewFactory.button(tertiaryLabel, onTertiary)
+            tertiary.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
+                it.marginStart = viewFactory.dp(12)
+            }
+            buttonRow.addView(tertiary)
+        }
+
         card.addView(buttonRow)
         primary.post { primary.requestFocus() }
 
         root.addView(card)
         root.setOnKeyListener { _, keyCode, event ->
-            if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_BACK && onSecondary != null) {
-                onSecondary()
-                true
+            if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_BACK) {
+                when {
+                    dismissOnBack && onSecondary != null -> {
+                        onSecondary()
+                        true
+                    }
+                    dismissOnBack -> true
+                    else -> true
+                }
             } else {
                 false
             }

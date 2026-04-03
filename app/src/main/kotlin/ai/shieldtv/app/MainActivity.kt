@@ -45,6 +45,7 @@ import ai.shieldtv.app.ui.DetailsScreenRenderer
 import ai.shieldtv.app.ui.EpisodePickerScreenRenderer
 import ai.shieldtv.app.ui.HomeScreenRenderer
 import ai.shieldtv.app.ui.NavigationRailRenderer
+import ai.shieldtv.app.ui.OverlayPopup
 import ai.shieldtv.app.ui.PlayerScreenRenderer
 import ai.shieldtv.app.ui.ResultsScreenRenderer
 import ai.shieldtv.app.ui.ScreenViewFactory
@@ -91,6 +92,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var sourcesRenderer: SourcesScreenRenderer
     private lateinit var playerRenderer: PlayerScreenRenderer
     private lateinit var settingsRenderer: SettingsScreenRenderer
+    private lateinit var overlayPopup: OverlayPopup
 
     private lateinit var root: LinearLayout
     private lateinit var sidebar: LinearLayout
@@ -100,6 +102,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var statusText: android.widget.TextView
     private lateinit var loadingView: ProgressBar
     private lateinit var screenHost: LinearLayout
+    private lateinit var modalHost: android.widget.FrameLayout
     private lateinit var playerView: PlayerView
 
     private val playerControllerVisibilityTimeoutMs = 3500
@@ -120,6 +123,7 @@ class MainActivity : ComponentActivity() {
     private var latestUpdateInfo: AppUpdateInfo? = null
     private var latestUpdateMessage: String? = null
     private var persistedPlaybackSession: PlaybackSessionRecord? = null
+    private var activeModalView: View? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -169,6 +173,9 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_BACK && dismissModal()) {
+            return true
+        }
         if (keyCode == KeyEvent.KEYCODE_BACK && handleBackPress()) {
             return true
         }
@@ -176,10 +183,13 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun buildContentView(): View {
+        val shellRoot = android.widget.FrameLayout(this).apply {
+            setBackgroundResource(ai.shieldtv.app.R.drawable.asahi_app_bg)
+        }
+
         root = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             setPadding(48, 32, 48, 32)
-            setBackgroundResource(ai.shieldtv.app.R.drawable.asahi_app_bg)
         }
 
         sidebar = LinearLayout(this).apply {
@@ -247,7 +257,20 @@ class MainActivity : ComponentActivity() {
         root.addView(sidebar)
         root.addView(contentPane)
 
-        return root
+        modalHost = android.widget.FrameLayout(this).apply {
+            layoutParams = android.widget.FrameLayout.LayoutParams(
+                android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                android.widget.FrameLayout.LayoutParams.MATCH_PARENT
+            )
+            visibility = View.GONE
+            isClickable = true
+            isFocusable = true
+            isFocusableInTouchMode = true
+        }
+
+        shellRoot.addView(root)
+        shellRoot.addView(modalHost)
+        return shellRoot
     }
 
     private fun initializeRenderers() {
@@ -260,6 +283,7 @@ class MainActivity : ComponentActivity() {
         sourcesRenderer = SourcesScreenRenderer(screenHost, viewFactory)
         playerRenderer = PlayerScreenRenderer(screenHost, viewFactory)
         settingsRenderer = SettingsScreenRenderer(this, screenHost, viewFactory)
+        overlayPopup = OverlayPopup(this, viewFactory)
     }
 
     private fun createPlayerView(): PlayerView {
@@ -404,6 +428,57 @@ class MainActivity : ComponentActivity() {
 
     private fun refreshAuthUiOnly() {
         renderCurrentScreen()
+    }
+
+    private fun showModal(view: View) {
+        modalHost.removeAllViews()
+        modalHost.addView(view)
+        modalHost.visibility = View.VISIBLE
+        activeModalView = view
+        modalHost.post { modalHost.requestFocus() }
+    }
+
+    private fun dismissModal(): Boolean {
+        if (activeModalView == null) return false
+        modalHost.removeAllViews()
+        modalHost.visibility = View.GONE
+        activeModalView = null
+        return true
+    }
+
+    private fun showInfoModal(
+        title: String,
+        message: String,
+        primaryLabel: String = "OK",
+        onPrimary: (() -> Unit)? = null,
+        secondaryLabel: String? = null,
+        onSecondary: (() -> Unit)? = null,
+        tertiaryLabel: String? = null,
+        onTertiary: (() -> Unit)? = null,
+        dismissOnBack: Boolean = true
+    ) {
+        showModal(
+            overlayPopup.build(
+                title = title,
+                message = message,
+                primaryLabel = primaryLabel,
+                onPrimary = {
+                    dismissModal()
+                    onPrimary?.invoke()
+                },
+                secondaryLabel = secondaryLabel,
+                onSecondary = {
+                    dismissModal()
+                    onSecondary?.invoke()
+                },
+                tertiaryLabel = tertiaryLabel,
+                onTertiary = {
+                    dismissModal()
+                    onTertiary?.invoke()
+                },
+                dismissOnBack = dismissOnBack
+            )
+        )
     }
 
     private fun renderCurrentScreen() {
@@ -735,6 +810,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun startRealDebridLink() {
+        dismissModal()
         setLoading(true, "Starting Real-Debrid link flow…")
         lifecycleScope.launch {
             runCatching {
@@ -743,15 +819,41 @@ class MainActivity : ComponentActivity() {
                 activeDeviceFlow = flow
                 authState = RealDebridAuthState(isLinked = false, authInProgress = true, lastError = null)
                 setLoading(false, "Real-Debrid device flow started: ${flow.userCode}")
+                showRealDebridFlowModal(flow)
                 refreshAuthUiOnly()
                 startAutoPolling(flow)
             }.onFailure { error ->
                 authPollingJob?.cancel()
                 authState = RealDebridAuthState(isLinked = false, authInProgress = false, lastError = error.message)
                 setLoading(false, "Failed to start Real-Debrid link flow.")
+                showInfoModal(
+                    title = "Real-Debrid Link Failed",
+                    message = error.message ?: "Could not start the device code flow.",
+                    primaryLabel = "OK"
+                )
                 refreshAuthUiOnly()
             }
         }
+    }
+
+    private fun showRealDebridFlowModal(flow: DeviceCodeFlow) {
+        showInfoModal(
+            title = "Link Real-Debrid",
+            message = buildString {
+                appendLine("Open: ${buildRealDebridAuthUrl(flow)}")
+                appendLine()
+                append("Code: ${flow.userCode}")
+            },
+            primaryLabel = "Open Link Page",
+            onPrimary = {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(buildRealDebridAuthUrl(flow))))
+                showRealDebridFlowModal(flow)
+            },
+            secondaryLabel = "Copy Debug Info",
+            onSecondary = ::copyDebugInfoToClipboard,
+            tertiaryLabel = "Close",
+            onTertiary = {}
+        )
     }
 
     private fun startAutoPolling(flow: DeviceCodeFlow) {
@@ -767,7 +869,13 @@ class MainActivity : ComponentActivity() {
                     authState = state
                     if (state.isLinked) {
                         activeDeviceFlow = null
+                        dismissModal()
                         statusText.text = "Real-Debrid linked successfully."
+                        showInfoModal(
+                            title = "Real-Debrid Linked",
+                            message = state.username?.let { "Connected as $it." } ?: "Real-Debrid linked successfully.",
+                            primaryLabel = "Nice"
+                        )
                         refreshAuthUiOnly()
                         return@launch
                     }
@@ -787,6 +895,11 @@ class MainActivity : ComponentActivity() {
                     lastError = authState.lastError ?: "Real-Debrid link timed out after 2 minutes."
                 )
                 statusText.text = "Real-Debrid link polling timed out."
+                showInfoModal(
+                    title = "Real-Debrid Link Timed Out",
+                    message = authState.lastError ?: "The device link flow expired before authorization completed.",
+                    primaryLabel = "OK"
+                )
                 refreshAuthUiOnly()
             }
         }
@@ -947,6 +1060,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun checkForUpdates() {
+        dismissModal()
         setLoading(true, "Checking for updates…")
         lifecycleScope.launch {
             val result = runCatching {
@@ -960,6 +1074,9 @@ class MainActivity : ComponentActivity() {
                 latestUpdateInfo = checkResult.updateInfo
                 latestUpdateMessage = checkResult.statusMessage
                 setLoading(false, latestUpdateMessage ?: "Update check complete.")
+                if (checkResult.updateInfo != null) {
+                    showUpdateAvailableModal(checkResult.updateInfo)
+                }
                 renderCurrentScreen()
             }.onFailure { error ->
                 latestUpdateInfo = null
@@ -976,15 +1093,54 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 setLoading(false, latestUpdateMessage ?: "Update check failed.")
+                showInfoModal(
+                    title = "Update Check Failed",
+                    message = latestUpdateMessage ?: "Could not check for updates.",
+                    primaryLabel = "OK"
+                )
                 renderCurrentScreen()
             }
         }
     }
 
+    private fun showUpdateAvailableModal(updateInfo: AppUpdateInfo) {
+        showInfoModal(
+            title = "Update Available",
+            message = buildString {
+                append(updateInfo.versionName)
+                updateInfo.versionCodeHint?.let {
+                    append(" (versionCode ")
+                    append(it)
+                    append(")")
+                }
+                updateInfo.publishedAt?.takeIf { it.isNotBlank() }?.let {
+                    appendLine()
+                    appendLine()
+                    append("Published: ")
+                    append(it)
+                }
+            },
+            primaryLabel = "Install Update",
+            onPrimary = { openLatestUpdate(updateInfo) },
+            secondaryLabel = "Open Release Page",
+            onSecondary = {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(updateInfo.pageUrl)))
+            },
+            tertiaryLabel = "Later",
+            onTertiary = {}
+        )
+    }
+
     private fun openLatestUpdate(updateInfo: AppUpdateInfo) {
+        dismissModal()
         val url = updateInfo.downloadUrl.ifBlank { updateInfo.pageUrl }
         if (url.isBlank()) {
             setLoading(false, "No APK URL available for this update.")
+            showInfoModal(
+                title = "No APK Found",
+                message = "This release does not include a downloadable APK asset.",
+                primaryLabel = "OK"
+            )
             return
         }
         lifecycleScope.launch {
@@ -992,10 +1148,44 @@ class MainActivity : ComponentActivity() {
                 setLoading(true, "Downloading update APK…")
                 val apkFile = java.io.File(cacheDir, "updates/asahi-update.apk")
                 apkDownloadManager.download(url, apkFile)
+                val installIntent = apkInstaller.buildInstallIntent(apkFile)
+                if (!apkInstaller.canRequestPackageInstalls()) {
+                    setLoading(false, "Enable install unknown apps for Asahi.")
+                    showInfoModal(
+                        title = "Enable APK Installs",
+                        message = "Android is blocking installs from Asahi right now. Allow installs from this app, then try again.",
+                        primaryLabel = "Open Settings",
+                        onPrimary = {
+                            startActivity(apkInstaller.buildManageUnknownAppsIntent())
+                        },
+                        secondaryLabel = "Cancel",
+                        onSecondary = {}
+                    )
+                    return@launch
+                }
+                if (!apkInstaller.canResolveInstallIntent(installIntent)) {
+                    setLoading(false, "No package installer available.")
+                    showInfoModal(
+                        title = "Installer Unavailable",
+                        message = "No app on this device can handle APK installation intents right now.",
+                        primaryLabel = "OK"
+                    )
+                    return@launch
+                }
                 setLoading(false, "Launching package installer…")
-                startActivity(apkInstaller.buildInstallIntent(apkFile))
+                startActivity(installIntent)
+                showInfoModal(
+                    title = "Installer Launched",
+                    message = "If Android does not show the installer, check the unknown apps permission for Asahi.",
+                    primaryLabel = "OK"
+                )
             } catch (error: Throwable) {
                 setLoading(false, "Update download/install failed: ${error.message ?: error::class.simpleName}")
+                showInfoModal(
+                    title = "Update Failed",
+                    message = error.message ?: error::class.simpleName ?: "Unknown update error.",
+                    primaryLabel = "OK"
+                )
             }
         }
     }
