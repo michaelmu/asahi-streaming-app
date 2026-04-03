@@ -13,13 +13,23 @@ val localProperties = Properties().apply {
     }
 }
 
+val computedVersionCode = run {
+    val explicit = (project.findProperty("ASAHI_VERSION_CODE") as String?)
+        ?: System.getenv("ASAHI_VERSION_CODE")
+    explicit?.toIntOrNull() ?: runCatching {
+        providers.exec {
+            commandLine("git", "rev-list", "--count", "HEAD")
+        }.standardOutput.asText.get().trim().toInt()
+    }.getOrDefault(1)
+}
+
 android {
     compileSdk = 34
 
     defaultConfig {
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
+        versionCode = computedVersionCode
         versionName = "0.1.0"
 
         val tmdbApiKey = (project.findProperty("TMDB_API_KEY") as String?)
@@ -34,6 +44,7 @@ android {
         buildConfigField("String", "TMDB_API_KEY", "\"$tmdbApiKey\"")
         buildConfigField("boolean", "TMDB_KEY_EMBEDDED", if (tmdbApiKey.isNotBlank()) "true" else "false")
         buildConfigField("String", "GIT_SHA", "\"$gitSha\"")
+        buildConfigField("int", "VERSION_CODE", computedVersionCode.toString())
     }
 
     buildFeatures {

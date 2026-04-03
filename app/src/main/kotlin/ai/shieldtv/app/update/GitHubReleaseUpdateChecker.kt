@@ -49,12 +49,21 @@ class GitHubReleaseUpdateChecker(
             return UpdateCheckResult(
                 updateInfo = AppUpdateInfo(
                     versionName = latestVersion,
+                    versionCodeHint = extractVersionCodeHint(json.optString("body")),
                     downloadUrl = apkAsset.optString("browser_download_url"),
                     pageUrl = json.optString("html_url"),
                     publishedAt = json.optString("published_at"),
                     notes = json.optString("body")
                 ),
-                statusMessage = "Update available: $latestVersion"
+                statusMessage = buildString {
+                    append("Update available: ")
+                    append(latestVersion)
+                    extractVersionCodeHint(json.optString("body"))?.let {
+                        append(" (versionCode ")
+                        append(it)
+                        append(")")
+                    }
+                }
             )
         }
 
@@ -105,6 +114,12 @@ class GitHubReleaseUpdateChecker(
             }
         }
         return false
+    }
+
+    private fun extractVersionCodeHint(notes: String?): String? {
+        if (notes.isNullOrBlank()) return null
+        val regex = Regex("Version code:\\s*`?(\\d+)`?", RegexOption.IGNORE_CASE)
+        return regex.find(notes)?.groupValues?.getOrNull(1)
     }
 
     private fun normalizeVersion(version: String): List<Int> {
