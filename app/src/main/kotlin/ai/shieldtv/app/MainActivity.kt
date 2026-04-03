@@ -292,19 +292,6 @@ class MainActivity : ComponentActivity() {
             AppDestination.SEARCH,
             AppDestination.RESULTS,
             AppDestination.SETTINGS -> false
-            AppDestination.RESUME_PROMPT -> {
-                coordinator.showSources(
-                    mediaRef = coordinator.currentState().selectedMedia
-                        ?: coordinator.currentState().selectedSource?.mediaRef
-                        ?: return false,
-                    details = coordinator.currentState().selectedDetails,
-                    seasonNumber = coordinator.currentState().selectedSeasonNumber,
-                    episodeNumber = coordinator.currentState().selectedEpisodeNumber,
-                    sources = coordinator.currentState().selectedSources
-                )
-                renderCurrentScreen()
-                true
-            }
             AppDestination.DETAILS -> {
                 coordinator.showResults(
                     query = coordinator.currentState().query,
@@ -594,8 +581,11 @@ class MainActivity : ComponentActivity() {
                         coordinator.currentState().selectedEpisodeNumber
                     )
                     if (resumePosition > 0L) {
-                        coordinator.showResumePrompt(source)
-                        renderCurrentScreen()
+                        preparePlayback(
+                            source = source,
+                            seasonNumber = coordinator.currentState().selectedSeasonNumber,
+                            episodeNumber = coordinator.currentState().selectedEpisodeNumber
+                        )
                     } else {
                         preparePlayback(
                             source = source,
@@ -606,70 +596,6 @@ class MainActivity : ComponentActivity() {
                 },
                 onFirstFocusTarget = ::focusView
             )
-            AppDestination.RESUME_PROMPT -> {
-                val source = coordinator.currentState().selectedSource
-                val resumePosition = source?.let {
-                    resumePositionFor(
-                        it,
-                        coordinator.currentState().selectedSeasonNumber,
-                        coordinator.currentState().selectedEpisodeNumber
-                    )
-                } ?: 0L
-                screenHost.addView(viewFactory.title("Resume Playback"))
-                screenHost.addView(viewFactory.spacer(8))
-                screenHost.addView(viewFactory.body(
-                    if (resumePosition > 0L) {
-                        "Continue from ${(resumePosition / 60000)}m ${(resumePosition / 1000) % 60}s, or start over?"
-                    } else {
-                        "Resume point unavailable. Start over?"
-                    }
-                ))
-                screenHost.addView(viewFactory.spacer(18))
-                val resumeButton = viewFactory.button("Resume") {
-                    source?.let {
-                        preparePlayback(
-                            source = it,
-                            seasonNumber = coordinator.currentState().selectedSeasonNumber,
-                            episodeNumber = coordinator.currentState().selectedEpisodeNumber
-                        )
-                    }
-                }.apply {
-                    isFocusable = true
-                    isFocusableInTouchMode = true
-                }
-                val startOverButton = viewFactory.button("Start Over") {
-                    source?.let {
-                        preparePlayback(
-                            source = it,
-                            seasonNumber = coordinator.currentState().selectedSeasonNumber,
-                            episodeNumber = coordinator.currentState().selectedEpisodeNumber,
-                            forceStartAtZero = true
-                        )
-                    }
-                }.apply {
-                    isFocusable = true
-                    isFocusableInTouchMode = true
-                }
-                val backButton = viewFactory.button("Back to Sources") {
-                    coordinator.showSources(
-                        mediaRef = coordinator.currentState().selectedMedia ?: source?.mediaRef ?: return@button,
-                        details = coordinator.currentState().selectedDetails,
-                        seasonNumber = coordinator.currentState().selectedSeasonNumber,
-                        episodeNumber = coordinator.currentState().selectedEpisodeNumber,
-                        sources = coordinator.currentState().selectedSources
-                    )
-                    renderCurrentScreen()
-                }.apply {
-                    isFocusable = true
-                    isFocusableInTouchMode = true
-                }
-                screenHost.addView(resumeButton)
-                screenHost.addView(viewFactory.spacer(12))
-                screenHost.addView(startOverButton)
-                screenHost.addView(viewFactory.spacer(12))
-                screenHost.addView(backButton)
-                focusView(resumeButton)
-            }
             AppDestination.PLAYER -> {
                 playerView.visibility = View.VISIBLE
                 detachPlayerFromParent()
