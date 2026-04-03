@@ -963,37 +963,43 @@ class PlayerScreenRenderer(
             }
             playerFrame.addView(errorOverlay)
         } else {
-            val subtleOverlay = LinearLayout(host.context).apply {
-                orientation = LinearLayout.VERTICAL
-                layoutParams = FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                    Gravity.TOP or Gravity.START
-                )
-                setPadding(viewFactory.dp(20))
-                addView(TextView(host.context).apply {
-                    text = source.mediaRef.title
-                    setTextColor(viewFactory.textPrimaryColor)
-                    textSize = 20f
-                    setTypeface(typeface, Typeface.BOLD)
-                })
-                addView(viewFactory.caption(buildString {
-                    append(stateLabel(playbackStateLabel))
-                    append(" • ")
-                    append(formatTime(playbackPositionMs))
-                    append(" / ")
-                    append(formatTime(playbackDurationMs))
-                    source.seasonNumber?.let { season ->
-                        val episode = source.episodeNumber ?: 1
-                        append(" • S${season.toString().padStart(2, '0')}E${episode.toString().padStart(2, '0')}")
-                    }
-                }))
-                playbackMessage?.lineSequence()?.firstOrNull()?.takeIf { it.isNotBlank() }?.let {
-                    addView(viewFactory.spacer(6))
-                    addView(viewFactory.caption(it))
-                }
+            val shouldShowOverlay = when (playbackStateLabel.lowercase()) {
+                "paused", "buffering", "ended", "idle" -> true
+                else -> false
             }
-            playerFrame.addView(subtleOverlay)
+            if (shouldShowOverlay) {
+                val subtleOverlay = LinearLayout(host.context).apply {
+                    orientation = LinearLayout.VERTICAL
+                    layoutParams = FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.WRAP_CONTENT,
+                        FrameLayout.LayoutParams.WRAP_CONTENT,
+                        Gravity.TOP or Gravity.START
+                    )
+                    setPadding(viewFactory.dp(20))
+                    addView(TextView(host.context).apply {
+                        text = source.mediaRef.title
+                        setTextColor(viewFactory.textPrimaryColor)
+                        textSize = 20f
+                        setTypeface(typeface, Typeface.BOLD)
+                    })
+                    addView(viewFactory.caption(buildString {
+                        append(stateLabel(playbackStateLabel))
+                        append(" • ")
+                        append(formatTime(playbackPositionMs))
+                        append(" / ")
+                        append(formatTime(playbackDurationMs))
+                        source.seasonNumber?.let { season ->
+                            val episode = source.episodeNumber ?: 1
+                            append(" • S${season.toString().padStart(2, '0')}E${episode.toString().padStart(2, '0')}")
+                        }
+                    }))
+                    playbackMessage?.lineSequence()?.firstOrNull()?.takeIf { it.isNotBlank() }?.let {
+                        addView(viewFactory.spacer(6))
+                        addView(viewFactory.caption(it))
+                    }
+                }
+                playerFrame.addView(subtleOverlay)
+            }
         }
 
         host.addView(playerFrame)
