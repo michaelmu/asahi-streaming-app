@@ -1,0 +1,30 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/asahi_bg" />
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#182235" />
+            <corners android:radius="18dp" />
+            <stroke android:width="1dp" android:color="#2B3952" />
+        </shape>
+    </item>
+    <item android:left="28dp" android:top="16dp" android:right="28dp" android:bottom="16dp">
+        <vector
+            android:width="320dp"
+            android:height="180dp"
+            android:viewportWidth="320"
+            android:viewportHeight="180">
+            <path
+                android:fillColor="#23C9A9"
+                android:pathData="M92,34 L146,146 H123 L111,118 H73 L61,146 H38 Z M84,96 H100 L92,77 Z" />
+            <path
+                android:fillColor="#5B8CFF"
+                android:pathData="M130,70 L182,101 L130,132 Z" />
+            <path
+                android:fillColor="#F7FAFF"
+                android:pathData="M204,70h16q12,0 19,6.5t7,17.5q0,11 -7,17.5t-19,6.5h-16zM218,83v23h3q5,0 8,-3t3,-8.5q0,-5.5 -3,-8.5t-8,-3z" />
+            <path
+                android:fillColor="#A8B3C7"
+                android:pathData="M254,70h14v48h-14z" />
+        </vector>
+    </item>
+</layer-list>
