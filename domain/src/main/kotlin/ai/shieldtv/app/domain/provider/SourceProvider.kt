@@ -7,6 +7,7 @@ interface SourceProvider {
     val id: String
     val displayName: String
     val kind: ProviderKind
+    val capabilities: ProviderCapabilities
 
     suspend fun search(request: SourceSearchRequest): List<RawProviderSource>
 }

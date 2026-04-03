@@ -21,7 +21,7 @@ class SourceRepositoryImpl(
         RealDebridDebugState.lastSourceRepositorySeen = "yes"
         RealDebridDebugState.lastSourceRepositoryMarkerPresent = if (sourceCacheMarker == null) "no" else "yes"
         val providerSummaries = mutableListOf<String>()
-        val rawResults = providerRegistry.providers.flatMap { provider ->
+        val rawResults = providerRegistry.activeProviders().flatMap { provider ->
             val normalized = provider.search(request).map { raw ->
                 sourceNormalizer.normalize(request, provider, raw)
             }
@@ -31,16 +31,8 @@ class SourceRepositoryImpl(
         RealDebridDebugState.lastSourceProviderSummary = providerSummaries.joinToString(",")
         val cacheMarked = sourceCacheMarker?.markCached(rawResults) ?: rawResults
         val shaped = ProviderModeDecider.shapeSources(cacheMarked)
-        val liveCount = shaped.count {
-            it.providerId == "torrentio" || it.rawMetadata["transport"] == "torrentio"
-        }
-        val fallbackCount = shaped.count { it.rawMetadata["fallbackMode"] == "true" }
-        RealDebridDebugState.lastSourceLiveCount = liveCount.toString()
-        RealDebridDebugState.lastSourceFallbackCount = fallbackCount.toString()
-        val torrentioPreview = RealDebridDebugState.lastTorrentioResponsePreview
-            .replace("\n", " ")
-            .replace("\r", " ")
-            .take(160)
+        RealDebridDebugState.lastSourceLiveCount = shaped.size.toString()
+        RealDebridDebugState.lastSourceFallbackCount = "0"
         println(
             buildString {
                 append("AsahiSources ")
@@ -58,20 +50,8 @@ class SourceRepositoryImpl(
                 }
                 append(" providers=")
                 append(RealDebridDebugState.lastSourceProviderSummary)
-                append(" live=")
-                append(liveCount)
-                append(" fallback=")
-                append(fallbackCount)
-                append(" torrentioParsed=")
-                append(RealDebridDebugState.lastTorrentioParsedCount)
-                RealDebridDebugState.lastTorrentioUrl.takeIf { it.isNotBlank() }?.let {
-                    append(" torrentioUrl=")
-                    append(it)
-                }
-                torrentioPreview.takeIf { it.isNotBlank() }?.let {
-                    append(" torrentioPreview=")
-                    append(it)
-                }
+                append(" resultCount=")
+                append(shaped.size)
             }
         )
         return sourceRanker.rank(shaped, SourceFilters())

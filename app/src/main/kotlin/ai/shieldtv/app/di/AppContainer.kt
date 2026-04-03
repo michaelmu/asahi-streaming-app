@@ -24,12 +24,7 @@ import ai.shieldtv.app.integration.metadata.tmdb.mapper.TmdbSeasonMapper
 import ai.shieldtv.app.integration.metadata.tmdb.repository.TmdbMetadataRepository
 import ai.shieldtv.app.integration.playback.media3.engine.Media3PlaybackEngine
 import ai.shieldtv.app.integration.scrapers.normalize.DefaultSourceNormalizer
-import ai.shieldtv.app.integration.scrapers.provider.FakeSourceProvider
-import ai.shieldtv.app.integration.scrapers.provider.HttpSourceProviderAdapter
-import ai.shieldtv.app.integration.scrapers.provider.JsonSourceProviderAdapter
 import ai.shieldtv.app.integration.scrapers.provider.ProviderRegistry
-import ai.shieldtv.app.integration.scrapers.provider.SourcesFeedFactory
-import ai.shieldtv.app.integration.scrapers.provider.sample.SampleTemplateSourceProvider
 import ai.shieldtv.app.integration.scrapers.provider.torrentio.TorrentioConfig
 import ai.shieldtv.app.integration.scrapers.provider.torrentio.TorrentioSourceProvider
 import ai.shieldtv.app.integration.scrapers.ranking.DefaultSourceRanker
@@ -87,19 +82,11 @@ object AppContainer {
     }
     private val debridCacheRepository by lazy { RealDebridCacheRepository(realDebridApi) }
 
-    private val remoteJsonSourceFeed by lazy {
-        SourcesFeedFactory.createRemoteJsonSourceFeed()
-    }
-
     private val providerRegistry by lazy {
         val providers = buildList {
             if (TorrentioConfig.isEnabled()) {
                 add(TorrentioSourceProvider(realDebridTokenProvider))
             }
-            add(FakeSourceProvider())
-            add(FakeSourceProvider(adapter = HttpSourceProviderAdapter()))
-            add(FakeSourceProvider(adapter = JsonSourceProviderAdapter(remoteJsonSourceFeed::load)))
-            add(SampleTemplateSourceProvider())
         }
         ProviderRegistry(providers = providers)
     }
