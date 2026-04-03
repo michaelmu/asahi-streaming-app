@@ -23,8 +23,11 @@ data class PlaybackSessionRecord(
 
 class PlaybackSessionStore(
     context: Context
+) : PlaybackSessionStoreBase(File(context.filesDir, "playback/session.txt"))
+
+open class PlaybackSessionStoreBase(
+    private val file: File
 ) {
-    private val file = File(context.filesDir, "playback/session.txt")
 
     fun save(item: PlaybackItem, state: PlaybackState, seasonNumber: Int?, episodeNumber: Int?) {
         file.parentFile?.mkdirs()
