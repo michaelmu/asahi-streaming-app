@@ -33,6 +33,7 @@ import ai.shieldtv.app.feature.sources.presentation.SourcesPresenter
 import ai.shieldtv.app.feature.sources.presentation.SourcesViewModel
 import ai.shieldtv.app.integration.playback.media3.engine.Media3PlaybackEngine
 import ai.shieldtv.app.integration.playback.media3.engine.Media3PlaybackEngine.RenderMode
+import ai.shieldtv.app.playback.ContinueWatchingHydrator
 import ai.shieldtv.app.playback.PlaybackRestoreDecider
 import ai.shieldtv.app.playback.PlaybackResumeDecider
 import ai.shieldtv.app.playback.RestoreTarget
@@ -346,21 +347,21 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun hydrateContinueWatchingFromPersistedSession() {
-        persistedPlaybackSession?.takeIf { it.progressPercent in 3..92 }?.let { record ->
-            coordinator.recordContinueWatching(
-                mediaRef = coordinator.currentState().selectedMedia
-                    ?: ai.shieldtv.app.core.model.media.MediaRef(
-                        mediaType = coordinator.currentState().searchMode.mediaType,
-                        ids = ai.shieldtv.app.core.model.media.MediaIds(tmdbId = null, imdbId = null, tvdbId = null),
-                        title = record.mediaTitle,
-                        year = null
-                    ),
-                artworkUrl = record.artworkUrl,
-                seasonNumber = record.seasonNumber,
-                episodeNumber = record.episodeNumber,
-                progressPercent = record.progressPercent
-            )
-        }
+        val record = persistedPlaybackSession ?: return
+        val item = ContinueWatchingHydrator.fromPersistedSession(record) ?: return
+        coordinator.recordContinueWatching(
+            mediaRef = coordinator.currentState().selectedMedia
+                ?: ai.shieldtv.app.core.model.media.MediaRef(
+                    mediaType = coordinator.currentState().searchMode.mediaType,
+                    ids = ai.shieldtv.app.core.model.media.MediaIds(tmdbId = null, imdbId = null, tvdbId = null),
+                    title = item.mediaTitle,
+                    year = null
+                ),
+            artworkUrl = item.artworkUrl,
+            seasonNumber = record.seasonNumber,
+            episodeNumber = record.episodeNumber,
+            progressPercent = item.progressPercent
+        )
     }
 
     private fun resumePositionFor(source: SourceResult, seasonNumber: Int?, episodeNumber: Int?): Long {
