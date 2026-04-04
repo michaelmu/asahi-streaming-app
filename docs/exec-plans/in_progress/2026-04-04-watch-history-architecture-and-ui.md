@@ -77,6 +77,25 @@ If the write rules are vague, the history list will feel noisy or unreliable.
 
 ---
 
+## Repository Reality Check
+
+Before implementation begins, confirm:
+- the app currently has local favorites persistence that can serve as a pattern for a parallel history subsystem
+- playback/session persistence already exists and may offer the cleanest write seam for history recording
+- Movies and TV entry-point browsing currently routes through shared renderer/state patterns that history can likely reuse
+- TV history requirements differ from favorites because TV entries should be episode-level, not show-level
+
+---
+
+## Locked Decisions
+
+- movie watch history is movie-level
+- TV watch history is episode-level
+- history should be stored locally in a lightweight subsystem, not a large library database
+- storage should support future watched-indicator lookups for movie search results and TV episode rows
+
+---
+
 ## Background / Review Summary
 
 From the current app structure:
@@ -305,6 +324,15 @@ This keeps TV history honest about what was actually watched and gives the store
 
 ---
 
+## Validation Notes / Honesty Check
+
+### Plan setup
+- Validated by: reviewed current app direction and recent favorites implementation pattern
+- Not validated: actual history-write seam in playback flow is not implemented yet
+- Known uncertainty: exact write trigger still needs to be chosen against the real playback lifecycle
+
+---
+
 ## Progress Log
 
 ### 2026-04-04 19:53 UTC
@@ -326,6 +354,7 @@ This keeps TV history honest about what was actually watched and gives the store
 - Initial requested behavior is browse-focused: expose history under Movies and TV menus with descending recency.
 - History write rules are treated as first-class scope because they determine whether the browse experience feels trustworthy.
 - Stored history data should be designed so it can later drive watched badges/indicators in search results and episode lists.
+- Future hooks to preserve: stable per-movie and per-episode lookup keys for watched-indicator rendering.
 
 ---
 

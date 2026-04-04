@@ -86,11 +86,29 @@ State:
 - immediate target
 - why this is the current priority
 
-## 6. Review Summary or Background
+This section must be updated whenever the phase or immediate target changes.
+A stale `Current Focus` section makes the whole plan misleading.
+
+## 6. Repository Reality Check
+Before implementation begins, confirm:
+- the actual files/classes involved exist
+- the current method/data-class signatures match expectations
+- any important mismatch from prior summaries or assumptions is recorded
+
+This section is intentionally lightweight, but it prevents planning against imaginary APIs.
+
+## 7. Locked Decisions
+Capture product/architecture decisions that future implementation should treat as settled for this pass.
+Examples:
+- local storage instead of database
+- episode-level instead of show-level history
+- duplicate action refreshes recency
+
+## 8. Review Summary or Background
 Explain the reasoning behind the plan.
 This is where architectural findings, UX observations, or code-review conclusions live.
 
-## 7. Phases / Task Groups
+## 9. Phases / Task Groups
 Each task group should include:
 - status
 - priority
@@ -99,17 +117,25 @@ Each task group should include:
 - proposed sub-steps
 - validation expectations
 
-## 8. Recommended Order
+## 10. Recommended Order
 List the intended order of execution.
 This reduces drift and avoids random work selection.
 
-## 9. Open Questions / Decisions Needed
+## 11. Open Questions / Decisions Needed
 Capture unresolved questions explicitly instead of hiding them in implementation.
 
-## 10. Risks / Watchouts
+## 12. Risks / Watchouts
 Document likely failure modes, churn risks, and areas where regressions are easy.
 
-## 11. Progress Log
+## 13. Validation Notes / Honesty Check
+For major milestones, record:
+- what was actually validated
+- what was not validated
+- known uncertainty or suspicious areas
+
+This is meant to reduce optimistic claims and preserve trust in the plan.
+
+## 14. Progress Log
 Append entries as work progresses.
 Each meaningful step should record:
 - timestamp
@@ -118,13 +144,13 @@ Each meaningful step should record:
 - what remains
 - any new risk or decision
 
-## 12. Scope Changes
-Log scope expansions, reductions, or intentional deferrals.
+## 15. Scope Changes
+Log scope expansions, reductions, intentional deferrals, or newly preserved future hooks.
 
-## 13. Session Start
+## 16. Session Start
 At the start of a work session, update this with the intended task.
 
-## 14. Definition of Done
+## 17. Definition of Done
 State what makes the plan complete for its intended pass.
 
 ---
@@ -159,6 +185,23 @@ Validation can be:
 - build success
 - manual flow verification
 - explicit rationale if full validation was not possible
+
+## Rule 6: Check the repo before coding against assumptions
+Before implementation, confirm the files and APIs you intend to change actually exist in the current branch.
+If the real code shape differs from the plan, record that mismatch and adapt before claiming progress.
+
+## Rule 7: Keep commits honest and scoped
+Before each commit:
+- run `git status --short`
+- confirm only intended files are staged
+- if unrelated changes are included, either split them, document them, or ask before proceeding
+
+## Rule 8: Close plans promptly when required scope is done
+If all required items are `DONE`, `DEFERRED`, `OPTIONAL`, or removed, do not leave the plan lingering in `in_progress/`.
+In the same pass:
+- update `Current Focus`
+- set final plan status truthfully
+- move it to `complete/` if no real next required slice remains
 
 ---
 
@@ -205,9 +248,10 @@ Bad plans are:
 
 Typical lifecycle:
 1. create in `in_progress/`
-2. update while implementing
-3. on completion, move to `complete/`
-4. if superseded or dropped, move to `abandoned/`
+2. do a repository reality check
+3. update while implementing
+4. on completion, move to `complete/`
+5. if superseded or dropped, move to `abandoned/`
 
 Do not duplicate the same plan across multiple folders.
 Move it.
@@ -232,8 +276,11 @@ Before calling a new exec plan ready, confirm:
 - [ ] correct filename
 - [ ] clear purpose
 - [ ] current focus section
+- [ ] repository reality check section
+- [ ] locked decisions section
 - [ ] prioritized phases/tasks
 - [ ] validation expectations
+- [ ] validation honesty section
 - [ ] progress log section
 - [ ] scope changes section
 - [ ] session start section

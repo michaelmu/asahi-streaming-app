@@ -63,6 +63,24 @@ A task is only `DONE` when:
 **Why this now:**
 <why this is the current priority>
 
+> Update this section whenever the active phase or immediate target changes.
+
+---
+
+## Repository Reality Check
+
+Before implementation begins, confirm:
+- <file/class/method actually exists>
+- <signature/state shape confirmed>
+- <important mismatch from assumptions, if any>
+
+---
+
+## Locked Decisions
+
+- <decision that should be treated as settled>
+- <decision that should be treated as settled>
+
 ---
 
 ## Background / Review Summary
@@ -178,6 +196,15 @@ Current recommendation:
 
 ---
 
+## Validation Notes / Honesty Check
+
+### <milestone or phase>
+- Validated by: <tests/build/manual flow>
+- Not validated: <what remains unverified>
+- Known uncertainty: <anything suspicious or partially inferred>
+
+---
+
 ## Progress Log
 
 ### YYYY-MM-DD HH:MM UTC
@@ -190,6 +217,7 @@ Current recommendation:
 
 ### YYYY-MM-DD
 - Initial scope established.
+- Future hooks to preserve: <data/model requirement that should shape implementation now even if UI comes later>
 
 ---
 
@@ -206,3 +234,5 @@ This plan is complete for its intended pass when:
 - all accepted items are marked `DONE`, `DEFERRED`, `OPTIONAL`, or removed
 - validation is recorded for completed work
 - major follow-up work is explicitly captured
+- `Current Focus` no longer implies unfinished required work
+- the file is ready to move out of `in_progress/` without misleading anyone
