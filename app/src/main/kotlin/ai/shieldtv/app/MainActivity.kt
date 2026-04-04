@@ -573,24 +573,6 @@ class MainActivity : ComponentActivity() {
                         renderCurrentScreen()
                     }
                 },
-                onMovieFavorites = {
-                    AppContainer.playbackEngine.stop()
-                    coordinator.showFavorites(
-                        SearchMode.MOVIES,
-                        AppContainer.favoritesCoordinator.listByType(ai.shieldtv.app.core.model.media.MediaType.MOVIE)
-                    )
-                    statusText.text = "Movie favorites"
-                    renderCurrentScreen()
-                },
-                onMovieHistory = {
-                    AppContainer.playbackEngine.stop()
-                    coordinator.showHistory(
-                        SearchMode.MOVIES,
-                        AppContainer.watchHistoryCoordinator.listResultsByType(ai.shieldtv.app.core.model.media.MediaType.MOVIE)
-                    )
-                    statusText.text = "Movie watch history"
-                    renderCurrentScreen()
-                },
                 onShows = {
                     AppContainer.playbackEngine.stop()
                     if (coordinator.currentState().searchMode == SearchMode.SHOWS && coordinator.currentState().destination == AppDestination.SEARCH) {
@@ -599,24 +581,6 @@ class MainActivity : ComponentActivity() {
                         coordinator.openSearch(SearchMode.SHOWS)
                         renderCurrentScreen()
                     }
-                },
-                onShowFavorites = {
-                    AppContainer.playbackEngine.stop()
-                    coordinator.showFavorites(
-                        SearchMode.SHOWS,
-                        AppContainer.favoritesCoordinator.listByType(ai.shieldtv.app.core.model.media.MediaType.SHOW)
-                    )
-                    statusText.text = "TV favorites"
-                    renderCurrentScreen()
-                },
-                onShowHistory = {
-                    AppContainer.playbackEngine.stop()
-                    coordinator.showHistory(
-                        SearchMode.SHOWS,
-                        AppContainer.watchHistoryCoordinator.listResultsByType(ai.shieldtv.app.core.model.media.MediaType.SHOW)
-                    )
-                    statusText.text = "TV watch history"
-                    renderCurrentScreen()
                 },
                 onSettings = {
                     AppContainer.playbackEngine.stop()
@@ -725,6 +689,38 @@ class MainActivity : ComponentActivity() {
             AppDestination.SEARCH -> searchRenderer.render(
                 state = coordinator.currentState(),
                 onSearch = ::runSearch,
+                onOpenFavorites = {
+                    if (coordinator.currentState().searchMode == SearchMode.MOVIES) {
+                        coordinator.showFavorites(
+                            SearchMode.MOVIES,
+                            AppContainer.favoritesCoordinator.listByType(ai.shieldtv.app.core.model.media.MediaType.MOVIE)
+                        )
+                        statusText.text = "Movie favorites"
+                    } else {
+                        coordinator.showFavorites(
+                            SearchMode.SHOWS,
+                            AppContainer.favoritesCoordinator.listByType(ai.shieldtv.app.core.model.media.MediaType.SHOW)
+                        )
+                        statusText.text = "TV favorites"
+                    }
+                    renderCurrentScreen()
+                },
+                onOpenHistory = {
+                    if (coordinator.currentState().searchMode == SearchMode.MOVIES) {
+                        coordinator.showHistory(
+                            SearchMode.MOVIES,
+                            AppContainer.watchHistoryCoordinator.listResultsByType(ai.shieldtv.app.core.model.media.MediaType.MOVIE)
+                        )
+                        statusText.text = "Movie watch history"
+                    } else {
+                        coordinator.showHistory(
+                            SearchMode.SHOWS,
+                            AppContainer.watchHistoryCoordinator.listResultsByType(ai.shieldtv.app.core.model.media.MediaType.SHOW)
+                        )
+                        statusText.text = "TV watch history"
+                    }
+                    renderCurrentScreen()
+                },
                 onBack = {},
                 onFirstFocusTarget = ::focusView
             )

@@ -57,11 +57,7 @@ class NavigationRailRenderer(
         inSettings: Boolean,
         onHome: () -> Unit,
         onMovies: () -> Unit,
-        onMovieFavorites: () -> Unit,
-        onMovieHistory: () -> Unit,
         onShows: () -> Unit,
-        onShowFavorites: () -> Unit,
-        onShowHistory: () -> Unit,
         onSettings: () -> Unit,
         onQuit: () -> Unit,
         onFirstFocusTarget: (View) -> Unit = {}
@@ -73,26 +69,9 @@ class NavigationRailRenderer(
         val homeButton = focusableButton("Home", onHome, selected = inHome)
         host.addView(homeButton)
         host.addView(viewFactory.spacer(10))
-
-        host.addView(viewFactory.sectionTitle("Movies"))
+        host.addView(focusableButton("Movies", onMovies, selected = !inSettings && selectedMode == SearchMode.MOVIES))
         host.addView(viewFactory.spacer(10))
-        host.addView(focusableButton("Browse Movies", onMovies, selected = !inSettings && selectedMode == SearchMode.MOVIES))
-        host.addView(viewFactory.spacer(10))
-        host.addView(focusableButton("Movie Favorites", onMovieFavorites))
-        host.addView(viewFactory.spacer(10))
-        host.addView(focusableButton("Movie Watch History", onMovieHistory))
-        host.addView(viewFactory.spacer(14))
-
-        host.addView(viewFactory.sectionTitle("TV Shows"))
-        host.addView(viewFactory.spacer(10))
-        host.addView(focusableButton("Browse TV Shows", onShows, selected = !inSettings && selectedMode == SearchMode.SHOWS))
-        host.addView(viewFactory.spacer(10))
-        host.addView(focusableButton("TV Favorites", onShowFavorites))
-        host.addView(viewFactory.spacer(10))
-        host.addView(focusableButton("TV Watch History", onShowHistory))
-        host.addView(viewFactory.spacer(14))
-
-        host.addView(viewFactory.sectionTitle("System"))
+        host.addView(focusableButton("TV Shows", onShows, selected = !inSettings && selectedMode == SearchMode.SHOWS))
         host.addView(viewFactory.spacer(10))
         host.addView(focusableButton("Settings", onSettings, selected = inSettings))
         host.addView(viewFactory.spacer(18))
@@ -476,12 +455,31 @@ class SearchScreenRenderer(
     fun render(
         state: AppState,
         onSearch: (SearchMode, String) -> Unit,
+        onOpenFavorites: () -> Unit,
+        onOpenHistory: () -> Unit,
         onBack: (() -> Unit)?,
         onFirstFocusTarget: (View) -> Unit = {}
     ) {
         val searchPanel = viewFactory.panel(elevated = true).apply {
             addView(viewFactory.pageTitle(state.searchMode.label))
             addView(viewFactory.spacer(12))
+
+            val actionRow = LinearLayout(activity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            val favoritesButton = viewFactory.button("Favorites", onClick = onOpenFavorites).apply {
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+            val historyButton = viewFactory.button("Watch History", onClick = onOpenHistory).apply {
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
+                    it.marginStart = viewFactory.dp(16)
+                }
+            }
+            actionRow.addView(favoritesButton)
+            actionRow.addView(historyButton)
+            addView(actionRow)
+            addView(viewFactory.spacer(16))
 
             val searchRow = LinearLayout(activity).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -510,7 +508,7 @@ class SearchScreenRenderer(
             searchRow.addView(searchButton)
             addView(searchRow)
 
-            searchButton.post { onFirstFocusTarget(searchButton) }
+            favoritesButton.post { onFirstFocusTarget(favoritesButton) }
         }
 
         host.addView(searchPanel)
