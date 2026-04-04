@@ -60,10 +60,10 @@ A task is only `DONE` when:
 
 **Current phase:** Complete
 
-**Immediate target:** none — the controlled settings source-preferences cleanup for this plan is complete.
+**Immediate target:** none — the broader settings-shell coordination follow-up for this plan is complete.
 
 **Why this now:**
-This plan now covers three controlled shell reductions: playback launch, browse search/detail loading, and source-preferences settings actions. Broader settings modal/auth/update flow remains separate future work.
+This plan now covers playback launch, browse search/detail loading, source-preferences settings actions, and a broader settings-shell coordinator for summaries plus auth/update entry points. Modal UI composition remains a future pass.
 
 > Update this section whenever the active phase or immediate target changes.
 
@@ -251,6 +251,16 @@ Yes for this pass, since the playback extraction stayed controlled and browse fl
 - Not validated: manual settings interaction on device in this session
 - Known uncertainty: modal-page building and auth/update actions still leave the wider settings workflow concentrated in `MainActivity`
 
+### Settings shell coordination follow-up
+- Validated by: repo inspection showing provider summaries, history/favorites status labels, auth reset/start calls, and update checks were still spread through `MainActivity`
+- Not validated: behavior after centralizing those entry points yet in this session
+- Known uncertainty: update install branching, auth result modals, and provider/size picker page composition still remain activity-owned UI workflow
+
+### After broader settings-shell coordination
+- Validated by: successful `./gradlew testDebugUnitTest assembleDebug` after introducing `SettingsCoordinator` and rewiring settings summaries plus auth/update entry points through it
+- Not validated: manual settings navigation on device in this session
+- Known uncertainty: most settings modal composition and branching still lives in `MainActivity`, so this pass reduces shell sprawl but does not finish settings extraction
+
 ---
 
 ## Progress Log
@@ -307,6 +317,16 @@ Yes for this pass, since the playback extraction stayed controlled and browse fl
 - The long-standing non-blocking Kotlin warning in `MainActivity` remains unrelated to this pass.
 - Next likely seam remains broader settings modal/auth/update flow, followed by deeper details/episodes/sources transition cleanup.
 
+### 2026-04-04 22:57 UTC
+- Continued the same plan with a broader but still controlled settings-shell pass.
+- Added an app-level `SettingsCoordinator` to centralize provider/source-preference summaries, favorites/history status labels, Real-Debrid auth reset/start entry points, and update-check entry points.
+- Intentionally left modal composition and update-install/auth-result branching in `MainActivity` to avoid collapsing too many UI responsibilities into one extraction.
+
+### 2026-04-04 22:59 UTC
+- Ran `./gradlew testDebugUnitTest assembleDebug` successfully after the broader settings-shell coordination pass.
+- The long-standing non-blocking Kotlin warning in `MainActivity` remains unrelated to this work.
+- The clearest remaining shell seams are now settings modal/action workflow and details/episodes/sources transition cleanup.
+
 ---
 
 ## Scope Changes
@@ -316,6 +336,7 @@ Yes for this pass, since the playback extraction stayed controlled and browse fl
 - Browse-flow extraction was initially kept out of required scope unless playback extraction stayed small.
 - After playback landed cleanly, browse-flow extraction was pulled into the same plan as a controlled follow-up.
 - A narrow settings source-preferences cleanup was then pulled in as another controlled follow-up.
+- A broader settings-shell coordination pass was then pulled in to centralize summaries and auth/update entry points without yet extracting modal UI composition.
 - Full settings modal/auth/update extraction remains separate follow-up work.
 - The deeper details/episodes/sources transition glue was intentionally not folded into the browse extraction to keep this pass controlled.
 
@@ -331,6 +352,9 @@ Intended task: Continue the same plan by extracting the browse flow (`runSearch`
 
 ### 2026-04-04 22:53 UTC
 Intended task: Continue the same plan with a narrow settings cleanup that routes source-preferences behavior through `SourcePreferencesCoordinator`.
+
+### 2026-04-04 22:57 UTC
+Intended task: Continue the same plan with a broader settings-shell coordinator for summaries and auth/update entry points.
 
 ---
 

@@ -171,6 +171,14 @@ class MainActivity : ComponentActivity() {
             availableProviderIds = { AppContainer.availableProviderIds().toSet() }
         )
     }
+    private val settingsCoordinator by lazy {
+        ai.shieldtv.app.settings.SettingsCoordinator(
+            sourcePreferencesCoordinator = sourcePreferencesCoordinator,
+            availableProviderLabels = { AppContainer.availableProviderLabels() },
+            realDebridAuthCoordinator = realDebridAuthCoordinator,
+            updateUiCoordinator = updateUiCoordinator
+        )
+    }
 
     private val playerControllerVisibilityTimeoutMs = 3500
 
@@ -632,7 +640,7 @@ class MainActivity : ComponentActivity() {
                             SearchMode.MOVIES,
                             AppContainer.favoritesCoordinator.listByType(ai.shieldtv.app.core.model.media.MediaType.MOVIE)
                         )
-                        statusText.text = "Movie favorites"
+                        statusText.text = settingsCoordinator.favoritesStatusLabel(ai.shieldtv.app.core.model.media.MediaType.MOVIE)
                         renderCurrentScreen()
                     },
                     onMovieHistory = {
@@ -640,7 +648,7 @@ class MainActivity : ComponentActivity() {
                             SearchMode.MOVIES,
                             AppContainer.watchHistoryCoordinator.listResultsByType(ai.shieldtv.app.core.model.media.MediaType.MOVIE)
                         )
-                        statusText.text = "Movie watch history"
+                        statusText.text = settingsCoordinator.historyStatusLabel(ai.shieldtv.app.core.model.media.MediaType.MOVIE)
                         renderCurrentScreen()
                     },
                     onBrowseShows = {
@@ -652,7 +660,7 @@ class MainActivity : ComponentActivity() {
                             SearchMode.SHOWS,
                             AppContainer.favoritesCoordinator.listByType(ai.shieldtv.app.core.model.media.MediaType.SHOW)
                         )
-                        statusText.text = "TV favorites"
+                        statusText.text = settingsCoordinator.favoritesStatusLabel(ai.shieldtv.app.core.model.media.MediaType.SHOW)
                         renderCurrentScreen()
                     },
                     onShowHistory = {
@@ -660,7 +668,7 @@ class MainActivity : ComponentActivity() {
                             SearchMode.SHOWS,
                             AppContainer.watchHistoryCoordinator.listResultsByType(ai.shieldtv.app.core.model.media.MediaType.SHOW)
                         )
-                        statusText.text = "TV watch history"
+                        statusText.text = settingsCoordinator.historyStatusLabel(ai.shieldtv.app.core.model.media.MediaType.SHOW)
                         renderCurrentScreen()
                     },
                     onOpenSettings = {
@@ -709,13 +717,13 @@ class MainActivity : ComponentActivity() {
                             SearchMode.MOVIES,
                             AppContainer.favoritesCoordinator.listByType(ai.shieldtv.app.core.model.media.MediaType.MOVIE)
                         )
-                        statusText.text = "Movie favorites"
+                        statusText.text = settingsCoordinator.favoritesStatusLabel(ai.shieldtv.app.core.model.media.MediaType.MOVIE)
                     } else {
                         coordinator.showFavorites(
                             SearchMode.SHOWS,
                             AppContainer.favoritesCoordinator.listByType(ai.shieldtv.app.core.model.media.MediaType.SHOW)
                         )
-                        statusText.text = "TV favorites"
+                        statusText.text = settingsCoordinator.favoritesStatusLabel(ai.shieldtv.app.core.model.media.MediaType.SHOW)
                     }
                     renderCurrentScreen()
                 },
@@ -725,13 +733,13 @@ class MainActivity : ComponentActivity() {
                             SearchMode.MOVIES,
                             AppContainer.watchHistoryCoordinator.listResultsByType(ai.shieldtv.app.core.model.media.MediaType.MOVIE)
                         )
-                        statusText.text = "Movie watch history"
+                        statusText.text = settingsCoordinator.historyStatusLabel(ai.shieldtv.app.core.model.media.MediaType.MOVIE)
                     } else {
                         coordinator.showHistory(
                             SearchMode.SHOWS,
                             AppContainer.watchHistoryCoordinator.listResultsByType(ai.shieldtv.app.core.model.media.MediaType.SHOW)
                         )
-                        statusText.text = "TV watch history"
+                        statusText.text = settingsCoordinator.historyStatusLabel(ai.shieldtv.app.core.model.media.MediaType.SHOW)
                     }
                     renderCurrentScreen()
                 },
@@ -851,8 +859,8 @@ class MainActivity : ComponentActivity() {
                 authState = authState,
                 activeDeviceFlow = activeDeviceFlow,
                 updateSummary = latestUpdateMessage,
-                providerSummary = buildProviderSummary(),
-                sourcePreferencesSummary = buildSourcePreferencesSummary(),
+                providerSummary = settingsCoordinator.buildProviderSummary(),
+                sourcePreferencesSummary = settingsCoordinator.buildSourcePreferencesSummary(),
                 movieMaxSizeLabel = currentSourcePreferences().movieMaxSizeGb?.let { "${it}GB" } ?: "No limit",
                 tvMaxSizeLabel = currentSourcePreferences().episodeMaxSizeGb?.let { "${it}GB" } ?: "No limit",
                 providerSelectionLabel = buildProviderSelectionLabel(),
@@ -981,7 +989,7 @@ class MainActivity : ComponentActivity() {
         val mode = coordinator.currentState().favoritesBrowseMode ?: return
         val mediaType = if (mode == SearchMode.SHOWS) ai.shieldtv.app.core.model.media.MediaType.SHOW else ai.shieldtv.app.core.model.media.MediaType.MOVIE
         coordinator.showFavorites(mode, AppContainer.favoritesCoordinator.listByType(mediaType))
-        statusText.text = if (mode == SearchMode.SHOWS) "TV favorites" else "Movie favorites"
+        statusText.text = settingsCoordinator.favoritesStatusLabel(mediaType)
         renderCurrentScreen()
     }
 
@@ -989,7 +997,7 @@ class MainActivity : ComponentActivity() {
         val mode = coordinator.currentState().historyBrowseMode ?: return
         val mediaType = if (mode == SearchMode.SHOWS) ai.shieldtv.app.core.model.media.MediaType.SHOW else ai.shieldtv.app.core.model.media.MediaType.MOVIE
         coordinator.showHistory(mode, AppContainer.watchHistoryCoordinator.listResultsByType(mediaType))
-        statusText.text = if (mode == SearchMode.SHOWS) "TV watch history" else "Movie watch history"
+        statusText.text = settingsCoordinator.historyStatusLabel(mediaType)
         renderCurrentScreen()
     }
 
@@ -1128,7 +1136,7 @@ class MainActivity : ComponentActivity() {
 
     private fun resetRealDebridAuth() {
         activeDeviceFlow = null
-        authState = realDebridAuthCoordinator.resetAuth()
+        authState = settingsCoordinator.resetAuth()
         latestSourcesError = null
         statusText.text = "Real-Debrid auth reset."
         renderCurrentScreen()
@@ -1138,7 +1146,7 @@ class MainActivity : ComponentActivity() {
         dismissModal()
         setLoading(true, "Starting Real-Debrid link flow…")
         lifecycleScope.launch {
-            when (val result = realDebridAuthCoordinator.startLink()) {
+            when (val result = settingsCoordinator.startLink()) {
                 is RealDebridLinkStartResult.Success -> {
                     activeDeviceFlow = result.value.flow
                     authState = result.value.authState
@@ -1420,21 +1428,6 @@ class MainActivity : ComponentActivity() {
         ).filterNotNull().joinToString(" | ")
     }
 
-    private fun buildProviderSummary(): String {
-        val labels = AppContainer.availableProviderLabels()
-        val allProviders = labels.keys.toSet()
-        val prefs = currentSourcePreferences()
-        val enabled = prefs.providerSelection.effectiveEnabledProviders(allProviders)
-        val modeLabel = when (prefs.providerSelection.mode) {
-            ai.shieldtv.app.settings.ProviderSelectionMode.ALL_ENABLED -> "all enabled"
-            ai.shieldtv.app.settings.ProviderSelectionMode.CUSTOM -> "custom"
-        }
-        return labels.entries.joinToString(" • ") { (id, label) ->
-            val marker = if (id in enabled) "on" else "off"
-            "$label:$marker"
-        } + " ($modeLabel)"
-    }
-
     private fun currentSourcePreferences(): SourcePreferences = sourcePreferencesCoordinator.currentPreferences()
 
     private fun currentSourceFilters(): ai.shieldtv.app.core.model.source.SourceFilters {
@@ -1443,19 +1436,6 @@ class MainActivity : ComponentActivity() {
             movieMaxSizeGb = prefs.movieMaxSizeGb,
             episodeMaxSizeGb = prefs.episodeMaxSizeGb
         )
-    }
-
-    private fun buildSourcePreferencesSummary(): String {
-        val prefs = currentSourcePreferences()
-        val allProviders = AppContainer.availableProviderIds().toSet()
-        val effectiveProviders = prefs.providerSelection.effectiveEnabledProviders(allProviders)
-        val providerMode = when (prefs.providerSelection.mode) {
-            ai.shieldtv.app.settings.ProviderSelectionMode.ALL_ENABLED -> "Providers: all enabled"
-            ai.shieldtv.app.settings.ProviderSelectionMode.CUSTOM -> "Providers: ${effectiveProviders.joinToString(", ")}"
-        }
-        val movieLimit = "Movies max: ${prefs.movieMaxSizeGb?.let { "${it}GB" } ?: "none"}"
-        val tvLimit = "TV max: ${prefs.episodeMaxSizeGb?.let { "${it}GB" } ?: "none"}"
-        return listOf(providerMode, movieLimit, tvLimit).joinToString(" • ")
     }
 
     private fun buildProviderSelectionLabel(): String = sourcePreferencesCoordinator.buildProviderSelectionLabel()
@@ -1767,7 +1747,7 @@ class MainActivity : ComponentActivity() {
         dismissModal()
         setLoading(true, "Checking for updates…")
         lifecycleScope.launch {
-            val result = updateUiCoordinator.checkForUpdates()
+            val result = settingsCoordinator.checkForUpdates()
             latestUpdateInfo = result.updateInfo
             latestUpdateMessage = result.statusMessage
             setLoading(false, result.statusMessage)
