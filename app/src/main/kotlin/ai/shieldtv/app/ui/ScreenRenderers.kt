@@ -479,20 +479,9 @@ class SearchScreenRenderer(
         onBack: (() -> Unit)?,
         onFirstFocusTarget: (View) -> Unit = {}
     ) {
-        host.addView(viewFactory.heroCard(
-            title = state.searchMode.label,
-            subtitle = when (state.searchMode) {
-                SearchMode.MOVIES -> "Search films, jump into details, then pick the best cached source."
-                SearchMode.SHOWS -> "Search series, browse episodes, and move straight into the source picker."
-            }
-        ))
-        host.addView(viewFactory.spacer())
-
         val searchPanel = viewFactory.panel(elevated = true).apply {
-            addView(viewFactory.sectionTitle("Search"))
+            addView(viewFactory.pageTitle(state.searchMode.label))
             addView(viewFactory.spacer(12))
-            addView(viewFactory.body("Lean into a Stremio-style flow: query first, results next, source chooser after that."))
-            addView(viewFactory.spacer(16))
 
             val searchRow = LinearLayout(activity).apply {
                 orientation = LinearLayout.HORIZONTAL
