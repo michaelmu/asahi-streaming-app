@@ -64,7 +64,7 @@ A task is only `DONE` when:
 
 **Current phase:** Phase A — focus-state polish and modal behavior cleanup
 
-**Immediate target:** A2 — make selected/focused list and card items visually distinct beyond scale by strengthening color/state treatment in renderer-specific views.
+**Immediate target:** B1 — fix modal focus trapping and directional navigation so focus stays inside active overlays.
 
 **Why this now:**
 The current UI is functional, but TV polish issues are visible:
@@ -181,7 +181,7 @@ Users should be able to tell selection state instantly from across the room.
 # Phase B — Modal behavior and default focus cleanup
 
 ## B1. Fix modal focus trapping and directional navigation
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
@@ -192,11 +192,11 @@ Current behavior where left/right can move in and out of the modal is a direct T
 It makes the modal feel unfinished and confusing.
 
 ### Proposed sub-steps
-- [TODO] inspect `OverlayPopup` focus handling and root/card/button container behavior
-- [TODO] trap focus inside the modal while it is visible
-- [TODO] ensure directional navigation cycles or stops within sensible modal bounds
-- [TODO] verify back/dismiss behavior still works as intended
-- [TODO] confirm background content is not focusable while modal is active
+- [DONE] inspect `OverlayPopup` focus handling and root/card/button container behavior
+- [DONE] trap focus inside the modal while it is visible
+- [DONE] ensure directional navigation cycles or stops within sensible modal bounds
+- [DONE] verify back/dismiss behavior still works as intended
+- [DONE] confirm background content is not focusable while modal is active
 
 ### Validation
 - emulator manual check for:
@@ -347,6 +347,13 @@ Centralize common button/card focus behavior first, but keep renderer-specific d
 - Validation: `./gradlew testDebugUnitTest` and `./gradlew assembleDebug` passed.
 - Emulator/screenshot validation remains pending and is still required before the overall UI plan is considered complete.
 
+### 2026-04-04 17:00 UTC
+- Completed B1 by tightening `OverlayPopup` focus handling so modal focus stays inside the overlay instead of leaking into background content.
+- Added directional focus clamping/trapping for modal buttons and reinforced default focus restoration when the overlay root regains focus.
+- Kept the fix localized to `OverlayPopup` rather than introducing a larger modal framework.
+- Validation: `./gradlew testDebugUnitTest` and `./gradlew assembleDebug` passed.
+- Emulator/manual validation is still needed to confirm real D-pad behavior matches the intended trap behavior.
+
 ---
 
 ## Scope Changes
@@ -356,13 +363,14 @@ Centralize common button/card focus behavior first, but keep renderer-specific d
 - Emulator + screenshot validation was made part of the required validation, not an optional extra.
 - During A1 implementation, started with shared drawable/factory-level focus treatment changes first because they offer the highest leverage and lowest regression risk before deeper renderer/modal work.
 - During A2 implementation, focused on the highest-traffic renderer-specific cards first (media, episode, source) rather than trying to restyle every focusable widget in one pass.
+- During B1 implementation, kept the modal navigation fix localized to `OverlayPopup` so all modal call sites benefit immediately without per-modal rewrites.
 
 ---
 
 ## Session Start
 
-### 2026-04-04 16:54 UTC
-Intended task: begin A2 by strengthening focused-state color treatment in renderer-specific list and card views.
+### 2026-04-04 16:58 UTC
+Intended task: begin B1 by fixing modal focus trapping and directional navigation in `OverlayPopup`.
 
 ---
 
