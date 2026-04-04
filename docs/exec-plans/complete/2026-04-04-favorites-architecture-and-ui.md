@@ -1,7 +1,7 @@
 # Asahi Execution Plan — Favorites Architecture and UI
 
 Last updated: 2026-04-04 UTC
-Status: IN_PROGRESS
+Status: COMPLETE
 Owner: shield-tv-bot + Mike
 Location: `docs/exec-plans/in_progress/2026-04-04-favorites-architecture-and-ui.md`
 Supersedes: none
@@ -60,19 +60,11 @@ A task is only `DONE` when:
 
 ## Current Focus
 
-**Current phase:** Phase A — favorites data model and storage design
+This pass is complete.
 
-**Immediate target:** define the clean storage/model shape for favorites so the UI work is built on something stable.
-
-**Why this now:**
-Favorites touch multiple layers:
-- media models
-- local persistence
-- search results UI
-- Movies/TV menu entry points
-- list rendering/sorting behavior
-
-If the storage and data model are sloppy, the UI will either be awkward or need rework later.
+Remaining follow-up is optional polish only:
+- optionally add favorite toggle/state to details screen
+- optionally improve discoverability for long-press item actions if testing shows users miss it
 
 ---
 
@@ -127,7 +119,7 @@ If they store too much, the model becomes a fake media database.
 ---
 
 ## A2. Add local favorites storage
-Status: IN_PROGRESS
+Status: DONE
 Priority: High
 
 ### Goal
@@ -354,8 +346,8 @@ Avoid making long-press the only way to favorite, but use it as the clean manage
 
 ## Session Start
 
-### 2026-04-04 19:45 UTC
-Intended task: add long-press item actions to results/favorites cards, including favorite/unfavorite management via modal.
+### 2026-04-04 19:52 UTC
+Intended task: close the favorites plan after implementation and validation are complete.
 
 ---
 
@@ -365,3 +357,5 @@ This plan is complete for its intended pass when:
 - accepted favorites items are marked `DONE`, `DEFERRED`, `OPTIONAL`, or removed
 - validation is recorded for completed work
 - follow-up work is explicitly captured
+
+Result: complete for this pass. Remaining items are optional polish only.
