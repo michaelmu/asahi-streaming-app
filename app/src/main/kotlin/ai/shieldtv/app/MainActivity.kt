@@ -22,6 +22,8 @@ import ai.shieldtv.app.auth.RealDebridLinkStartResult
 import ai.shieldtv.app.browse.BrowseFlowCoordinator
 import ai.shieldtv.app.browse.BrowseSearchResult
 import ai.shieldtv.app.browse.BrowseSelectionResult
+import ai.shieldtv.app.browse.DetailsNavigationCoordinator
+import ai.shieldtv.app.browse.SourceNavigationDecision
 import ai.shieldtv.app.core.model.auth.DeviceCodeFlow
 import ai.shieldtv.app.core.model.auth.RealDebridAuthState
 import ai.shieldtv.app.core.model.media.MediaRef
@@ -157,6 +159,7 @@ class MainActivity : ComponentActivity() {
             watchHistoryCoordinator = AppContainer.watchHistoryCoordinator
         )
     }
+    private val detailsNavigationCoordinator = DetailsNavigationCoordinator()
     private val playbackLaunchCoordinator by lazy {
         PlaybackLaunchCoordinator(
             playerViewModel = playerViewModel,
@@ -761,7 +764,8 @@ class MainActivity : ComponentActivity() {
                 state = coordinator.currentState(),
                 onBrowseEpisodes = {
                     coordinator.currentState().selectedDetails?.let { details ->
-                        coordinator.showEpisodes(
+                        detailsNavigationCoordinator.openEpisodes(
+                            coordinator = coordinator,
                             details = details,
                             seasonNumber = coordinator.currentState().selectedSeasonNumber ?: 1,
                             episodeNumber = coordinator.currentState().selectedEpisodeNumber ?: 1
@@ -771,8 +775,23 @@ class MainActivity : ComponentActivity() {
                 },
                 onFindSources = {
                     coordinator.currentState().selectedDetails?.let { details ->
-                        if (!ensureRealDebridLinkedForSources()) return@let
-                        loadSourcesFor(details.mediaRef, null, null)
+                        when (
+                            val decision = detailsNavigationCoordinator.requestMovieSources(
+                                authLinked = authState.isLinked,
+                                mediaRef = details.mediaRef
+                            )
+                        ) {
+                            SourceNavigationDecision.RequiresAuth -> {
+                                ensureRealDebridLinkedForSources()
+                            }
+                            is SourceNavigationDecision.LoadSources -> {
+                                loadSourcesFor(
+                                    decision.mediaRef,
+                                    decision.seasonNumber,
+                                    decision.episodeNumber
+                                )
+                            }
+                        }
                     }
                 },
                 onFirstFocusTarget = ::focusView
@@ -784,36 +803,74 @@ class MainActivity : ComponentActivity() {
                 }.orEmpty(),
                 onSeasonSelected = { season ->
                     coordinator.currentState().selectedDetails?.let { details ->
-                        coordinator.showEpisodes(details, season, 1)
+                        detailsNavigationCoordinator.selectEpisode(
+                            coordinator = coordinator,
+                            details = details,
+                            seasonNumber = season,
+                            episodeNumber = 1
+                        )
                         renderCurrentScreen()
                     }
                 },
                 onEpisodeSelected = { episode ->
                     coordinator.currentState().selectedDetails?.let { details ->
-                        coordinator.showEpisodes(
-                            details,
-                            coordinator.currentState().selectedSeasonNumber ?: 1,
-                            episode
+                        detailsNavigationCoordinator.selectEpisode(
+                            coordinator = coordinator,
+                            details = details,
+                            seasonNumber = coordinator.currentState().selectedSeasonNumber ?: 1,
+                            episodeNumber = episode
                         )
                         renderCurrentScreen()
                     }
                 },
                 onFindSources = {
                     coordinator.currentState().selectedDetails?.let { details ->
-                        if (!ensureRealDebridLinkedForSources()) return@let
-                        loadSourcesFor(
-                            details.mediaRef,
-                            coordinator.currentState().selectedSeasonNumber ?: 1,
-                            coordinator.currentState().selectedEpisodeNumber ?: 1
-                        )
+                        when (
+                            val decision = detailsNavigationCoordinator.requestEpisodeSources(
+                                authLinked = authState.isLinked,
+                                details = details,
+                                seasonNumber = coordinator.currentState().selectedSeasonNumber ?: 1,
+                                episodeNumber = coordinator.currentState().selectedEpisodeNumber ?: 1,
+                                autoSelectEpisode = false,
+                                coordinator = coordinator
+                            )
+                        ) {
+                            SourceNavigationDecision.RequiresAuth -> {
+                                ensureRealDebridLinkedForSources()
+                            }
+                            is SourceNavigationDecision.LoadSources -> {
+                                loadSourcesFor(
+                                    decision.mediaRef,
+                                    decision.seasonNumber,
+                                    decision.episodeNumber
+                                )
+                            }
+                        }
                     }
                 },
                 onEpisodePlay = { episode ->
                     coordinator.currentState().selectedDetails?.let { details ->
-                        if (!ensureRealDebridLinkedForSources()) return@let
-                        val season = coordinator.currentState().selectedSeasonNumber ?: 1
-                        coordinator.showEpisodes(details, season, episode)
-                        loadSourcesFor(details.mediaRef, season, episode)
+                        when (
+                            val decision = detailsNavigationCoordinator.requestEpisodeSources(
+                                authLinked = authState.isLinked,
+                                details = details,
+                                seasonNumber = coordinator.currentState().selectedSeasonNumber ?: 1,
+                                episodeNumber = episode,
+                                autoSelectEpisode = true,
+                                coordinator = coordinator
+                            )
+                        ) {
+                            SourceNavigationDecision.RequiresAuth -> {
+                                ensureRealDebridLinkedForSources()
+                            }
+                            is SourceNavigationDecision.LoadSources -> {
+                                loadSourcesFor(
+                                    decision.mediaRef,
+                                    decision.seasonNumber,
+                                    decision.episodeNumber
+                                )
+                            }
+                        }
                     }
                 },
                 onFirstFocusTarget = ::focusView
