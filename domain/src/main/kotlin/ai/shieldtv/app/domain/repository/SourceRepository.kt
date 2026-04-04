@@ -7,6 +7,7 @@ interface SourceRepository {
     suspend fun findSources(
         request: SourceSearchRequest,
         enabledProviderIds: Set<String> = emptySet(),
-        onProgress: ((SourceFetchProgress) -> Unit)? = null
+        onProgress: ((SourceFetchProgress) -> Unit)? = null,
+        onIncrementalResults: ((IncrementalSourceResult) -> Unit)? = null
     ): List<SourceResult>
 }

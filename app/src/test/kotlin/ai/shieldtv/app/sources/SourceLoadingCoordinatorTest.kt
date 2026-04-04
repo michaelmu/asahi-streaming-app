@@ -9,6 +9,7 @@ import ai.shieldtv.app.core.model.source.ProviderKind
 import ai.shieldtv.app.core.model.source.Quality
 import ai.shieldtv.app.core.model.source.SourceFilters
 import ai.shieldtv.app.core.model.source.SourceResult
+import ai.shieldtv.app.domain.repository.IncrementalSourceResult
 import ai.shieldtv.app.domain.repository.SourceFetchProgress
 import ai.shieldtv.app.domain.usecase.sources.FindSourcesUseCase
 import ai.shieldtv.app.feature.sources.presentation.SourcesPresenter
@@ -37,7 +38,7 @@ class SourceLoadingCoordinatorTest {
     private val dispatcher = StandardTestDispatcher()
 
     @Test
-    fun load_filters_rd_only_sources_when_auth_not_linked_and_reports_progress() = runTest(dispatcher) {
+    fun load_filters_rd_only_sources_when_auth_not_linked_reports_progress_and_incremental_updates() = runTest(dispatcher) {
         Dispatchers.setMain(dispatcher)
         try {
             val owner = TestLifecycleOwner()
@@ -61,6 +62,16 @@ class SourceLoadingCoordinatorTest {
                                 state = SourceFetchProgress.State.COMPLETED,
                                 resultCount = 2
                             )
+                        ),
+                        incrementalResults = listOf(
+                            IncrementalSourceResult(
+                                sources = listOf(
+                                    source("rd", DebridService.REAL_DEBRID),
+                                    source("direct", DebridService.NONE)
+                                ),
+                                completedProviders = 1,
+                                totalProviders = 1
+                            )
                         )
                     )
                 )
@@ -68,6 +79,7 @@ class SourceLoadingCoordinatorTest {
 
             var startedCalled = false
             val progressSnapshots = mutableListOf<List<SourceFetchProgress>>()
+            val incrementalSnapshots = mutableListOf<IncrementalSourceUpdate>()
             var result: SourceLoadResult? = null
 
             coordinator.load(
@@ -81,6 +93,7 @@ class SourceLoadingCoordinatorTest {
                 ),
                 onStarted = { startedCalled = true },
                 onProgressUpdated = { progressSnapshots += it },
+                onIncrementalUpdate = { incrementalSnapshots += it },
                 onCompleted = { result = it }
             )
 
@@ -88,6 +101,9 @@ class SourceLoadingCoordinatorTest {
 
             assertTrue(startedCalled)
             assertEquals(2, progressSnapshots.size)
+            assertEquals(1, incrementalSnapshots.size)
+            assertEquals(1, incrementalSnapshots.first().sources.size)
+            assertTrue(incrementalSnapshots.first().sources.all { it.debridService == DebridService.NONE })
             assertEquals(1, result?.sources?.size)
             assertTrue(result?.sources?.all { it.debridService == DebridService.NONE } == true)
             assertEquals(SourceFetchProgress.State.COMPLETED, coordinator.currentProgress().last().state)
@@ -108,12 +124,20 @@ class SourceLoadingCoordinatorTest {
                         providedSources = listOf(
                             source("direct", DebridService.NONE),
                             source("rd", DebridService.REAL_DEBRID)
+                        ),
+                        incrementalResults = listOf(
+                            IncrementalSourceResult(
+                                sources = listOf(source("rd", DebridService.REAL_DEBRID)),
+                                completedProviders = 1,
+                                totalProviders = 1
+                            )
                         )
                     )
                 )
             )
 
             var result: SourceLoadResult? = null
+            val incrementalSnapshots = mutableListOf<IncrementalSourceUpdate>()
             coordinator.load(
                 request = SourceLoadRequest(
                     mediaRef = mediaRef(),
@@ -125,11 +149,14 @@ class SourceLoadingCoordinatorTest {
                 ),
                 onStarted = {},
                 onProgressUpdated = {},
+                onIncrementalUpdate = { incrementalSnapshots += it },
                 onCompleted = { result = it }
             )
 
             advanceUntilIdle()
 
+            assertEquals(1, incrementalSnapshots.first().sources.size)
+            assertEquals(DebridService.REAL_DEBRID, incrementalSnapshots.first().sources.first().debridService)
             assertEquals(2, result?.sources?.size)
         } finally {
             Dispatchers.resetMain()
@@ -164,16 +191,19 @@ class SourceLoadingCoordinatorTest {
 
 private class FakeSourcesPresenter(
     private val providedSources: List<SourceResult>,
-    private val progressEvents: List<SourceFetchProgress> = emptyList()
+    private val progressEvents: List<SourceFetchProgress> = emptyList(),
+    private val incrementalResults: List<IncrementalSourceResult> = emptyList()
 ) : SourcesPresenter(
     FindSourcesUseCase(FakeSourceRepository())
 ) {
     override suspend fun load(
         request: ai.shieldtv.app.core.model.source.SourceSearchRequest,
         enabledProviderIds: Set<String>,
-        onProgress: ((SourceFetchProgress) -> Unit)?
+        onProgress: ((SourceFetchProgress) -> Unit)?,
+        onIncrementalResults: ((IncrementalSourceResult) -> Unit)?
     ): ai.shieldtv.app.feature.sources.ui.SourcesUiState {
         progressEvents.forEach { onProgress?.invoke(it) }
+        incrementalResults.forEach { onIncrementalResults?.invoke(it) }
         return ai.shieldtv.app.feature.sources.ui.SourcesUiState(sources = providedSources)
     }
 }
@@ -182,7 +212,8 @@ private class FakeSourceRepository : ai.shieldtv.app.domain.repository.SourceRep
     override suspend fun findSources(
         request: ai.shieldtv.app.core.model.source.SourceSearchRequest,
         enabledProviderIds: Set<String>,
-        onProgress: ((SourceFetchProgress) -> Unit)?
+        onProgress: ((SourceFetchProgress) -> Unit)?,
+        onIncrementalResults: ((IncrementalSourceResult) -> Unit)?
     ): List<SourceResult> = emptyList()
 }
 

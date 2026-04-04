@@ -60,7 +60,7 @@ A task is only `DONE` when:
 
 **Current phase:** Phase A — product-quality source pipeline and app orchestration
 
-**Immediate target:** A4 — improve dedupe provenance modeling so merged sources preserve origin evidence instead of flattening it into display strings.
+**Immediate target:** A5 — implement incremental source loading UX so users can see and act on partial results before every provider finishes.
 
 **Why this now:**
 The repo is in a better structural state than before, but the current bottlenecks are obvious:
@@ -240,7 +240,7 @@ It also improves diagnostics and future provider health analysis.
 ---
 
 ## A5. Incremental source loading UX
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
@@ -251,11 +251,11 @@ This is the biggest likely UX win available right now.
 You already parallelized the backend path; now the UI should benefit from it.
 
 ### Proposed sub-steps
-- [TODO] Define a progressive source-loading state model
-- [TODO] allow partial results to appear before all providers finish
-- [TODO] keep provider progress visible while results continue arriving
-- [TODO] support completion/failure without forcing a full-screen blocking modal loop
-- [TODO] ensure TV focus behavior stays sane while results append/update
+- [DONE] Define a progressive source-loading state model
+- [DONE] allow partial results to appear before all providers finish
+- [DONE] keep provider progress visible while results continue arriving
+- [DONE] support completion/failure without forcing a full-screen blocking modal loop
+- [DONE] ensure TV focus behavior stays sane while results append/update
 
 ### Validation
 - time-to-first-usable-source improves
@@ -449,6 +449,13 @@ Keep ranking opinionated by default, but design A2/A3 so profile-based variation
 - Validation: targeted ranking/dedupe tests plus `./gradlew testDebugUnitTest` passed.
 - Note: a separate live provider integration test (`BitSearchLiveIntegrationTest`) failed during one full-suite run; treated as unrelated external flakiness and not used as a blocker for this provenance change.
 
+### 2026-04-04 16:00 UTC
+- Completed A5 by extending the source repository/presenter/viewmodel path to emit incremental ranked source snapshots as providers complete.
+- Updated `SourceLoadingCoordinator` to consume incremental results and keep both progress state and partial sources available during lookup.
+- Updated `MainActivity` to enter the Sources screen immediately with an empty list, then refresh it as incremental results arrive while retaining the progress modal as optional/secondary rather than the only visible state.
+- Added coordinator test coverage for incremental updates plus existing auth-linked filtering behavior.
+- Validation: `./gradlew testDebugUnitTest` passed.
+
 ---
 
 ## Scope Changes
@@ -460,13 +467,14 @@ Keep ranking opinionated by default, but design A2/A3 so profile-based variation
 - During A2 execution, chose to keep the public `SourceRanker` interface unchanged and make scoring-rule composition an internal implementation detail to avoid unnecessary API churn.
 - During A3 execution, chose to expose explanations via `SourceRanker.explain(...)` and source diagnostics first instead of pushing explanation data through all UI state models immediately.
 - During A4 execution, chose to extend `SourceResult` with explicit `origins` rather than replacing existing provider label fields, which kept UI churn low while still preserving provenance for diagnostics and future work.
+- During A5 execution, chose to drive incremental updates from the repository layer where provider completion is known, instead of trying to fake partial results inside the loading coordinator.
 
 ---
 
 ## Session Start
 
-### 2026-04-04 15:44 UTC
-Intended task: Continue the active next-pass plan by starting A4 and preserving explicit source provenance through dedupe with minimal UI churn.
+### 2026-04-04 15:51 UTC
+Intended task: Continue the active next-pass plan by starting A5 and making source loading incrementally usable with minimal TV-focus disruption.
 
 ---
 

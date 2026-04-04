@@ -4,6 +4,7 @@ import ai.shieldtv.app.core.model.source.SourceFilters
 import ai.shieldtv.app.core.model.source.SourceResult
 import ai.shieldtv.app.core.model.source.SourceSearchRequest
 import ai.shieldtv.app.domain.provider.SourceNormalizer
+import ai.shieldtv.app.domain.repository.IncrementalSourceResult
 import ai.shieldtv.app.domain.repository.SourceFetchError
 import ai.shieldtv.app.domain.repository.SourceRepository
 import ai.shieldtv.app.domain.source.ranking.SourceCacheMarker
@@ -15,6 +16,7 @@ import ai.shieldtv.app.integration.scrapers.provider.ProviderRegistry
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.TimeoutCancellationException
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.withTimeout
 
 class SourceRepositoryImpl(
@@ -27,11 +29,14 @@ class SourceRepositoryImpl(
     override suspend fun findSources(
         request: SourceSearchRequest,
         enabledProviderIds: Set<String>,
-        onProgress: ((SourceFetchProgress) -> Unit)?
+        onProgress: ((SourceFetchProgress) -> Unit)?,
+        onIncrementalResults: ((IncrementalSourceResult) -> Unit)?
     ): List<SourceResult> {
         RealDebridDebugState.lastSourceRepositorySeen = "yes"
         RealDebridDebugState.lastSourceRepositoryMarkerPresent = if (sourceCacheMarker == null) "no" else "yes"
         val providers = providerRegistry.activeProviders(enabledProviderIds = enabledProviderIds)
+        val aggregatedNormalized = mutableListOf<SourceResult>()
+        val completedProviders = AtomicInteger(0)
         val providerResults = coroutineScope {
             providers.map { provider ->
                 async {
@@ -59,6 +64,18 @@ class SourceRepositoryImpl(
                                 latencyMs = latency
                             )
                         )
+                        synchronized(aggregatedNormalized) {
+                            aggregatedNormalized += normalized
+                            val shapedPartial = ProviderModeDecider.shapeSources(aggregatedNormalized.toList())
+                            val rankedPartial = sourceRanker.rank(shapedPartial, SourceFilters())
+                            onIncrementalResults?.invoke(
+                                IncrementalSourceResult(
+                                    sources = rankedPartial,
+                                    completedProviders = completedProviders.incrementAndGet(),
+                                    totalProviders = providers.size
+                                )
+                            )
+                        }
                         ProviderFetchResult(
                             summary = "${provider.id}:${normalized.size}",
                             normalized = normalized
@@ -77,6 +94,13 @@ class SourceRepositoryImpl(
                                 message = error.message,
                                 latencyMs = latency,
                                 errorType = errorType
+                            )
+                        )
+                        onIncrementalResults?.invoke(
+                            IncrementalSourceResult(
+                                sources = sourceRanker.rank(ProviderModeDecider.shapeSources(aggregatedNormalized.toList()), SourceFilters()),
+                                completedProviders = completedProviders.incrementAndGet(),
+                                totalProviders = providers.size
                             )
                         )
                         ProviderFetchResult(

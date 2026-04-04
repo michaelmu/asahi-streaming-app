@@ -839,6 +839,14 @@ class MainActivity : ComponentActivity() {
         }
 
         setLoading(true, "Finding sources for $searchLabel…")
+        coordinator.showSources(
+            mediaRef = mediaRef,
+            details = coordinator.currentState().selectedDetails,
+            seasonNumber = seasonNumber,
+            episodeNumber = episodeNumber,
+            sources = emptyList()
+        )
+        renderCurrentScreen()
         val prefs = currentSourcePreferences()
         sourceLoadingCoordinator.load(
             request = SourceLoadRequest(
@@ -856,7 +864,23 @@ class MainActivity : ComponentActivity() {
             },
             onProgressUpdated = {
                 runOnUiThread {
-                    showSourceProgressModal(searchLabel)
+                    if (activeModalView != null) {
+                        showSourceProgressModal(searchLabel)
+                    }
+                }
+            },
+            onIncrementalUpdate = { update ->
+                runOnUiThread {
+                    coordinator.showSources(
+                        mediaRef = mediaRef,
+                        details = coordinator.currentState().selectedDetails,
+                        seasonNumber = seasonNumber,
+                        episodeNumber = episodeNumber,
+                        sources = update.sources
+                    )
+                    latestSourceDiagnostics = buildSourceDiagnostics(update.sources) + " | progress=${update.completedProviders}/${update.totalProviders}"
+                    latestSourcesError = null
+                    renderCurrentScreen()
                 }
             },
             onCompleted = { result ->
