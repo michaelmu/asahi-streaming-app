@@ -447,6 +447,7 @@ class ResultsScreenRenderer(
         state: AppState,
         emptyMessage: String,
         onResultSelected: (SearchResult) -> Unit,
+        onResultLongPress: (SearchResult) -> Unit,
         onNewSearch: () -> Unit,
         onFirstFocusTarget: (View) -> Unit = {}
     ) {
@@ -474,7 +475,11 @@ class ResultsScreenRenderer(
         }
 
         state.searchResults.take(20).forEachIndexed { index, result ->
-            val card = focusableMediaCard(onClick = { onResultSelected(result) }, elevated = index < 4).apply {
+            val card = focusableMediaCard(
+                onClick = { onResultSelected(result) },
+                onLongPress = { onResultLongPress(result) },
+                elevated = index < 4
+            ).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
             }
@@ -526,13 +531,18 @@ class ResultsScreenRenderer(
         host.addView(viewFactory.button("New Search", onNewSearch))
     }
 
-    private fun focusableMediaCard(onClick: () -> Unit, elevated: Boolean = true): LinearLayout {
+    private fun focusableMediaCard(onClick: () -> Unit, onLongPress: () -> Unit, elevated: Boolean = true): LinearLayout {
         return viewFactory.panel(elevated = elevated).apply {
             isFocusable = true
             isFocusableInTouchMode = true
             isClickable = true
+            isLongClickable = true
             alpha = 0.97f
             setOnClickListener { onClick() }
+            setOnLongClickListener {
+                onLongPress()
+                true
+            }
             setOnFocusChangeListener { view, hasFocus ->
                 view.scaleX = if (hasFocus) 1.02f else 1f
                 view.scaleY = if (hasFocus) 1.02f else 1f
@@ -548,11 +558,16 @@ class ResultsScreenRenderer(
                 )
             }
             setOnKeyListener { _, keyCode, event ->
-                if (event.action == KeyEvent.ACTION_DOWN && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)) {
-                    onClick()
-                    true
-                } else {
-                    false
+                when {
+                    event.action == KeyEvent.ACTION_DOWN && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER) -> {
+                        onClick()
+                        true
+                    }
+                    event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_MENU -> {
+                        onLongPress()
+                        true
+                    }
+                    else -> false
                 }
             }
         }

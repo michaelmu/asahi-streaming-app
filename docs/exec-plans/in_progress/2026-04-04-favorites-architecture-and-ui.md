@@ -254,11 +254,11 @@ This may be worthwhile, but it is not required to satisfy the current requested 
 The core requested flow is favoriting from search results and browsing from movie/TV favorites menus.
 
 ## D2. Add remove-from-favorites action inside favorites lists
-Status: OPTIONAL
+Status: DONE
 Priority: Medium
 
 ### Notes
-Probably useful and likely should happen, but can be implemented once the basic list flow is stable.
+Implemented via long-press item actions so favorites management works from both search results and favorites lists without cluttering the default card UI.
 
 ---
 
@@ -270,7 +270,8 @@ Probably useful and likely should happen, but can be implemented once the basic 
 4. C1 Add Favorites entry points to Movies and TV menus
 5. C2 Render favorites lists sorted by most recent add
 6. B2 Improve favorite-state consistency in UI
-7. Optional D-items if still justified
+7. D2 Add long-press item actions and remove-from-favorites management
+8. Optional D1 if still justified
 
 ---
 
@@ -291,8 +292,8 @@ That keeps storage simpler while matching the requested Movies-vs-TV browse flow
 
 ### Q4. What is the right TV-friendly affordance for toggling favorites on search results?
 Current recommendation:
-Likely a dedicated small favorite action on the card or a clearly visible secondary action.
-Avoid hidden long-press-only interactions on TV unless the UI makes them very discoverable.
+Use click-to-open as the primary default action, and support long-press to open an item actions modal with favorite/unfavorite and other contextual actions.
+Avoid making long-press the only way to favorite, but use it as the clean management surface.
 
 ---
 
@@ -326,6 +327,18 @@ Avoid hidden long-press-only interactions on TV unless the UI makes them very di
 - Added `FavoritesCoordinator.listByType(...)` returning local `SearchResult` rows sorted newest first from the unified favorites store.
 - Validation: `./gradlew testDebugUnitTest assembleDebug` passed.
 
+### 2026-04-04 19:45 UTC
+- New product direction: add long-press item actions for results/favorites cards.
+- Goal is to keep click-to-open fast while using a modal for contextual actions such as favorite/unfavorite.
+- This will also provide the cleanest place to support direct remove-from-favorites inside favorites lists.
+
+### 2026-04-04 19:51 UTC
+- Implemented long-press item actions on results/favorites cards.
+- Results cards now support Android long-press and MENU-key actions that open a modal with contextual actions.
+- Added favorite/unfavorite management to the modal, including direct removal while browsing favorites.
+- Favorites browse lists now refresh immediately after a modal-driven toggle/remove so the current screen stays accurate.
+- Validation: `./gradlew testDebugUnitTest assembleDebug` passed.
+
 ---
 
 ## Scope Changes
@@ -335,13 +348,14 @@ Avoid hidden long-press-only interactions on TV unless the UI makes them very di
 - The requested behavior is centered on favoriting search results and browsing favorites from Movies/TV menus, so that is the core scope.
 - Started implementation from the data/storage side first to avoid building UI behavior on a shaky persistence model.
 - Reused the existing results screen for favorites browsing instead of adding a separate favorites renderer in this pass.
+- Added long-press item actions to result cards as the preferred contextual-management surface for TV.
 
 ---
 
 ## Session Start
 
-### 2026-04-04 19:35 UTC
-Intended task: continue the favorites plan by adding Favorites entry points and rendering favorites lists in Movies/TV flows.
+### 2026-04-04 19:45 UTC
+Intended task: add long-press item actions to results/favorites cards, including favorite/unfavorite management via modal.
 
 ---
 

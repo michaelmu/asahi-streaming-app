@@ -649,6 +649,7 @@ class MainActivity : ComponentActivity() {
                 state = coordinator.currentState(),
                 emptyMessage = latestSourcesError ?: "No results.",
                 onResultSelected = ::onSearchResultSelected,
+                onResultLongPress = ::showResultActions,
                 onNewSearch = {
                     coordinator.openSearch(coordinator.currentState().searchMode)
                     renderCurrentScreen()
@@ -821,6 +822,54 @@ class MainActivity : ComponentActivity() {
             setLoading(false, "Loaded details for ${details.mediaRef.title}.")
             renderCurrentScreen()
         }
+    }
+
+    private fun showResultActions(result: SearchResult) {
+        val isFavorite = AppContainer.favoritesCoordinator.isFavorited(result)
+        val isFavoritesBrowse = coordinator.currentState().favoritesBrowseMode != null
+        showInfoModal(
+            title = result.mediaRef.title,
+            message = if (isFavoritesBrowse) {
+                "Choose what to do with this favorite."
+            } else {
+                "Open details or manage this item from here."
+            },
+            primaryLabel = "Open",
+            onPrimary = {
+                onSearchResultSelected(result)
+            },
+            secondaryLabel = if (isFavorite) "Remove Favorite" else "Add Favorite",
+            onSecondary = {
+                val nowFavorite = AppContainer.favoritesCoordinator.toggle(result)
+                if (coordinator.currentState().favoritesBrowseMode != null) {
+                    refreshFavoritesBrowse()
+                } else {
+                    statusText.text = if (nowFavorite) {
+                        "Added ${result.mediaRef.title} to favorites"
+                    } else {
+                        "Removed ${result.mediaRef.title} from favorites"
+                    }
+                    renderCurrentScreen()
+                }
+            },
+            tertiaryLabel = if (isFavoritesBrowse) "Back to Search" else null,
+            onTertiary = if (isFavoritesBrowse) {
+                {
+                    coordinator.openSearch(coordinator.currentState().searchMode)
+                    renderCurrentScreen()
+                }
+            } else {
+                null
+            }
+        )
+    }
+
+    private fun refreshFavoritesBrowse() {
+        val mode = coordinator.currentState().favoritesBrowseMode ?: return
+        val mediaType = if (mode == SearchMode.SHOWS) ai.shieldtv.app.core.model.media.MediaType.SHOW else ai.shieldtv.app.core.model.media.MediaType.MOVIE
+        coordinator.showFavorites(mode, AppContainer.favoritesCoordinator.listByType(mediaType))
+        statusText.text = if (mode == SearchMode.SHOWS) "TV favorites" else "Movie favorites"
+        renderCurrentScreen()
     }
 
     private fun ensureRealDebridLinkedForSources(): Boolean {
