@@ -60,10 +60,10 @@ A task is only `DONE` when:
 
 **Current phase:** Complete
 
-**Immediate target:** none — the required playback and follow-up browse extractions for this plan are complete.
+**Immediate target:** none — the controlled settings source-preferences cleanup for this plan is complete.
 
 **Why this now:**
-This plan now covers two controlled shell extractions: playback launch and browse search/detail loading. The next likely seam is settings modal/action flow, but that belongs in a separate follow-up pass.
+This plan now covers three controlled shell reductions: playback launch, browse search/detail loading, and source-preferences settings actions. Broader settings modal/auth/update flow remains separate future work.
 
 > Update this section whenever the active phase or immediate target changes.
 
@@ -241,6 +241,16 @@ Yes for this pass, since the playback extraction stayed controlled and browse fl
 - Not validated: manual on-device browse flow in this session
 - Known uncertainty: details-to-episodes-to-sources navigation still lives in `MainActivity`, so browse logic is reduced but not fully extracted end-to-end
 
+### Settings follow-up target
+- Validated by: repo inspection showing source preference labels and mutations were still duplicated in `MainActivity` despite `SourcePreferencesCoordinator` already existing
+- Not validated: settings behavior after this cleanup yet in this session
+- Known uncertainty: auth/update/settings-modal orchestration is still a larger separate seam after the source-preferences slice is cleaned up
+
+### After settings source-preferences cleanup
+- Validated by: successful `./gradlew testDebugUnitTest assembleDebug` after routing provider selection labels, provider toggles, max-size mutations, and reset behavior through `SourcePreferencesCoordinator`
+- Not validated: manual settings interaction on device in this session
+- Known uncertainty: modal-page building and auth/update actions still leave the wider settings workflow concentrated in `MainActivity`
+
 ---
 
 ## Progress Log
@@ -282,6 +292,21 @@ Yes for this pass, since the playback extraction stayed controlled and browse fl
 - The long-standing non-blocking Kotlin warning in `MainActivity` about the Elvis operator in source diagnostics remains unrelated to this pass.
 - Next likely seam remains settings modal/action flow, followed by deeper details/episodes/sources transition cleanup.
 
+### 2026-04-04 22:53 UTC
+- Continued the same plan for a narrow settings-focused cleanup rather than starting the full settings modal/auth/update extraction.
+- Chose the source-preferences slice specifically because `SourcePreferencesCoordinator` already existed and `MainActivity` was still reimplementing much of that behavior inline.
+- Scoped this follow-up narrowly to provider-selection labels, provider toggles, max-size mutations, and reset behavior.
+
+### 2026-04-04 22:55 UTC
+- Rewired `MainActivity` to route source-preference label generation and mutations through `SourcePreferencesCoordinator`.
+- Removed duplicated provider toggle/save logic from `MainActivity` in favor of the existing coordinator.
+- Left auth, update, and modal-page orchestration untouched to avoid broadening the pass beyond the source-preferences seam.
+
+### 2026-04-04 22:56 UTC
+- Ran `./gradlew testDebugUnitTest assembleDebug` successfully after the settings cleanup.
+- The long-standing non-blocking Kotlin warning in `MainActivity` remains unrelated to this pass.
+- Next likely seam remains broader settings modal/auth/update flow, followed by deeper details/episodes/sources transition cleanup.
+
 ---
 
 ## Scope Changes
@@ -290,7 +315,8 @@ Yes for this pass, since the playback extraction stayed controlled and browse fl
 - Initial scope established as: document top refactor candidates + implement one focused extraction + update docs honestly.
 - Browse-flow extraction was initially kept out of required scope unless playback extraction stayed small.
 - After playback landed cleanly, browse-flow extraction was pulled into the same plan as a controlled follow-up.
-- Settings modal/action extraction remains the next likely seam after browse-flow cleanup.
+- A narrow settings source-preferences cleanup was then pulled in as another controlled follow-up.
+- Full settings modal/auth/update extraction remains separate follow-up work.
 - The deeper details/episodes/sources transition glue was intentionally not folded into the browse extraction to keep this pass controlled.
 
 ---
@@ -302,6 +328,9 @@ Intended task: Create the plan, document top shell refactor candidates, and extr
 
 ### 2026-04-04 22:47 UTC
 Intended task: Continue the same plan by extracting the browse flow (`runSearch` and `onSearchResultSelected`) into a focused coordinator.
+
+### 2026-04-04 22:53 UTC
+Intended task: Continue the same plan with a narrow settings cleanup that routes source-preferences behavior through `SourcePreferencesCoordinator`.
 
 ---
 

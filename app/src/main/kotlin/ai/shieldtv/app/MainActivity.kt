@@ -31,6 +31,7 @@ import ai.shieldtv.app.core.model.source.SourceResult
 import ai.shieldtv.app.core.model.source.SourceSearchRequest
 import ai.shieldtv.app.di.AppContainer
 import ai.shieldtv.app.settings.SourcePreferences
+import ai.shieldtv.app.settings.SourcePreferencesCoordinator
 import ai.shieldtv.app.domain.repository.SourceFetchProgress
 import ai.shieldtv.app.feature.DetailsFeatureFactory
 import ai.shieldtv.app.feature.PlayerFeatureFactory
@@ -162,6 +163,12 @@ class MainActivity : ComponentActivity() {
             playbackEngine = AppContainer.playbackEngine,
             playbackSessionStore = AppContainer.playbackSessionStore,
             watchHistoryCoordinator = AppContainer.watchHistoryCoordinator
+        )
+    }
+    private val sourcePreferencesCoordinator by lazy {
+        SourcePreferencesCoordinator(
+            sourcePreferencesStore = AppContainer.sourcePreferencesStore,
+            availableProviderIds = { AppContainer.availableProviderIds().toSet() }
         )
     }
 
@@ -1428,7 +1435,7 @@ class MainActivity : ComponentActivity() {
         } + " ($modeLabel)"
     }
 
-    private fun currentSourcePreferences(): SourcePreferences = AppContainer.sourcePreferencesStore.load()
+    private fun currentSourcePreferences(): SourcePreferences = sourcePreferencesCoordinator.currentPreferences()
 
     private fun currentSourceFilters(): ai.shieldtv.app.core.model.source.SourceFilters {
         val prefs = currentSourcePreferences()
@@ -1451,15 +1458,7 @@ class MainActivity : ComponentActivity() {
         return listOf(providerMode, movieLimit, tvLimit).joinToString(" • ")
     }
 
-    private fun buildProviderSelectionLabel(): String {
-        val prefs = currentSourcePreferences()
-        val allProviders = AppContainer.availableProviderIds().toSet()
-        val effectiveProviders = prefs.providerSelection.effectiveEnabledProviders(allProviders)
-        return when (prefs.providerSelection.mode) {
-            ai.shieldtv.app.settings.ProviderSelectionMode.ALL_ENABLED -> "All enabled"
-            ai.shieldtv.app.settings.ProviderSelectionMode.CUSTOM -> "${effectiveProviders.size} selected"
-        }
-    }
+    private fun buildProviderSelectionLabel(): String = sourcePreferencesCoordinator.buildProviderSelectionLabel()
 
     private fun showMovieMaxSizePicker() {
         showSizePickerModal(
@@ -1468,7 +1467,7 @@ class MainActivity : ComponentActivity() {
             values = listOf(null, 1, 2, 4, 8, 12, 16, 24, 32, 48),
             valueLabel = { it?.let { gb -> "${gb}GB" } ?: "No limit" },
             onSelected = {
-                AppContainer.sourcePreferencesStore.saveMovieMaxSizeGb(it)
+                sourcePreferencesCoordinator.setMovieMaxSizeGb(it)
                 renderCurrentScreen()
             }
         )
@@ -1481,7 +1480,7 @@ class MainActivity : ComponentActivity() {
             values = listOf(null, 1, 2, 4, 6, 8, 12, 16, 24),
             valueLabel = { it?.let { gb -> "${gb}GB" } ?: "No limit" },
             onSelected = {
-                AppContainer.sourcePreferencesStore.saveEpisodeMaxSizeGb(it)
+                sourcePreferencesCoordinator.setEpisodeMaxSizeGb(it)
                 renderCurrentScreen()
             }
         )
@@ -1565,46 +1564,19 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun toggleProvider(providerId: String) {
-        val allProviders = AppContainer.availableProviderIds().toSet()
-        val store = AppContainer.sourcePreferencesStore
-        val current = currentSourcePreferences().providerSelection
-        val working = current.effectiveEnabledProviders(allProviders).toMutableSet()
-        if (!working.add(providerId)) {
-            working.remove(providerId)
-        }
-        store.saveProviderSelection(
-            if (working == allProviders) {
-                ai.shieldtv.app.settings.ProviderSelectionState(
-                    mode = ai.shieldtv.app.settings.ProviderSelectionMode.ALL_ENABLED
-                )
-            } else {
-                ai.shieldtv.app.settings.ProviderSelectionState(
-                    mode = ai.shieldtv.app.settings.ProviderSelectionMode.CUSTOM,
-                    enabledProviders = working
-                )
-            }
-        )
+        sourcePreferencesCoordinator.toggleProvider(providerId)
         showProviderSelectionModal()
         renderCurrentScreen()
     }
 
     private fun setAllProvidersEnabled() {
-        AppContainer.sourcePreferencesStore.saveProviderSelection(
-            ai.shieldtv.app.settings.ProviderSelectionState(
-                mode = ai.shieldtv.app.settings.ProviderSelectionMode.ALL_ENABLED
-            )
-        )
+        sourcePreferencesCoordinator.enableAllProviders()
         showProviderSelectionModal()
         renderCurrentScreen()
     }
 
     private fun setNoProviderOverrides() {
-        AppContainer.sourcePreferencesStore.saveProviderSelection(
-            ai.shieldtv.app.settings.ProviderSelectionState(
-                mode = ai.shieldtv.app.settings.ProviderSelectionMode.CUSTOM,
-                enabledProviders = emptySet()
-            )
-        )
+        sourcePreferencesCoordinator.disableAllProviders()
         showProviderSelectionModal()
         renderCurrentScreen()
     }
@@ -1740,7 +1712,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun resetSourcePreferences() {
-        AppContainer.sourcePreferencesStore.reset()
+        sourcePreferencesCoordinator.reset()
         showInfoModal(
             title = "Source Preferences Reset",
             message = "Movie/TV size limits and provider overrides were reset.",
