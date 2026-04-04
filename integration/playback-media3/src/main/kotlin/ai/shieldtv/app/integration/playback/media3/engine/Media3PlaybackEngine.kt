@@ -6,9 +6,11 @@ import ai.shieldtv.app.domain.playback.PlaybackEngine
 import android.content.Context
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.VideoSize
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.mediacodec.MediaCodecRenderer
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -63,8 +65,13 @@ class Media3PlaybackEngine : PlaybackEngine {
                     )
                 }
 
-                override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                    updateState(errorMessage = error.message ?: error.errorCodeName)
+                override fun onPlayerError(error: PlaybackException) {
+                    updateState(
+                        isBuffering = false,
+                        isPlaying = false,
+                        playerStateLabel = "error",
+                        errorMessage = buildPlaybackErrorMessage(error)
+                    )
                 }
 
                 override fun onVideoSizeChanged(videoSize: VideoSize) {
@@ -98,6 +105,8 @@ class Media3PlaybackEngine : PlaybackEngine {
         currentItem = item
         pendingStartPositionMs = startPositionMs.coerceAtLeast(0L)
         player?.apply {
+            stop()
+            clearMediaItems()
             setMediaItem(MediaItem.fromUri(item.stream.url))
             if (pendingStartPositionMs > 0L) {
                 seekTo(pendingStartPositionMs)
@@ -171,5 +180,32 @@ class Media3PlaybackEngine : PlaybackEngine {
             videoSizeLabel = videoSizeLabel,
             errorMessage = errorMessage
         )
+    }
+
+    private fun buildPlaybackErrorMessage(error: PlaybackException): String {
+        val codecDetail = (error.cause as? MediaCodecRenderer.DecoderInitializationException)?.let { decoderError ->
+            buildString {
+                decoderError.mimeType?.takeIf { it.isNotBlank() }?.let {
+                    append("mime=")
+                    append(it)
+                }
+                decoderError.codecInfo?.name?.takeIf { it.isNotBlank() }?.let {
+                    if (isNotBlank()) append(' ')
+                    append("codec=")
+                    append(it)
+                }
+                decoderError.diagnosticInfo?.takeIf { it.isNotBlank() }?.let {
+                    if (isNotBlank()) append(' ')
+                    append("diagnostic=")
+                    append(it)
+                }
+            }
+        }
+
+        return listOfNotNull(
+            error.errorCodeName.takeIf { it.isNotBlank() },
+            error.message?.takeIf { it.isNotBlank() },
+            codecDetail?.takeIf { it.isNotBlank() }
+        ).joinToString(" | ").ifBlank { "Playback failed." }
     }
 }
