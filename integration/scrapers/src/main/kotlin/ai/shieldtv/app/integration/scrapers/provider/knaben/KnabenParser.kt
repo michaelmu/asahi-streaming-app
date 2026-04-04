@@ -5,7 +5,6 @@ import ai.shieldtv.app.integration.scrapers.normalize.ReleaseInfoParser
 import ai.shieldtv.app.integration.scrapers.provider.template.ProviderParser
 import org.jsoup.Jsoup
 import java.net.URLDecoder
-import java.nio.charset.StandardCharsets
 import java.util.regex.Pattern
 
 class KnabenParser : ProviderParser {
@@ -16,7 +15,7 @@ class KnabenParser : ProviderParser {
             val rows = doc.select("tr")
             rows.mapNotNull { row ->
                 val magnet = row.select("a[href^=magnet:]").firstOrNull()?.attr("href")?.ifBlank { null } ?: return@mapNotNull null
-                val normalizedMagnet = URLDecoder.decode(magnet, StandardCharsets.UTF_8)
+                val normalizedMagnet = URLDecoder.decode(magnet, "UTF-8")
                     .replace("&amp;", "&")
                     .replace("&#x3D;", "=")
                 val infoHash = extractInfoHash(normalizedMagnet) ?: return@mapNotNull null

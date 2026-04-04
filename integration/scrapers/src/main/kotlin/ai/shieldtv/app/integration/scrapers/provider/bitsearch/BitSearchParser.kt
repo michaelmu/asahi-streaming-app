@@ -5,7 +5,6 @@ import ai.shieldtv.app.integration.scrapers.normalize.ReleaseInfoParser
 import ai.shieldtv.app.integration.scrapers.provider.template.ProviderParser
 import org.jsoup.Jsoup
 import java.net.URLDecoder
-import java.nio.charset.StandardCharsets
 import java.util.regex.Pattern
 
 class BitSearchParser : ProviderParser {
@@ -19,7 +18,7 @@ class BitSearchParser : ProviderParser {
                 val magnet = container.select("a[href^=magnet:]").lastOrNull()?.attr("href")?.ifBlank { null }
                     ?: downloadLink.parent()?.select("a[href^=magnet:]")?.lastOrNull()?.attr("href")?.ifBlank { null }
                     ?: return@mapNotNull null
-                val normalizedMagnet = URLDecoder.decode(magnet, StandardCharsets.UTF_8)
+                val normalizedMagnet = URLDecoder.decode(magnet, "UTF-8")
                     .replace("&amp;", "&")
                     .replace("&#x3D;", "=")
                     .replace(" ", ".")
