@@ -53,6 +53,8 @@ import ai.shieldtv.app.playback.PlaybackResumeDecider
 import ai.shieldtv.app.playback.RestoreTarget
 import ai.shieldtv.app.playback.PlaybackSessionRecord
 import ai.shieldtv.app.navigation.AppDestination
+import ai.shieldtv.app.navigation.BackNavigationCoordinator
+import ai.shieldtv.app.navigation.BackNavigationResult
 import ai.shieldtv.app.update.ApkDownloadManager
 import ai.shieldtv.app.update.ApkInstaller
 import ai.shieldtv.app.sources.ProviderHealthTracker
@@ -160,6 +162,7 @@ class MainActivity : ComponentActivity() {
         )
     }
     private val detailsNavigationCoordinator = DetailsNavigationCoordinator()
+    private val backNavigationCoordinator = BackNavigationCoordinator()
     private val playbackLaunchCoordinator by lazy {
         PlaybackLaunchCoordinator(
             playerViewModel = playerViewModel,
@@ -395,52 +398,21 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleBackPress(): Boolean {
-        return when (coordinator.currentState().destination) {
-            AppDestination.HOME -> false
-            AppDestination.SEARCH,
-            AppDestination.RESULTS,
-            AppDestination.SETTINGS -> false
-            AppDestination.DETAILS -> {
-                coordinator.showResults(
-                    query = coordinator.currentState().query,
-                    results = coordinator.currentState().searchResults
-                )
-                renderCurrentScreen()
-                true
-            }
-            AppDestination.EPISODES -> {
-                coordinator.currentState().selectedDetails?.let {
-                    coordinator.showDetails(it.mediaRef, it)
-                    renderCurrentScreen()
-                    true
-                } ?: false
-            }
-            AppDestination.SOURCES -> {
-                val state = coordinator.currentState()
-                val details = state.selectedDetails
-                if (details != null && details.mediaRef.mediaType == ai.shieldtv.app.core.model.media.MediaType.SHOW) {
-                    coordinator.showEpisodes(details, state.selectedSeasonNumber, state.selectedEpisodeNumber)
-                } else if (details != null) {
-                    coordinator.showDetails(details.mediaRef, details)
-                } else {
-                    coordinator.showResults(state.query, state.searchResults)
+        return when (
+            val result = backNavigationCoordinator.handleBack(
+                coordinator = coordinator,
+                state = coordinator.currentState()
+            )
+        ) {
+            BackNavigationResult.Unhandled -> false
+            is BackNavigationResult.Handled -> {
+                if (result.stopPlayback) {
+                    AppContainer.playbackEngine.stop()
                 }
-                renderCurrentScreen()
-                true
-            }
-            AppDestination.PLAYER -> {
-                AppContainer.playbackEngine.stop()
-                coordinator.currentState().selectedMedia?.let { mediaRef ->
-                    coordinator.showSources(
-                        mediaRef = mediaRef,
-                        details = coordinator.currentState().selectedDetails,
-                        seasonNumber = coordinator.currentState().selectedSeasonNumber,
-                        episodeNumber = coordinator.currentState().selectedEpisodeNumber,
-                        sources = coordinator.currentState().selectedSources
-                    )
+                if (result.renderRequired) {
                     renderCurrentScreen()
-                    true
-                } ?: false
+                }
+                true
             }
         }
     }

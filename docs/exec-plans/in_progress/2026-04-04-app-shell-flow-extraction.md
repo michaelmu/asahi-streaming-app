@@ -60,10 +60,10 @@ A task is only `DONE` when:
 
 **Current phase:** Complete
 
-**Immediate target:** none — the details/episodes/sources transition cleanup for this plan is complete.
+**Immediate target:** none — the back-stack/navigation policy cleanup for this plan is complete.
 
 **Why this now:**
-This plan now covers playback launch, browse search/detail loading, settings-shell coordination, and details/episodes/sources transition policy. The remaining big shell seams are settings modal composition and back-stack/navigation policy.
+This plan now covers playback launch, browse search/detail loading, settings-shell coordination, details/episodes/sources transition policy, and back-navigation policy. The biggest remaining shell seam is now settings modal composition / remaining action branching.
 
 > Update this section whenever the active phase or immediate target changes.
 
@@ -271,6 +271,16 @@ Yes for this pass, since the playback extraction stayed controlled and browse fl
 - Not validated: manual source lookup flow on device in this session
 - Known uncertainty: source-loading progress UI, diagnostics, and completion handling still live in `MainActivity`
 
+### Back-stack/navigation follow-up
+- Validated by: repo inspection showing `handleBackPress()` still encoded destination-specific back behavior inline in `MainActivity`
+- Not validated: back-navigation behavior after extraction yet in this session
+- Known uncertainty: this pass only centralizes policy; it does not introduce a richer navigator/history stack
+
+### After back-stack/navigation cleanup
+- Validated by: successful `./gradlew testDebugUnitTest assembleDebug` after introducing `BackNavigationCoordinator` and routing back behavior through it
+- Not validated: manual controller back-navigation on device in this session
+- Known uncertainty: app navigation is still state-based rather than history-stack-based, so this remains explicit policy rather than generalized navigation infrastructure
+
 ---
 
 ## Progress Log
@@ -347,6 +357,16 @@ Yes for this pass, since the playback extraction stayed controlled and browse fl
 - The long-standing non-blocking Kotlin warning in `MainActivity` remains unrelated to this work.
 - The clearest remaining shell seams are now settings modal/action workflow and back-stack/navigation policy.
 
+### 2026-04-04 23:11 UTC
+- Continued the same plan with back-stack/navigation policy cleanup.
+- Added `BackNavigationCoordinator` to own destination-specific back behavior and to signal whether playback should be stopped on back out of player.
+- Kept navigation state mutation in `AppCoordinator` and kept rendering/playback side effects in `MainActivity`.
+
+### 2026-04-04 23:12 UTC
+- Ran `./gradlew testDebugUnitTest assembleDebug` successfully after the back-navigation cleanup.
+- The long-standing non-blocking Kotlin warning in `MainActivity` remains unrelated to this work.
+- The biggest remaining shell seam is now settings modal/action composition, with source-loading UI lifecycle as a possible later cleanup.
+
 ---
 
 ## Scope Changes
@@ -358,8 +378,10 @@ Yes for this pass, since the playback extraction stayed controlled and browse fl
 - A narrow settings source-preferences cleanup was then pulled in as another controlled follow-up.
 - A broader settings-shell coordination pass was then pulled in to centralize summaries and auth/update entry points without yet extracting modal UI composition.
 - A details/episodes/sources transition pass was then pulled in to reduce inline navigation/auth decision logic in `MainActivity`.
+- A back-stack/navigation policy pass was then pulled in to reduce remaining inline shell policy.
 - Full settings modal/auth/update extraction remains separate follow-up work.
 - Actual source-loading lifecycle management was intentionally kept out of the details/episodes/sources transition extraction.
+- No richer navigation stack/history system was introduced in the back-navigation extraction.
 
 ---
 
@@ -379,6 +401,9 @@ Intended task: Continue the same plan with a broader settings-shell coordinator 
 
 ### 2026-04-04 23:01 UTC
 Intended task: Continue the same plan with a details/episodes/sources transition coordinator.
+
+### 2026-04-04 23:11 UTC
+Intended task: Continue the same plan with a back-navigation coordinator.
 
 ---
 
