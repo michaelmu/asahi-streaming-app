@@ -60,10 +60,10 @@ A task is only `DONE` when:
 
 **Current phase:** Complete
 
-**Immediate target:** none — the auth/update modal branching cleanup for this plan is complete.
+**Immediate target:** none — the source-loading UI lifecycle extraction and hygiene sweep are complete.
 
 **Why this now:**
-This plan now covers the major app-shell seams that were concentrated in `MainActivity`. What remains is mostly generic modal helper plumbing and optional source-loading UI lifecycle cleanup rather than large workflow-specific branching.
+This plan now covers the major shell reductions requested in this pass. Remaining work is no longer about a giant `MainActivity` knot so much as normal ongoing product work and smaller maintenance decisions.
 
 > Update this section whenever the active phase or immediate target changes.
 
@@ -301,6 +301,16 @@ Yes for this pass, since the playback extraction stayed controlled and browse fl
 - Not validated: manual auth/update flow interaction on device in this session
 - Known uncertainty: final shell cleanup opportunities are now more about helper consolidation than large missing workflow coordinators
 
+### Final source-loading + hygiene sweep
+- Validated by: repo inspection showing source-loading UI application/progress modal behavior still lived inline in `MainActivity`, plus leftover dead helper methods remained from earlier extractions
+- Not validated: behavior after the final sweep yet in this session
+- Known uncertainty: this pass aims for cleanup and consolidation, not another deep architectural shift
+
+### After source-loading + hygiene sweep
+- Validated by: successful `./gradlew testDebugUnitTest assembleDebug` after introducing `SourceLoadUiCoordinator`, routing source-loading UI state/progress handling through it, and removing dead helper methods
+- Not validated: manual source-loading flow on device in this session
+- Known uncertainty: generic app-shell helper methods still exist, but there is no longer an obvious large workflow seam left from the original audit list
+
 ---
 
 ## Progress Log
@@ -407,6 +417,17 @@ Yes for this pass, since the playback extraction stayed controlled and browse fl
 - Re-ran `./gradlew testDebugUnitTest assembleDebug` successfully after the fix.
 - The long-standing non-blocking Kotlin warning in `MainActivity` remains unrelated to this work.
 
+### 2026-04-04 23:22 UTC
+- Continued the same plan with the final source-loading UI lifecycle extraction and hygiene sweep.
+- Added `SourceLoadUiCoordinator` to centralize source search label construction, shell-state application for source loading, progress modal spec creation, and diagnostics/status message composition.
+- Removed old dead local helper methods left behind by earlier settings modal extraction work.
+- Fixed the ranking-diagnostics Elvis warning by removing a no-longer-valid nullable fallback path.
+
+### 2026-04-04 23:24 UTC
+- Fixed a build break caused by a missing `SourceLoadUiCoordinator` import in `MainActivity`.
+- Re-ran `./gradlew testDebugUnitTest assembleDebug` successfully after the import fix.
+- The earlier ranking-diagnostics warning is gone; only the unrelated Android manifest warning remains during build.
+
 ---
 
 ## Scope Changes
@@ -421,7 +442,8 @@ Yes for this pass, since the playback extraction stayed controlled and browse fl
 - A back-stack/navigation policy pass was then pulled in to reduce remaining inline shell policy.
 - A partial settings modal-composition pass was then pulled in for source-preferences modal pages.
 - An auth/update modal-branching pass was then pulled in to reduce the remaining settings-shell branching.
-- Actual source-loading lifecycle management was intentionally kept out of the details/episodes/sources transition extraction.
+- A final source-loading UI lifecycle + hygiene sweep was then pulled in to finish the most obvious remaining activity-level sprawl.
+- Actual deep source-loading domain orchestration remained in `SourceLoadingCoordinator`; only shell/UI concerns moved.
 - No richer navigation stack/history system was introduced in the back-navigation extraction.
 
 ---
@@ -451,6 +473,9 @@ Intended task: Continue the same plan with a settings modal coordinator for sour
 
 ### 2026-04-04 23:17 UTC
 Intended task: Continue the same plan with auth/update modal branching cleanup.
+
+### 2026-04-04 23:22 UTC
+Intended task: Continue the same plan with source-loading UI lifecycle extraction and a final hygiene sweep.
 
 ---
 

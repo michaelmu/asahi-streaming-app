@@ -59,6 +59,7 @@ import ai.shieldtv.app.update.ApkDownloadManager
 import ai.shieldtv.app.update.ApkInstaller
 import ai.shieldtv.app.sources.ProviderHealthTracker
 import ai.shieldtv.app.sources.SourceLoadRequest
+import ai.shieldtv.app.sources.SourceLoadUiCoordinator
 import ai.shieldtv.app.sources.SourceLoadingCoordinator
 import ai.shieldtv.app.ui.DetailsScreenRenderer
 import ai.shieldtv.app.ui.EpisodePickerScreenRenderer
@@ -163,6 +164,7 @@ class MainActivity : ComponentActivity() {
     }
     private val detailsNavigationCoordinator = DetailsNavigationCoordinator()
     private val backNavigationCoordinator = BackNavigationCoordinator()
+    private val sourceLoadUiCoordinator = SourceLoadUiCoordinator()
     private val playbackLaunchCoordinator by lazy {
         PlaybackLaunchCoordinator(
             playerViewModel = playerViewModel,
@@ -1063,21 +1065,11 @@ class MainActivity : ComponentActivity() {
         latestPlaybackError = null
         AppContainer.playbackEngine.stop()
 
-        val searchLabel = if (seasonNumber != null && episodeNumber != null) {
-            "${mediaRef.title} S${seasonNumber.toString().padStart(2, '0')}E${episodeNumber.toString().padStart(2, '0')}"
-        } else {
-            mediaRef.title
-        }
+        val searchLabel = sourceLoadUiCoordinator.buildSearchLabel(mediaRef, seasonNumber, episodeNumber)
 
         providerHealthTracker.reset()
         setLoading(true, "Finding sources for $searchLabel…")
-        coordinator.showSources(
-            mediaRef = mediaRef,
-            details = coordinator.currentState().selectedDetails,
-            seasonNumber = seasonNumber,
-            episodeNumber = episodeNumber,
-            sources = emptyList()
-        )
+        sourceLoadUiCoordinator.applyInitialShellState(coordinator, mediaRef, seasonNumber, episodeNumber)
         renderCurrentScreen()
         val prefs = currentSourcePreferences()
         sourceLoadingCoordinator.load(
@@ -1104,68 +1096,69 @@ class MainActivity : ComponentActivity() {
             },
             onIncrementalUpdate = { update ->
                 runOnUiThread {
-                    coordinator.showSources(
+                    sourceLoadUiCoordinator.applyIncrementalState(
+                        coordinator = coordinator,
                         mediaRef = mediaRef,
-                        details = coordinator.currentState().selectedDetails,
                         seasonNumber = seasonNumber,
                         episodeNumber = episodeNumber,
                         sources = update.sources
                     )
-                    latestSourceDiagnostics = buildSourceDiagnostics(update.sources) +
-                        " | progress=${update.completedProviders}/${update.totalProviders}" +
-                        " | ${providerHealthTracker.summary()}"
+                    latestSourceDiagnostics = sourceLoadUiCoordinator.incrementalDiagnostics(
+                        sources = update.sources,
+                        completedProviders = update.completedProviders,
+                        totalProviders = update.totalProviders,
+                        providerSummary = providerHealthTracker.summary(),
+                        buildDiagnostics = ::buildSourceDiagnostics
+                    )
                     latestSourcesError = null
                     renderCurrentScreen()
                 }
             },
             onCompleted = { result ->
-                latestSourceDiagnostics = (result.diagnostics ?: buildSourceDiagnostics(result.sources)) +
-                    " | ${providerHealthTracker.summary()}"
+                latestSourceDiagnostics = sourceLoadUiCoordinator.completedDiagnostics(
+                    resultDiagnostics = result.diagnostics,
+                    sources = result.sources,
+                    providerSummary = providerHealthTracker.summary(),
+                    buildDiagnostics = ::buildSourceDiagnostics
+                )
                 latestSourcesError = result.error
-                coordinator.showSources(
+                sourceLoadUiCoordinator.applyIncrementalState(
+                    coordinator = coordinator,
                     mediaRef = mediaRef,
-                    details = coordinator.currentState().selectedDetails,
                     seasonNumber = seasonNumber,
                     episodeNumber = episodeNumber,
                     sources = result.sources
                 )
                 dismissModal()
-                setLoading(false, result.error ?: "Found ${result.sources.size} source(s) for $searchLabel.")
+                setLoading(false, sourceLoadUiCoordinator.completedStatusMessage(result.sources.size, searchLabel, result.error))
                 renderCurrentScreen()
             }
         )
     }
 
     private fun showSourceProgressModal(searchLabel: String) {
-        val progressItems = sourceLoadingCoordinator.currentProgress()
-        val lines = if (progressItems.isEmpty()) {
-            listOf("Preparing providers…")
-        } else {
-            progressItems.map { progress ->
-                when (progress.state) {
-                    SourceFetchProgress.State.STARTED -> "${progress.providerDisplayName}: querying…"
-                    SourceFetchProgress.State.COMPLETED -> "${progress.providerDisplayName}: ${progress.resultCount ?: 0} result(s)"
-                    SourceFetchProgress.State.FAILED -> "${progress.providerDisplayName}: failed${progress.message?.let { " (${it.take(60)})" } ?: ""}"
-                }
-            }
-        }
-        showInfoModal(
-            title = "Finding Sources",
-            message = buildString {
-                appendLine(searchLabel)
-                appendLine()
-                append(lines.joinToString("\n"))
-            },
-            primaryLabel = "Keep Waiting",
-            onPrimary = { showSourceProgressModal(searchLabel) },
-            secondaryLabel = "Cancel",
-            onSecondary = {
+        val spec = sourceLoadUiCoordinator.progressSpec(
+            searchLabel = searchLabel,
+            progressItems = sourceLoadingCoordinator.currentProgress(),
+            onKeepWaiting = { showSourceProgressModal(searchLabel) },
+            onCancel = {
                 sourceLoadingCoordinator.cancel()
                 dismissModal()
                 setLoading(false, "Source lookup cancelled.")
-            },
-            dismissOnBack = false,
-            defaultAction = ModalDefaultAction.PRIMARY
+            }
+        )
+        showInfoModal(
+            title = spec.title,
+            message = spec.message,
+            primaryLabel = spec.primaryLabel,
+            onPrimary = spec.onPrimary,
+            secondaryLabel = spec.secondaryLabel,
+            onSecondary = spec.onSecondary,
+            tertiaryLabel = spec.tertiaryLabel,
+            onTertiary = spec.onTertiary,
+            dismissOnBack = spec.dismissOnBack,
+            defaultAction = spec.defaultAction,
+            customContent = spec.customContent
         )
     }
 
@@ -1460,7 +1453,7 @@ class MainActivity : ComponentActivity() {
         val directCount = sources.count { it.cacheStatus == CacheStatus.DIRECT }
         val fallbackCount = sources.count { it.cacheStatus == CacheStatus.UNCACHED || it.cacheStatus == CacheStatus.UNCHECKED }
         val topRankExplanation = sources.firstOrNull()?.let { top ->
-            val explanation = AppContainer.explainSourceRanking(top) ?: return@let null
+            val explanation = AppContainer.explainSourceRanking(top)
             val topContributions = explanation.contributions
                 .sortedByDescending { kotlin.math.abs(it.value) }
                 .take(4)
@@ -1553,10 +1546,6 @@ class MainActivity : ComponentActivity() {
         showProviderSelectionPage(startIndex = 0)
     }
 
-    private fun formatProviderChoiceLabel(label: String, enabled: Boolean): String {
-        return if (enabled) "Disable $label" else "Enable $label"
-    }
-
     private fun showProviderSelectionPage(startIndex: Int) {
         val spec = settingsModalCoordinator.providerSelectionSpec(
             startIndex = startIndex,
@@ -1621,135 +1610,6 @@ class MainActivity : ComponentActivity() {
         renderCurrentScreen()
     }
 
-    private fun buildProviderToggleList(
-        labels: Map<String, String>,
-        allProviders: List<String>,
-        effectiveEnabled: Set<String>
-    ): View {
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            allProviders.forEachIndexed { index, providerId ->
-                val enabled = providerId in effectiveEnabled
-                val row = viewFactory.panel(vertical = false, elevated = false).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = android.view.Gravity.CENTER_VERTICAL
-                    setPadding(viewFactory.dp(16), viewFactory.dp(12), viewFactory.dp(16), viewFactory.dp(12))
-                    isFocusable = true
-                    isFocusableInTouchMode = true
-                    alpha = 0.97f
-                    nextFocusUpId = id
-                    nextFocusDownId = id
-                    setOnClickListener {
-                        toggleProvider(providerId)
-                    }
-                    setOnFocusChangeListener { view, hasFocus ->
-                        view.scaleX = if (hasFocus) 1.01f else 1f
-                        view.scaleY = if (hasFocus) 1.01f else 1f
-                        view.alpha = if (hasFocus) 1f else 0.97f
-                        background = androidx.core.content.ContextCompat.getDrawable(
-                            context,
-                            if (hasFocus) ai.shieldtv.app.R.drawable.asahi_button_bg else ai.shieldtv.app.R.drawable.asahi_panel_bg
-                        )
-                    }
-                }
-                val name = android.widget.TextView(this@MainActivity).apply {
-                    text = labels[providerId] ?: providerId
-                    setTextColor(viewFactory.textPrimaryColor)
-                    textSize = 17f
-                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                }
-                val badge = android.widget.TextView(this@MainActivity).apply {
-                    text = if (enabled) "ON" else "OFF"
-                    setTextColor(if (enabled) viewFactory.textPrimaryColor else viewFactory.textSecondaryColor)
-                    textSize = 14f
-                    setTypeface(typeface, android.graphics.Typeface.BOLD)
-                    background = androidx.core.content.ContextCompat.getDrawable(
-                        context,
-                        if (enabled) ai.shieldtv.app.R.drawable.asahi_chip_bg else ai.shieldtv.app.R.drawable.asahi_panel_bg
-                    )
-                    setPadding(viewFactory.dp(12), viewFactory.dp(6), viewFactory.dp(12), viewFactory.dp(6))
-                }
-                row.addView(name)
-                row.addView(badge)
-                addView(row)
-                if (index < allProviders.lastIndex) {
-                    addView(viewFactory.spacer(8))
-                }
-            }
-        }
-    }
-
-    private fun showSizePickerModal(
-        title: String,
-        currentValue: Int?,
-        values: List<Int?>,
-        valueLabel: (Int?) -> String,
-        onSelected: (Int?) -> Unit
-    ) {
-        showSizePickerPage(
-            title = title,
-            currentValue = currentValue,
-            values = values,
-            startIndex = 0,
-            valueLabel = valueLabel,
-            onSelected = onSelected
-        )
-    }
-
-    private fun showSizePickerPage(
-        title: String,
-        currentValue: Int?,
-        values: List<Int?>,
-        startIndex: Int,
-        valueLabel: (Int?) -> String,
-        onSelected: (Int?) -> Unit
-    ) {
-        val page = values.drop(startIndex).take(3)
-        showInfoModal(
-            title = title,
-            message = buildString {
-                appendLine("Current: ${valueLabel(currentValue)}")
-                appendLine()
-                appendLine(values.joinToString("\n") { value ->
-                    val marker = if (value == currentValue) "[x]" else "[ ]"
-                    "$marker ${valueLabel(value)}"
-                })
-            },
-            primaryLabel = page.getOrNull(0)?.let(valueLabel) ?: "Done",
-            onPrimary = {
-                val value = page.getOrNull(0)
-                if (value != null) {
-                    onSelected(value)
-                    showSizePickerPage(title, value, values, startIndex, valueLabel, onSelected)
-                }
-            },
-            secondaryLabel = page.getOrNull(1)?.let(valueLabel) ?: if (startIndex + 3 < values.size) "More…" else "Done",
-            onSecondary = {
-                val value = page.getOrNull(1)
-                when {
-                    value != null -> {
-                        onSelected(value)
-                        showSizePickerPage(title, value, values, startIndex, valueLabel, onSelected)
-                    }
-                    startIndex + 3 < values.size -> showSizePickerPage(title, currentValue, values, startIndex + 3, valueLabel, onSelected)
-                    else -> {}
-                }
-            },
-            tertiaryLabel = page.getOrNull(2)?.let(valueLabel) ?: if (startIndex > 0) "Back" else "Done",
-            onTertiary = {
-                val value = page.getOrNull(2)
-                when {
-                    value != null -> {
-                        onSelected(value)
-                        showSizePickerPage(title, value, values, startIndex, valueLabel, onSelected)
-                    }
-                    startIndex > 0 -> showSizePickerPage(title, currentValue, values, (startIndex - 3).coerceAtLeast(0), valueLabel, onSelected)
-                    else -> {}
-                }
-            },
-            defaultAction = ModalDefaultAction.PRIMARY
-        )
-    }
 
     private fun resetSourcePreferences() {
         sourcePreferencesCoordinator.reset()
