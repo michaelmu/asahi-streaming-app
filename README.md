@@ -26,6 +26,7 @@ The current direction remains a fully in-app provider model with no required cus
 
 Practical focus areas now are:
 - improving the browse → source selection → playback experience on TV
+- continuing to thin the app shell by extracting workflow coordinators out of `MainActivity`
 - improving provider visibility, diagnostics, and eventual toggles
 - keeping the provider stack high-signal instead of porting a large number of brittle scrapers
 - continuing real-device/emulator validation alongside fast JVM sanity checks
@@ -49,6 +50,7 @@ Useful docs for day-to-day work:
 - `docs/PROVIDER_RESEARCH.md`
 - `docs/PROVIDER_ARCHITECTURE_NOTES.md`
 - `docs/UPGRADE_FLOW_NOTES.md`
+- `docs/APP_SHELL_REVIEW_2026-04-04.md`
 
 ## Planning / reference docs
 See `docs/` for broader planning and architecture notes, including:

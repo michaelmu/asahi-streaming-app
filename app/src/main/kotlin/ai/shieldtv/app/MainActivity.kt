@@ -23,7 +23,6 @@ import ai.shieldtv.app.core.model.auth.DeviceCodeFlow
 import ai.shieldtv.app.core.model.auth.RealDebridAuthState
 import ai.shieldtv.app.core.model.media.MediaRef
 import ai.shieldtv.app.core.model.media.SearchResult
-import ai.shieldtv.app.core.model.source.DebridService
 import ai.shieldtv.app.core.model.source.CacheStatus
 import ai.shieldtv.app.core.model.source.SourceResult
 import ai.shieldtv.app.core.model.source.SourceSearchRequest
@@ -42,6 +41,8 @@ import ai.shieldtv.app.integration.debrid.realdebrid.debug.RealDebridDebugState
 import ai.shieldtv.app.integration.playback.media3.engine.Media3PlaybackEngine
 import ai.shieldtv.app.integration.playback.media3.engine.Media3PlaybackEngine.RenderMode
 import ai.shieldtv.app.playback.ContinueWatchingHydrator
+import ai.shieldtv.app.playback.PlaybackLaunchCoordinator
+import ai.shieldtv.app.playback.PlaybackLaunchResult
 import ai.shieldtv.app.playback.PlaybackRestoreDecider
 import ai.shieldtv.app.playback.PlaybackResumeDecider
 import ai.shieldtv.app.playback.RestoreTarget
@@ -158,6 +159,14 @@ class MainActivity : ComponentActivity() {
         )
     }
     private val providerHealthTracker = ProviderHealthTracker()
+    private val playbackLaunchCoordinator by lazy {
+        PlaybackLaunchCoordinator(
+            playerViewModel = playerViewModel,
+            playbackEngine = AppContainer.playbackEngine,
+            playbackSessionStore = AppContainer.playbackSessionStore,
+            watchHistoryCoordinator = AppContainer.watchHistoryCoordinator
+        )
+    }
 
     private val playerControllerVisibilityTimeoutMs = 3500
 
@@ -1316,10 +1325,10 @@ class MainActivity : ComponentActivity() {
         episodeNumber: Int? = source.episodeNumber,
         forceStartAtZero: Boolean = false
     ) {
-        if (source.debridService == DebridService.REAL_DEBRID && !authState.isLinked) {
-            latestPlaybackError = "Real-Debrid link required before playback."
-            latestPlaybackMessage = "This source needs Real-Debrid. Link your account in Settings / Accounts, then try again."
-            statusText.text = "Real-Debrid link required before playback."
+        playbackLaunchCoordinator.shouldBlockPlayback(source, authState.isLinked)?.let { blocked ->
+            latestPlaybackError = blocked.playbackError
+            latestPlaybackMessage = blocked.playbackMessage
+            statusText.text = blocked.statusMessage
             coordinator.openSettings()
             renderCurrentScreen()
             return
@@ -1330,54 +1339,37 @@ class MainActivity : ComponentActivity() {
         setLoading(true, "Resolving ${source.displayName}…")
 
         lifecycleScope.launch {
-            val state = playerViewModel.prepare(
-                source = source,
-                seasonNumber = seasonNumber,
-                episodeNumber = episodeNumber,
-                startPositionMs = if (forceStartAtZero) 0L else resumePositionFor(source, seasonNumber, episodeNumber)
-            )
-            latestPlaybackError = state.error
-            latestPlaybackMessage = if (state.prepared) null else buildString {
-                appendLine("Playback preparation failed.")
-                appendLine("Current item: ${AppContainer.playbackEngine.getCurrentItem()?.title ?: source.displayName}")
-                appendLine("Stream URL: ${state.playbackUrl ?: AppContainer.playbackEngine.getCurrentUrl() ?: source.url}")
-                appendLine("Player state: ${latestPlaybackState.playerStateLabel}")
-                appendLine("Video format: ${latestPlaybackState.videoFormat ?: "unknown"}")
-                appendLine("Video size: ${latestPlaybackState.videoSizeLabel ?: "unknown"}")
-                append("Playback error type: ${state.errorType ?: "unknown"}")
-                appendLine()
-                append("Playback error: ${latestPlaybackState.errorMessage ?: state.error ?: "none"}")
-            }
-            setLoading(false, state.error ?: if (state.prepared) "Playback item prepared." else "Playback not prepared.")
-            if (state.prepared) {
-                val progressPercent = when {
-                    latestPlaybackState.durationMs > 0 -> ((latestPlaybackState.positionMs * 100) / latestPlaybackState.durationMs).toInt()
-                    else -> 8
-                }
-                coordinator.recordContinueWatching(
-                    mediaRef = source.mediaRef,
-                    artworkUrl = coordinator.currentState().selectedDetails?.backdropUrl
-                        ?: coordinator.currentState().selectedDetails?.posterUrl,
+            when (
+                val result = playbackLaunchCoordinator.launch(
+                    source = source,
                     seasonNumber = seasonNumber,
                     episodeNumber = episodeNumber,
-                    progressPercent = progressPercent
+                    startPositionMs = if (forceStartAtZero) 0L else resumePositionFor(source, seasonNumber, episodeNumber),
+                    latestPlaybackState = latestPlaybackState,
+                    coordinator = coordinator,
+                    artworkUrl = coordinator.currentState().selectedDetails?.backdropUrl
+                        ?: coordinator.currentState().selectedDetails?.posterUrl
                 )
-                AppContainer.playbackEngine.getCurrentItem()?.let { currentItem ->
-                    AppContainer.playbackSessionStore.saveActiveResume(
-                        item = currentItem,
-                        state = latestPlaybackState,
-                        seasonNumber = seasonNumber,
-                        episodeNumber = episodeNumber
-                    )
-                    AppContainer.watchHistoryCoordinator.recordPlayback(
-                        item = currentItem,
-                        seasonNumber = seasonNumber,
-                        episodeNumber = episodeNumber
-                    )
-                    persistedPlaybackSession = AppContainer.playbackSessionStore.loadActiveResume()
+            ) {
+                is PlaybackLaunchResult.Blocked -> {
+                    latestPlaybackError = result.playbackError
+                    latestPlaybackMessage = result.playbackMessage
+                    setLoading(false, result.statusMessage)
+                    coordinator.openSettings()
                 }
-                coordinator.showPlayer(source)
-                AppContainer.playbackEngine.play()
+                is PlaybackLaunchResult.Failed -> {
+                    latestPlaybackError = result.playbackError
+                    latestPlaybackMessage = result.playbackMessage
+                    setLoading(false, result.statusMessage)
+                }
+                is PlaybackLaunchResult.Prepared -> {
+                    latestPlaybackError = null
+                    latestPlaybackMessage = null
+                    setLoading(false, result.statusMessage)
+                    persistedPlaybackSession = AppContainer.playbackSessionStore.loadActiveResume()
+                    coordinator.showPlayer(result.selectedSource)
+                    AppContainer.playbackEngine.play()
+                }
             }
             renderCurrentScreen()
         }
