@@ -22,5 +22,16 @@ data class SourceResult(
     val score: Double? = null,
     val providerIds: Set<String> = setOf(providerId),
     val providerDisplayNames: Set<String> = setOf(providerDisplayName),
-    val rawMetadata: Map<String, String> = emptyMap()
+    val rawMetadata: Map<String, String> = emptyMap(),
+    val origins: List<SourceOrigin> = listOf(
+        SourceOrigin(
+            providerId = providerId,
+            providerDisplayName = providerDisplayName,
+            displayName = displayName,
+            cacheStatus = cacheStatus,
+            sizeBytes = sizeBytes,
+            seeders = rawMetadata["seeders"]?.toIntOrNull(),
+            quality = quality
+        )
+    )
 )

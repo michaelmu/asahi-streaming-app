@@ -60,7 +60,7 @@ A task is only `DONE` when:
 
 **Current phase:** Phase A — product-quality source pipeline and app orchestration
 
-**Immediate target:** A3 — add ranking explanations and diagnostics on top of the new composable scoring pipeline.
+**Immediate target:** A4 — improve dedupe provenance modeling so merged sources preserve origin evidence instead of flattening it into display strings.
 
 **Why this now:**
 The repo is in a better structural state than before, but the current bottlenecks are obvious:
@@ -217,7 +217,7 @@ They also create a path toward user-facing trust signals later.
 ---
 
 ## A4. Improve dedupe provenance modeling
-Status: TODO
+Status: DONE
 Priority: Medium
 
 ### Goal
@@ -228,10 +228,10 @@ This becomes more valuable after ranking explanations exist.
 It also improves diagnostics and future provider health analysis.
 
 ### Proposed sub-steps
-- [TODO] Introduce explicit provenance/origin model
-- [TODO] Preserve origin list during info-hash dedupe
-- [TODO] Keep existing source list UI working with minimal churn
-- [TODO] Use provenance to improve merged-source diagnostics
+- [DONE] Introduce explicit provenance/origin model
+- [DONE] Preserve origin list during info-hash dedupe
+- [DONE] Keep existing source list UI working with minimal churn
+- [DONE] Use provenance to improve merged-source diagnostics
 
 ### Validation
 - merged sources keep meaningful origin detail
@@ -442,6 +442,13 @@ Keep ranking opinionated by default, but design A2/A3 so profile-based variation
 - Kept UI impact intentionally minimal and avoided broad source-model churn in this pass.
 - Validation: full `./gradlew test` passed.
 
+### 2026-04-04 15:54 UTC
+- Completed A4 by introducing `SourceOrigin` on `SourceResult` and preserving merged origin evidence through info-hash dedupe.
+- Updated dedupe metadata/diagnostics to reflect origin counts and origin summaries instead of only flattened provider labels.
+- Added focused deduper tests covering merged provenance retention and non-hash pass-through behavior.
+- Validation: targeted ranking/dedupe tests plus `./gradlew testDebugUnitTest` passed.
+- Note: a separate live provider integration test (`BitSearchLiveIntegrationTest`) failed during one full-suite run; treated as unrelated external flakiness and not used as a blocker for this provenance change.
+
 ---
 
 ## Scope Changes
@@ -452,13 +459,14 @@ Keep ranking opinionated by default, but design A2/A3 so profile-based variation
 - During A1 execution, chose to extract auth/update workflow coordination first because it offered the cleanest boundary with low regression risk compared with modal-system or playback-flow extraction.
 - During A2 execution, chose to keep the public `SourceRanker` interface unchanged and make scoring-rule composition an internal implementation detail to avoid unnecessary API churn.
 - During A3 execution, chose to expose explanations via `SourceRanker.explain(...)` and source diagnostics first instead of pushing explanation data through all UI state models immediately.
+- During A4 execution, chose to extend `SourceResult` with explicit `origins` rather than replacing existing provider label fields, which kept UI churn low while still preserving provenance for diagnostics and future work.
 
 ---
 
 ## Session Start
 
-### 2026-04-04 15:39 UTC
-Intended task: Continue the active next-pass plan by starting A3 and surfacing ranking explanations through diagnostics with minimal UI churn.
+### 2026-04-04 15:44 UTC
+Intended task: Continue the active next-pass plan by starting A4 and preserving explicit source provenance through dedupe with minimal UI churn.
 
 ---
 

@@ -1184,7 +1184,20 @@ class MainActivity : ComponentActivity() {
                 .joinToString(", ") { contribution ->
                     "${contribution.rule}:${contribution.value}"
                 }
-            "top=${top.displayName.take(60)} score=${explanation.totalScore} [$topContributions]"
+            val provenance = top.origins
+                .take(3)
+                .joinToString(", ") { origin ->
+                    val seeders = origin.seeders?.let { "/s$it" }.orEmpty()
+                    "${origin.providerDisplayName}:${origin.cacheStatus}$seeders"
+                }
+                .takeIf { it.isNotBlank() }
+            buildString {
+                append("top=${top.displayName.take(60)} score=${explanation.totalScore} [$topContributions]")
+                provenance?.let {
+                    append(" origins=")
+                    append(it)
+                }
+            }
         }
         return listOf(
             "providers=$providerSummary",
