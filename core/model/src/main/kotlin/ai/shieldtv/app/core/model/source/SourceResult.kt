@@ -20,5 +20,7 @@ data class SourceResult(
     val sizeBytes: Long? = null,
     val sizeLabel: String? = null,
     val score: Double? = null,
+    val providerIds: Set<String> = setOf(providerId),
+    val providerDisplayNames: Set<String> = setOf(providerDisplayName),
     val rawMetadata: Map<String, String> = emptyMap()
 )

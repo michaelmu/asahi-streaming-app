@@ -10,10 +10,11 @@ class SourcesPresenter(
 ) {
     suspend fun load(
         request: SourceSearchRequest,
+        enabledProviderIds: Set<String> = emptySet(),
         onProgress: ((SourceFetchProgress) -> Unit)? = null
     ): SourcesUiState {
         return try {
-            val sources = findSourcesUseCase(request, onProgress)
+            val sources = findSourcesUseCase(request, enabledProviderIds, onProgress)
             SourcesUiState(sources = sources)
         } catch (error: Throwable) {
             SourcesUiState(error = error.message)

@@ -9,8 +9,9 @@ class SourcesViewModel(
 ) {
     suspend fun load(
         request: SourceSearchRequest,
+        enabledProviderIds: Set<String> = emptySet(),
         onProgress: ((SourceFetchProgress) -> Unit)? = null
     ): SourcesUiState {
-        return sourcesPresenter.load(request, onProgress)
+        return sourcesPresenter.load(request, enabledProviderIds, onProgress)
     }
 }

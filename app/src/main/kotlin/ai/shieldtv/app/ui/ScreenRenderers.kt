@@ -1018,6 +1018,7 @@ class SettingsScreenRenderer(
         playbackModeLabel: String,
         updateSummary: String?,
         providerSummary: String?,
+        sourcePreferencesSummary: String?,
         buildAuthUrl: (DeviceCodeFlow) -> String,
         onStartLink: () -> Unit,
         onResetAuth: () -> Unit,
@@ -1025,6 +1026,10 @@ class SettingsScreenRenderer(
         onCopyDebugInfo: () -> Unit,
         onCheckForUpdates: () -> Unit,
         onOpenLatestUpdate: (() -> Unit)?,
+        onConfigureMovieMaxSize: () -> Unit,
+        onConfigureTvMaxSize: () -> Unit,
+        onToggleProviders: () -> Unit,
+        onResetSourcePreferences: () -> Unit,
         onBackToHome: () -> Unit,
         onFirstFocusTarget: (View) -> Unit = {}
     ) {
@@ -1095,7 +1100,7 @@ class SettingsScreenRenderer(
             addView(viewFactory.spacer(10))
             addView(viewFactory.body(providerSummary ?: "No provider diagnostics yet."))
             addView(viewFactory.spacer(10))
-            addView(viewFactory.caption("Current build includes validated providers only. More granular toggles can come next."))
+            addView(viewFactory.caption(sourcePreferencesSummary ?: "No source preference overrides yet."))
         }
         host.addView(providersPanel)
         host.addView(viewFactory.spacer())
@@ -1121,6 +1126,14 @@ class SettingsScreenRenderer(
             host.addView(viewFactory.button("Open Latest APK", openLatest))
             host.addView(viewFactory.spacer(10))
         }
+        host.addView(viewFactory.button("Movie Max Size", onConfigureMovieMaxSize))
+        host.addView(viewFactory.spacer(10))
+        host.addView(viewFactory.button("TV Max Size", onConfigureTvMaxSize))
+        host.addView(viewFactory.spacer(10))
+        host.addView(viewFactory.button("Toggle Providers", onToggleProviders))
+        host.addView(viewFactory.spacer(10))
+        host.addView(viewFactory.button("Reset Source Preferences", onResetSourcePreferences))
+        host.addView(viewFactory.spacer(10))
         host.addView(viewFactory.button("Copy Debug Info", onCopyDebugInfo))
         host.addView(viewFactory.spacer(10))
         host.addView(viewFactory.button("Back to Browse", onBackToHome))

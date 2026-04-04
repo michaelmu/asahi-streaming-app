@@ -37,7 +37,11 @@ object SourcePresentation {
     }
 
     fun providerChip(source: SourceResult): String = buildString {
-        append(source.providerDisplayName.ifBlank { source.providerId })
+        val providerLabel = when {
+            source.providerDisplayNames.size > 1 -> source.providerDisplayNames.joinToString(" + ")
+            else -> source.providerDisplayName.ifBlank { source.providerId }
+        }
+        append(providerLabel)
         source.sourceSite?.takeIf { it.isNotBlank() }?.let {
             append(" · ")
             append(it)

@@ -6,5 +6,6 @@ data class SourceSearchRequest(
     val mediaRef: MediaRef,
     val seasonNumber: Int? = null,
     val episodeNumber: Int? = null,
-    val aliases: List<String> = emptyList()
+    val aliases: List<String> = emptyList(),
+    val filters: SourceFilters = SourceFilters()
 )

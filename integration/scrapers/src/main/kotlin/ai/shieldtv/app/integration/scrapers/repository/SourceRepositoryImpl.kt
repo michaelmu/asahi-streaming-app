@@ -20,12 +20,13 @@ class SourceRepositoryImpl(
 ) : SourceRepository {
     override suspend fun findSources(
         request: SourceSearchRequest,
+        enabledProviderIds: Set<String>,
         onProgress: ((SourceFetchProgress) -> Unit)?
     ): List<SourceResult> {
         RealDebridDebugState.lastSourceRepositorySeen = "yes"
         RealDebridDebugState.lastSourceRepositoryMarkerPresent = if (sourceCacheMarker == null) "no" else "yes"
         val providerSummaries = mutableListOf<String>()
-        val rawResults = providerRegistry.activeProviders().flatMap { provider ->
+        val rawResults = providerRegistry.activeProviders(enabledProviderIds = enabledProviderIds).flatMap { provider ->
             onProgress?.invoke(
                 SourceFetchProgress(
                     providerId = provider.id,

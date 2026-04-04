@@ -6,6 +6,7 @@ import ai.shieldtv.app.core.model.source.SourceSearchRequest
 interface SourceRepository {
     suspend fun findSources(
         request: SourceSearchRequest,
+        enabledProviderIds: Set<String> = emptySet(),
         onProgress: ((SourceFetchProgress) -> Unit)? = null
     ): List<SourceResult>
 }

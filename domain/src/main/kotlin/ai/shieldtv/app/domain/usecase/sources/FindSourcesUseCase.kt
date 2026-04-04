@@ -10,8 +10,9 @@ class FindSourcesUseCase(
 ) {
     suspend operator fun invoke(
         request: SourceSearchRequest,
+        enabledProviderIds: Set<String> = emptySet(),
         onProgress: ((SourceFetchProgress) -> Unit)? = null
     ): List<SourceResult> {
-        return sourceRepository.findSources(request, onProgress)
+        return sourceRepository.findSources(request, enabledProviderIds, onProgress)
     }
 }

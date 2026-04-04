@@ -41,6 +41,7 @@ import ai.shieldtv.app.integration.scrapers.provider.zilean.ZileanConfig
 import ai.shieldtv.app.integration.scrapers.provider.zilean.ZileanSourceProvider
 import ai.shieldtv.app.integration.scrapers.ranking.DefaultSourceRanker
 import ai.shieldtv.app.integration.scrapers.ranking.RealDebridSourceCacheMarker
+import ai.shieldtv.app.settings.SourcePreferencesStore
 import ai.shieldtv.app.integration.scrapers.repository.SourceRepositoryImpl
 import ai.shieldtv.app.playback.PlaybackSessionStore
 import java.io.File
@@ -123,6 +124,10 @@ object AppContainer {
     private val sourceNormalizer by lazy { DefaultSourceNormalizer() }
     private val sourceRanker by lazy { DefaultSourceRanker() }
     private val sourceCacheMarker by lazy { RealDebridSourceCacheMarker(debridCacheRepository) }
+    val sourcePreferencesStore by lazy {
+        SourcePreferencesStore(requireContext())
+    }
+
     private val sourceRepository by lazy {
         SourceRepositoryImpl(
             providerRegistry = providerRegistry,

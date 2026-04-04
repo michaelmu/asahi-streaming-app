@@ -27,6 +27,7 @@ import ai.shieldtv.app.core.model.source.SourceResult
 import ai.shieldtv.app.core.model.source.SourceSearchRequest
 import ai.shieldtv.app.di.AppContainer
 import ai.shieldtv.app.domain.repository.SourceFetchProgress
+import ai.shieldtv.app.settings.SourcePreferences
 import ai.shieldtv.app.feature.details.presentation.DetailsPresenter
 import ai.shieldtv.app.feature.details.presentation.DetailsViewModel
 import ai.shieldtv.app.feature.player.presentation.PlayerPresenter
@@ -704,6 +705,7 @@ class MainActivity : ComponentActivity() {
                 playbackModeLabel = currentRenderModeLabel(),
                 updateSummary = latestUpdateMessage,
                 providerSummary = buildProviderSummary(),
+                sourcePreferencesSummary = buildSourcePreferencesSummary(),
                 buildAuthUrl = ::buildRealDebridAuthUrl,
                 onStartLink = ::startRealDebridLink,
                 onResetAuth = ::resetRealDebridAuth,
@@ -711,6 +713,10 @@ class MainActivity : ComponentActivity() {
                 onCopyDebugInfo = ::copyDebugInfoToClipboard,
                 onCheckForUpdates = ::checkForUpdates,
                 onOpenLatestUpdate = latestUpdateInfo?.let { { openLatestUpdate(it) } },
+                onConfigureMovieMaxSize = ::cycleMovieMaxSize,
+                onConfigureTvMaxSize = ::cycleTvMaxSize,
+                onToggleProviders = ::cycleProvidersEnabled,
+                onResetSourcePreferences = ::resetSourcePreferences,
                 onBackToHome = {
                     coordinator.openHome()
                     renderCurrentScreen()
@@ -797,12 +803,15 @@ class MainActivity : ComponentActivity() {
 
         loadSourcesJob?.cancel()
         loadSourcesJob = lifecycleScope.launch {
+            val prefs = currentSourcePreferences()
             val state = sourcesViewModel.load(
                 SourceSearchRequest(
                     mediaRef = mediaRef,
                     seasonNumber = seasonNumber,
-                    episodeNumber = episodeNumber
+                    episodeNumber = episodeNumber,
+                    filters = currentSourceFilters()
                 ),
+                enabledProviderIds = prefs.enabledProviders,
                 onProgress = { progress ->
                     providerProgress[progress.providerId] = progress
                     runOnUiThread {
@@ -1132,10 +1141,15 @@ class MainActivity : ComponentActivity() {
 
     private fun buildSourceDiagnostics(sources: List<SourceResult>): String {
         if (sources.isEmpty()) return "providers=none | results=0"
-        val providerSummary = sources.groupBy { it.providerDisplayName.ifBlank { it.providerId } }
-            .entries
-            .sortedByDescending { it.value.size }
-            .joinToString(", ") { (providerId, items) -> "$providerId:${items.size}" }
+        val providerCounts = sources
+            .flatMap { source ->
+                source.providerDisplayNames.ifEmpty { setOf(source.providerDisplayName.ifBlank { source.providerId }) }
+            }
+            .groupingBy { it }
+            .eachCount()
+        val providerSummary = providerCounts.entries
+            .sortedByDescending { it.value }
+            .joinToString(", ") { (providerId, count) -> "$providerId:$count" }
         val cachedCount = sources.count { it.cacheStatus == CacheStatus.CACHED }
         val directCount = sources.count { it.cacheStatus == CacheStatus.DIRECT }
         val fallbackCount = sources.count { it.cacheStatus == CacheStatus.UNCACHED || it.cacheStatus == CacheStatus.UNCHECKED }
@@ -1147,8 +1161,101 @@ class MainActivity : ComponentActivity() {
             "Torrentio",
             "Comet",
             "BitSearch",
-            "Knaben"
+            "Bitmagnet",
+            "Knaben",
+            "Zilean",
+            "Torz"
         ).joinToString(" • ")
+    }
+
+    private fun currentSourcePreferences(): SourcePreferences = AppContainer.sourcePreferencesStore.load()
+
+    private fun currentSourceFilters(): ai.shieldtv.app.core.model.source.SourceFilters {
+        val prefs = currentSourcePreferences()
+        return ai.shieldtv.app.core.model.source.SourceFilters(
+            movieMaxSizeGb = prefs.movieMaxSizeGb,
+            episodeMaxSizeGb = prefs.episodeMaxSizeGb
+        )
+    }
+
+    private fun buildSourcePreferencesSummary(): String {
+        val prefs = currentSourcePreferences()
+        val providerMode = if (prefs.enabledProviders.isEmpty()) {
+            "Providers: all enabled"
+        } else {
+            "Providers: ${prefs.enabledProviders.joinToString(", ")}"
+        }
+        val movieLimit = "Movies max: ${prefs.movieMaxSizeGb?.let { "${it}GB" } ?: "none"}"
+        val tvLimit = "TV max: ${prefs.episodeMaxSizeGb?.let { "${it}GB" } ?: "none"}"
+        return listOf(providerMode, movieLimit, tvLimit).joinToString(" • ")
+    }
+
+    private fun cycleMovieMaxSize() {
+        val store = AppContainer.sourcePreferencesStore
+        val current = currentSourcePreferences().movieMaxSizeGb
+        val next = when (current) {
+            null -> 10
+            10 -> 20
+            20 -> 40
+            else -> null
+        }
+        store.saveMovieMaxSizeGb(next)
+        showInfoModal(
+            title = "Movie Max Size",
+            message = "Movie source size limit is now ${next?.let { "${it}GB" } ?: "disabled"}.",
+            primaryLabel = "OK"
+        )
+        renderCurrentScreen()
+    }
+
+    private fun cycleTvMaxSize() {
+        val store = AppContainer.sourcePreferencesStore
+        val current = currentSourcePreferences().episodeMaxSizeGb
+        val next = when (current) {
+            null -> 2
+            2 -> 5
+            5 -> 10
+            else -> null
+        }
+        store.saveEpisodeMaxSizeGb(next)
+        showInfoModal(
+            title = "TV Max Size",
+            message = "TV episode source size limit is now ${next?.let { "${it}GB" } ?: "disabled"}.",
+            primaryLabel = "OK"
+        )
+        renderCurrentScreen()
+    }
+
+    private fun cycleProvidersEnabled() {
+        val allProviders = listOf("torrentio", "comet", "bitsearch", "bitmagnet", "knaben", "zilean", "torz")
+        val store = AppContainer.sourcePreferencesStore
+        val current = currentSourcePreferences().enabledProviders
+        val next = when {
+            current.isEmpty() -> allProviders.drop(1).toSet()
+            current.size < allProviders.size -> allProviders.toSet()
+            else -> emptySet()
+        }
+        store.saveEnabledProviders(next)
+        showInfoModal(
+            title = "Provider Selection",
+            message = if (next.isEmpty()) {
+                "All providers are enabled."
+            } else {
+                "Enabled providers: ${next.joinToString(", ")}"
+            },
+            primaryLabel = "OK"
+        )
+        renderCurrentScreen()
+    }
+
+    private fun resetSourcePreferences() {
+        AppContainer.sourcePreferencesStore.reset()
+        showInfoModal(
+            title = "Source Preferences Reset",
+            message = "Movie/TV size limits and provider overrides were reset.",
+            primaryLabel = "OK"
+        )
+        renderCurrentScreen()
     }
 
     private fun setLoading(isLoading: Boolean, message: String) {
