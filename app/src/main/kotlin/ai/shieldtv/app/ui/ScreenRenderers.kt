@@ -1063,14 +1063,12 @@ class SettingsScreenRenderer(
     fun render(
         authState: RealDebridAuthState,
         activeDeviceFlow: DeviceCodeFlow?,
-        playbackModeLabel: String,
         updateSummary: String?,
         providerSummary: String?,
         sourcePreferencesSummary: String?,
         buildAuthUrl: (DeviceCodeFlow) -> String,
         onStartLink: () -> Unit,
         onResetAuth: () -> Unit,
-        onTogglePlaybackMode: () -> Unit,
         onCopyDebugInfo: () -> Unit,
         onCheckForUpdates: () -> Unit,
         onOpenLatestUpdate: (() -> Unit)?,
@@ -1125,14 +1123,6 @@ class SettingsScreenRenderer(
         host.addView(accountPanel)
         host.addView(viewFactory.spacer())
 
-        val playbackPanel = viewFactory.panel(elevated = false).apply {
-            addView(viewFactory.sectionTitle("Playback"))
-            addView(viewFactory.spacer(10))
-            addView(viewFactory.body("Current render mode: $playbackModeLabel"))
-        }
-        host.addView(playbackPanel)
-        host.addView(viewFactory.spacer())
-
         val updatePanel = viewFactory.panel(elevated = false).apply {
             addView(viewFactory.sectionTitle("Updates"))
             addView(viewFactory.spacer(10))
@@ -1154,8 +1144,8 @@ class SettingsScreenRenderer(
         host.addView(viewFactory.spacer())
 
         val primaryButton = viewFactory.button(
-            if (!authState.isLinked) "Start Real-Debrid Link" else "Toggle Playback Mode",
-            if (!authState.isLinked) onStartLink else onTogglePlaybackMode
+            "Start Real-Debrid Link",
+            onStartLink
         )
         host.addView(primaryButton)
         primaryButton.post { onFirstFocusTarget(primaryButton) }
@@ -1163,9 +1153,6 @@ class SettingsScreenRenderer(
 
         if (authState.isLinked) {
             host.addView(viewFactory.button("Reset Real-Debrid Auth", onResetAuth))
-            host.addView(viewFactory.spacer(10))
-        } else {
-            host.addView(viewFactory.button("Toggle Playback Mode", onTogglePlaybackMode))
             host.addView(viewFactory.spacer(10))
         }
         host.addView(viewFactory.button("Check for Updates", onCheckForUpdates))
