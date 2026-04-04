@@ -6,6 +6,8 @@
     <color name="asahi_panel_soft">#1B2940</color>
     <color name="asahi_accent">#5B8CFF</color>
     <color name="asahi_accent_alt">#23C9A9</color>
+    <color name="asahi_accent_selected">#294A84</color>
+    <color name="asahi_accent_selected_focus">#3C63A6</color>
     <color name="asahi_warning">#FFB84D</color>
     <color name="asahi_error">#FF6B6B</color>
     <color name="asahi_text_primary">#F7FAFF</color>
