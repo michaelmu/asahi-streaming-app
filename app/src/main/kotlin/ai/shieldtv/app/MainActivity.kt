@@ -1157,15 +1157,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun buildProviderSummary(): String {
-        return listOf(
-            "Torrentio",
-            "Comet",
-            "BitSearch",
-            "Bitmagnet",
-            "Knaben",
-            "Zilean",
-            "Torz"
-        ).joinToString(" • ")
+        return AppContainer.availableProviderLabels().values.joinToString(" • ")
     }
 
     private fun currentSourcePreferences(): SourcePreferences = AppContainer.sourcePreferencesStore.load()
@@ -1227,24 +1219,119 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun cycleProvidersEnabled() {
-        val allProviders = listOf("torrentio", "comet", "bitsearch", "bitmagnet", "knaben", "zilean", "torz")
-        val store = AppContainer.sourcePreferencesStore
+        showProviderSelectionModal()
+    }
+
+    private fun showProviderSelectionModal() {
+        val labels = AppContainer.availableProviderLabels()
+        val allProviders = labels.keys.toList()
         val current = currentSourcePreferences().enabledProviders
-        val next = when {
-            current.isEmpty() -> allProviders.drop(1).toSet()
-            current.size < allProviders.size -> allProviders.toSet()
-            else -> emptySet()
+        val effectiveEnabled = if (current.isEmpty()) allProviders.toSet() else current
+        val providerLines = allProviders.joinToString("\n") { id ->
+            val enabled = id in effectiveEnabled
+            val marker = if (enabled) "[x]" else "[ ]"
+            "$marker ${labels[id] ?: id}"
         }
-        store.saveEnabledProviders(next)
         showInfoModal(
             title = "Provider Selection",
-            message = if (next.isEmpty()) {
-                "All providers are enabled."
-            } else {
-                "Enabled providers: ${next.joinToString(", ")}"
+            message = buildString {
+                appendLine("Enabled providers")
+                appendLine()
+                append(providerLines)
             },
-            primaryLabel = "OK"
+            primaryLabel = labels[allProviders.first()] ?: allProviders.first(),
+            onPrimary = { toggleProvider(allProviders.first()) },
+            secondaryLabel = if (allProviders.size > 1) labels[allProviders[1]] ?: allProviders[1] else "Enable All",
+            onSecondary = {
+                if (allProviders.size > 1) toggleProvider(allProviders[1]) else setAllProvidersEnabled()
+            },
+            tertiaryLabel = "More…",
+            onTertiary = { showProviderSelectionPage(allProviders, startIndex = 2) },
+            dismissOnBack = true,
+            defaultAction = ModalDefaultAction.PRIMARY
         )
+    }
+
+    private fun showProviderSelectionPage(allProviders: List<String>, startIndex: Int) {
+        val labels = AppContainer.availableProviderLabels()
+        val current = currentSourcePreferences().enabledProviders
+        val effectiveEnabled = if (current.isEmpty()) allProviders.toSet() else current
+        val visible = allProviders.drop(startIndex).take(3)
+        if (visible.isEmpty()) {
+            showProviderSelectionActions(allProviders)
+            return
+        }
+        val providerLines = allProviders.joinToString("\n") { id ->
+            val enabled = id in effectiveEnabled
+            val marker = if (enabled) "[x]" else "[ ]"
+            "$marker ${labels[id] ?: id}"
+        }
+        showInfoModal(
+            title = "Provider Selection",
+            message = providerLines,
+            primaryLabel = labels[visible[0]] ?: visible[0],
+            onPrimary = { toggleProvider(visible[0]) },
+            secondaryLabel = visible.getOrNull(1)?.let { labels[it] ?: it } ?: "All On",
+            onSecondary = {
+                val second = visible.getOrNull(1)
+                if (second != null) toggleProvider(second) else setAllProvidersEnabled()
+            },
+            tertiaryLabel = visible.getOrNull(2)?.let { labels[it] ?: it } ?: "Actions",
+            onTertiary = {
+                val third = visible.getOrNull(2)
+                if (third != null) toggleProvider(third) else showProviderSelectionActions(allProviders)
+            },
+            dismissOnBack = true,
+            defaultAction = ModalDefaultAction.PRIMARY
+        )
+    }
+
+    private fun showProviderSelectionActions(allProviders: List<String>) {
+        val labels = AppContainer.availableProviderLabels()
+        val current = currentSourcePreferences().enabledProviders
+        val effectiveEnabled = if (current.isEmpty()) allProviders.toSet() else current
+        val providerLines = allProviders.joinToString("\n") { id ->
+            val enabled = id in effectiveEnabled
+            val marker = if (enabled) "[x]" else "[ ]"
+            "$marker ${labels[id] ?: id}"
+        }
+        showInfoModal(
+            title = "Provider Selection",
+            message = providerLines,
+            primaryLabel = "Enable All",
+            onPrimary = { setAllProvidersEnabled() },
+            secondaryLabel = "Disable All",
+            onSecondary = { setNoProviderOverrides() },
+            tertiaryLabel = "Done",
+            onTertiary = { renderCurrentScreen() },
+            dismissOnBack = true,
+            defaultAction = ModalDefaultAction.TERTIARY
+        )
+    }
+
+    private fun toggleProvider(providerId: String) {
+        val allProviders = AppContainer.availableProviderIds().toSet()
+        val store = AppContainer.sourcePreferencesStore
+        val current = currentSourcePreferences().enabledProviders
+        val working = if (current.isEmpty()) allProviders.toMutableSet() else current.toMutableSet()
+        if (!working.add(providerId)) {
+            working.remove(providerId)
+        }
+        store.saveEnabledProviders(if (working == allProviders) emptySet() else working)
+        showProviderSelectionModal()
+        renderCurrentScreen()
+    }
+
+    private fun setAllProvidersEnabled() {
+        AppContainer.sourcePreferencesStore.saveEnabledProviders(emptySet())
+        showProviderSelectionModal()
+        renderCurrentScreen()
+    }
+
+    private fun setNoProviderOverrides() {
+        val allProviders = AppContainer.availableProviderIds().toSet()
+        AppContainer.sourcePreferencesStore.saveEnabledProviders(allProviders)
+        showProviderSelectionModal()
         renderCurrentScreen()
     }
 

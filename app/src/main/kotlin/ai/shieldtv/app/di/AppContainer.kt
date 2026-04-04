@@ -128,6 +128,9 @@ object AppContainer {
         SourcePreferencesStore(requireContext())
     }
 
+    fun availableProviderIds(): List<String> = providerRegistry.allProviders().map { it.id }
+    fun availableProviderLabels(): Map<String, String> = providerRegistry.allProviders().associate { it.id to it.displayName }
+
     private val sourceRepository by lazy {
         SourceRepositoryImpl(
             providerRegistry = providerRegistry,
