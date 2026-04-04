@@ -284,6 +284,10 @@ class MainActivity : ComponentActivity() {
 
         screenHost = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
+            layoutParams = android.view.ViewGroup.LayoutParams(
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+            )
         }
 
         sidebar.addView(title)
@@ -563,6 +567,24 @@ class MainActivity : ComponentActivity() {
                         renderCurrentScreen()
                     }
                 },
+                onMovieFavorites = {
+                    AppContainer.playbackEngine.stop()
+                    coordinator.showFavorites(
+                        SearchMode.MOVIES,
+                        AppContainer.favoritesCoordinator.listByType(ai.shieldtv.app.core.model.media.MediaType.MOVIE)
+                    )
+                    statusText.text = "Movie favorites"
+                    renderCurrentScreen()
+                },
+                onMovieHistory = {
+                    AppContainer.playbackEngine.stop()
+                    coordinator.showHistory(
+                        SearchMode.MOVIES,
+                        AppContainer.watchHistoryCoordinator.listResultsByType(ai.shieldtv.app.core.model.media.MediaType.MOVIE)
+                    )
+                    statusText.text = "Movie watch history"
+                    renderCurrentScreen()
+                },
                 onShows = {
                     AppContainer.playbackEngine.stop()
                     if (coordinator.currentState().searchMode == SearchMode.SHOWS && coordinator.currentState().destination == AppDestination.SEARCH) {
@@ -571,6 +593,24 @@ class MainActivity : ComponentActivity() {
                         coordinator.openSearch(SearchMode.SHOWS)
                         renderCurrentScreen()
                     }
+                },
+                onShowFavorites = {
+                    AppContainer.playbackEngine.stop()
+                    coordinator.showFavorites(
+                        SearchMode.SHOWS,
+                        AppContainer.favoritesCoordinator.listByType(ai.shieldtv.app.core.model.media.MediaType.SHOW)
+                    )
+                    statusText.text = "TV favorites"
+                    renderCurrentScreen()
+                },
+                onShowHistory = {
+                    AppContainer.playbackEngine.stop()
+                    coordinator.showHistory(
+                        SearchMode.SHOWS,
+                        AppContainer.watchHistoryCoordinator.listResultsByType(ai.shieldtv.app.core.model.media.MediaType.SHOW)
+                    )
+                    statusText.text = "TV watch history"
+                    renderCurrentScreen()
                 },
                 onSettings = {
                     AppContainer.playbackEngine.stop()
@@ -588,6 +628,9 @@ class MainActivity : ComponentActivity() {
         screenHost.removeAllViews()
         when (destination) {
             AppDestination.HOME -> {
+                contentScrollView.post {
+                    contentScrollView.scrollTo(0, 0)
+                }
                 homeRenderer.render(
                     state = coordinator.currentState(),
                     authLinked = authState.isLinked,

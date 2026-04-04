@@ -55,7 +55,11 @@ class NavigationRailRenderer(
         selectedMode: SearchMode,
         inSettings: Boolean,
         onMovies: () -> Unit,
+        onMovieFavorites: () -> Unit,
+        onMovieHistory: () -> Unit,
         onShows: () -> Unit,
+        onShowFavorites: () -> Unit,
+        onShowHistory: () -> Unit,
         onSettings: () -> Unit,
         onQuit: () -> Unit,
         onFirstFocusTarget: (View) -> Unit = {}
@@ -70,12 +74,20 @@ class NavigationRailRenderer(
         )
         host.addView(movieButton)
         host.addView(viewFactory.spacer(10))
+        host.addView(focusableButton("Movie Favorites", onMovieFavorites))
+        host.addView(viewFactory.spacer(10))
+        host.addView(focusableButton("Movie Watch History", onMovieHistory))
+        host.addView(viewFactory.spacer(10))
         host.addView(
             focusableButton(
                 if (!inSettings && selectedMode == SearchMode.SHOWS) "TV Shows •" else "TV Shows",
                 onShows
             )
         )
+        host.addView(viewFactory.spacer(10))
+        host.addView(focusableButton("TV Favorites", onShowFavorites))
+        host.addView(viewFactory.spacer(10))
+        host.addView(focusableButton("TV Watch History", onShowHistory))
         host.addView(viewFactory.spacer(10))
         host.addView(focusableButton(if (inSettings) "Settings •" else "Settings", onSettings))
         host.addView(viewFactory.spacer(18))
@@ -160,39 +172,40 @@ class HomeScreenRenderer(
         onContinueWatching: (ContinueWatchingItem) -> Unit,
         onFirstFocusTarget: (View) -> Unit = {}
     ) {
+        host.removeAllViews()
+        host.clearFocus()
+
         val libraryPicks = if (state.searchMode == SearchMode.SHOWS) featuredShows else featuredMovies
         val featured = dynamicPicks(state, libraryPicks)
 
         val firstMovieShortcut = actionButton("Browse Movies", onBrowseMovies)
-        host.addView(viewFactory.sectionTitle("Movies"))
-        host.addView(viewFactory.spacer(10))
-        host.addView(shortcutColumn(
-            listOf(
+        host.addView(buildActionSection(
+            title = "Movies",
+            buttons = listOf(
                 firstMovieShortcut,
                 actionButton("Favorites", onMovieFavorites),
                 actionButton("Watch History", onMovieHistory)
-            )
+            ),
+            elevated = true
         ))
         host.addView(viewFactory.spacer(14))
 
-        host.addView(viewFactory.sectionTitle("TV Shows"))
-        host.addView(viewFactory.spacer(10))
-        host.addView(shortcutColumn(
-            listOf(
+        host.addView(buildActionSection(
+            title = "TV Shows",
+            buttons = listOf(
                 actionButton("Browse TV Shows", onBrowseShows),
                 actionButton("Favorites", onShowFavorites),
                 actionButton("Watch History", onShowHistory)
-            )
+            ),
+            elevated = false
         ))
         host.addView(viewFactory.spacer(14))
 
-        val actionRow = LinearLayout(host.context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.START
-        }
-        val settingsButton = actionButton("Settings / Accounts", onOpenSettings)
-        actionRow.addView(settingsButton)
-        host.addView(actionRow)
+        host.addView(buildActionSection(
+            title = "Settings",
+            buttons = listOf(actionButton("Settings / Accounts", onOpenSettings)),
+            elevated = false
+        ))
         host.addView(viewFactory.spacer(14))
 
         val statusRow = LinearLayout(host.context).apply { orientation = LinearLayout.HORIZONTAL }
@@ -362,21 +375,23 @@ class HomeScreenRenderer(
         }
     }
 
-    private fun shortcutColumn(shortcuts: List<View>): View {
-        return LinearLayout(host.context).apply {
-            orientation = LinearLayout.VERTICAL
-            shortcuts.forEachIndexed { index, view ->
+    private fun buildActionSection(title: String, buttons: List<View>, elevated: Boolean): View {
+        return viewFactory.panel(elevated = elevated).apply {
+            addView(viewFactory.sectionTitle(title))
+            addView(viewFactory.spacer(10))
+            buttons.forEachIndexed { index, view ->
                 addView(view)
-                if (index < shortcuts.lastIndex) {
-                    addView(viewFactory.spacer(10))
-                }
+                if (index < buttons.lastIndex) addView(viewFactory.spacer(10))
             }
         }
     }
 
     private fun actionButton(text: String, onClick: () -> Unit, startMarginDp: Int = 0): View {
         return viewFactory.button(text, onClick).apply {
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).also {
                 if (startMarginDp > 0) it.marginStart = viewFactory.dp(startMarginDp)
             }
         }
