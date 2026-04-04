@@ -4,6 +4,7 @@ import ai.shieldtv.app.core.model.source.SourceFilters
 import ai.shieldtv.app.core.model.source.SourceResult
 import ai.shieldtv.app.core.model.source.SourceSearchRequest
 import ai.shieldtv.app.domain.provider.SourceNormalizer
+import ai.shieldtv.app.domain.repository.SourceFetchError
 import ai.shieldtv.app.domain.repository.SourceRepository
 import ai.shieldtv.app.domain.source.ranking.SourceCacheMarker
 import ai.shieldtv.app.domain.source.ranking.SourceRanker
@@ -11,12 +12,17 @@ import ai.shieldtv.app.domain.repository.SourceFetchProgress
 import ai.shieldtv.app.integration.debrid.realdebrid.debug.RealDebridDebugState
 import ai.shieldtv.app.integration.scrapers.provider.ProviderModeDecider
 import ai.shieldtv.app.integration.scrapers.provider.ProviderRegistry
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
 
 class SourceRepositoryImpl(
     private val providerRegistry: ProviderRegistry,
     private val sourceNormalizer: SourceNormalizer,
     private val sourceRanker: SourceRanker,
-    private val sourceCacheMarker: SourceCacheMarker? = null
+    private val sourceCacheMarker: SourceCacheMarker? = null,
+    private val providerTimeoutMs: Long = 15_000L
 ) : SourceRepository {
     override suspend fun findSources(
         request: SourceSearchRequest,
@@ -25,42 +31,64 @@ class SourceRepositoryImpl(
     ): List<SourceResult> {
         RealDebridDebugState.lastSourceRepositorySeen = "yes"
         RealDebridDebugState.lastSourceRepositoryMarkerPresent = if (sourceCacheMarker == null) "no" else "yes"
-        val providerSummaries = mutableListOf<String>()
-        val rawResults = providerRegistry.activeProviders(enabledProviderIds = enabledProviderIds).flatMap { provider ->
-            onProgress?.invoke(
-                SourceFetchProgress(
-                    providerId = provider.id,
-                    providerDisplayName = provider.displayName,
-                    state = SourceFetchProgress.State.STARTED
-                )
-            )
-            runCatching {
-                provider.search(request).map { raw ->
-                    sourceNormalizer.normalize(request, provider, raw)
+        val providers = providerRegistry.activeProviders(enabledProviderIds = enabledProviderIds)
+        val providerResults = coroutineScope {
+            providers.map { provider ->
+                async {
+                    val startedAt = System.currentTimeMillis()
+                    onProgress?.invoke(
+                        SourceFetchProgress(
+                            providerId = provider.id,
+                            providerDisplayName = provider.displayName,
+                            state = SourceFetchProgress.State.STARTED
+                        )
+                    )
+                    try {
+                        val normalized = withTimeout(providerTimeoutMs) {
+                            provider.search(request).map { raw ->
+                                sourceNormalizer.normalize(request, provider, raw)
+                            }
+                        }
+                        val latency = System.currentTimeMillis() - startedAt
+                        onProgress?.invoke(
+                            SourceFetchProgress(
+                                providerId = provider.id,
+                                providerDisplayName = provider.displayName,
+                                state = SourceFetchProgress.State.COMPLETED,
+                                resultCount = normalized.size,
+                                latencyMs = latency
+                            )
+                        )
+                        ProviderFetchResult(
+                            summary = "${provider.id}:${normalized.size}",
+                            normalized = normalized
+                        )
+                    } catch (error: Throwable) {
+                        val latency = System.currentTimeMillis() - startedAt
+                        val errorType = when (error) {
+                            is TimeoutCancellationException -> SourceFetchError.Timeout::class.simpleName
+                            else -> SourceFetchError.ProviderFailure::class.simpleName
+                        }
+                        onProgress?.invoke(
+                            SourceFetchProgress(
+                                providerId = provider.id,
+                                providerDisplayName = provider.displayName,
+                                state = SourceFetchProgress.State.FAILED,
+                                message = error.message,
+                                latencyMs = latency,
+                                errorType = errorType
+                            )
+                        )
+                        ProviderFetchResult(
+                            summary = "${provider.id}:error",
+                            normalized = emptyList()
+                        )
+                    }
                 }
-            }.onSuccess { normalized ->
-                providerSummaries += "${provider.id}:${normalized.size}"
-                onProgress?.invoke(
-                    SourceFetchProgress(
-                        providerId = provider.id,
-                        providerDisplayName = provider.displayName,
-                        state = SourceFetchProgress.State.COMPLETED,
-                        resultCount = normalized.size
-                    )
-                )
-            }.onFailure { error ->
-                providerSummaries += "${provider.id}:error"
-                onProgress?.invoke(
-                    SourceFetchProgress(
-                        providerId = provider.id,
-                        providerDisplayName = provider.displayName,
-                        state = SourceFetchProgress.State.FAILED,
-                        message = error.message
-                    )
-                )
-            }.getOrElse { emptyList() }
+            }.map { it.await() }
         }
-        RealDebridDebugState.lastSourceProviderSummary = providerSummaries.joinToString(",")
+        RealDebridDebugState.lastSourceProviderSummary = providerResults.joinToString(",") { it.summary }
+        val rawResults = providerResults.flatMap { it.normalized }
         val cacheMarked = sourceCacheMarker?.markCached(rawResults) ?: rawResults
         val shaped = ProviderModeDecider.shapeSources(cacheMarked)
         RealDebridDebugState.lastSourceLiveCount = shaped.size.toString()
@@ -88,4 +116,9 @@ class SourceRepositoryImpl(
         )
         return sourceRanker.rank(shaped, SourceFilters())
     }
+
+    private data class ProviderFetchResult(
+        val summary: String,
+        val normalized: List<SourceResult>
+    )
 }

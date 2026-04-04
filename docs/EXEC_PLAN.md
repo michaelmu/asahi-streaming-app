@@ -80,13 +80,12 @@ A task is only `DONE` when:
 
 ## Current Focus
 
-**Current phase:** Phase 1 — Runtime architecture cleanup and source pipeline reliability
+**Current phase:** Phase 1 → Phase 3 implementation pass in progress
 
-**Immediate target:** P1.1 first extraction pass — move source loading coordination out of `MainActivity` into a dedicated component without changing user-facing behavior.
+**Immediate target:** Continue through the remaining execution plan items in priority order, starting with P1.2 concurrent provider fetching and then completing the remaining accepted cleanup/hardening tasks.
 
-**Why this first:**
-The codebase already has good module-level direction, but app-level orchestration and source-loading flow are the biggest near-term maintainability risks.
-Fixing those first reduces future breakage and makes later product work faster.
+**Why this now:**
+The first extraction pass landed cleanly. The next best use of time is to convert the plan into shipped improvements while the architecture review context is still fresh.
 
 ---
 
@@ -162,7 +161,7 @@ Priority: High
 ---
 
 ## P1.2 Make provider source fetching concurrent
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Objectives
@@ -171,16 +170,16 @@ Priority: High
 - preserve progress updates
 
 ### Proposed sub-steps
-- [TODO] Refactor `SourceRepositoryImpl.findSources` to use structured concurrency
-- [TODO] run provider searches in parallel
-- [TODO] add per-provider timeout behavior
-- [TODO] preserve progress callbacks for STARTED / COMPLETED / FAILED
-- [TODO] ensure partial provider failure does not fail full lookup
-- [TODO] confirm ranking/dedupe/cache-mark flow still works correctly after parallelization
+- [DONE] Refactor `SourceRepositoryImpl.findSources` to use structured concurrency
+- [DONE] run provider searches in parallel
+- [DONE] add per-provider timeout behavior
+- [DONE] preserve progress callbacks for STARTED / COMPLETED / FAILED
+- [DONE] ensure partial provider failure does not fail full lookup
+- [DONE] confirm ranking/dedupe/cache-mark flow still works correctly after parallelization
 
 ### Nice-to-have if easy
-- [TODO] capture provider latency for diagnostics
-- [TODO] record timeout vs parse vs transport failure separately
+- [DONE] capture provider latency for diagnostics
+- [DONE] record timeout vs parse vs transport failure separately
 
 ### Validation
 - source fetching still returns stable results
@@ -191,7 +190,7 @@ Priority: High
 ---
 
 ## P1.3 Clean up provider enable/disable semantics
-Status: TODO
+Status: DONE
 Priority: Medium
 
 ### Objectives
@@ -199,10 +198,10 @@ Priority: Medium
 - avoid ambiguous meaning of empty/full sets
 
 ### Proposed sub-steps
-- [TODO] define clearer settings model for provider selection
-- [TODO] update storage semantics in `SourcePreferencesStore`
-- [TODO] update UI helper logic in settings/provider modal flow
-- [TODO] ensure migration behavior from existing stored prefs is reasonable
+- [DONE] define clearer settings model for provider selection
+- [DONE] update storage semantics in `SourcePreferencesStore`
+- [DONE] update UI helper logic in settings/provider modal flow
+- [DONE] ensure migration behavior from existing stored prefs is reasonable
 
 ### Validation
 - settings text matches real behavior
@@ -212,7 +211,7 @@ Priority: Medium
 ---
 
 ## P1.4 Push source eligibility/policy logic out of UI glue where practical
-Status: TODO
+Status: DONE
 Priority: Medium
 
 ### Objectives
@@ -220,9 +219,9 @@ Priority: Medium
 - move auth/provider/source eligibility rules closer to domain/use-case layer
 
 ### Proposed sub-steps
-- [TODO] identify policy checks currently living in activity code
-- [TODO] create domain/service helper(s) for effective provider selection / eligibility
-- [TODO] reduce UI-specific filtering logic for auth/provider gating
+- [DONE] identify policy checks currently living in activity code
+- [DONE] create domain/service helper(s) for effective provider selection / eligibility
+- [DONE] reduce UI-specific filtering logic for auth/provider gating
 
 ### Validation
 - source eligibility behavior remains unchanged or intentionally improved
@@ -233,7 +232,7 @@ Priority: Medium
 # Phase 2 — Ranking, dedupe, and resolver quality
 
 ## P2.1 Refactor ranking into composable scoring rules
-Status: TODO
+Status: DEFERRED
 Priority: High
 
 ### Objectives
@@ -254,7 +253,7 @@ Priority: High
 ---
 
 ## P2.2 Add ranking explanations / diagnostics
-Status: TODO
+Status: DEFERRED
 Priority: Medium
 
 ### Objectives
@@ -272,7 +271,7 @@ Priority: Medium
 ---
 
 ## P2.3 Improve source dedupe provenance modeling
-Status: TODO
+Status: DEFERRED
 Priority: Medium
 
 ### Objectives
@@ -291,7 +290,7 @@ Priority: Medium
 ---
 
 ## P2.4 Expand Real-Debrid resolver test coverage significantly
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Objectives
@@ -299,11 +298,11 @@ Priority: High
 - reduce regressions in file selection logic
 
 ### Proposed sub-steps
-- [TODO] add table-driven tests for movie file selection
-- [TODO] add table-driven tests for episodic selection
-- [TODO] add tests for sample/extras/junk exclusion
-- [TODO] add tests for ambiguous titles / year matching / multi-file torrents
-- [TODO] add tests around size heuristics and quality expectations
+- [DONE] add table-driven tests for movie file selection
+- [DONE] add table-driven tests for episodic selection
+- [DONE] add tests for sample/extras/junk exclusion
+- [DONE] add tests for ambiguous titles / year matching / multi-file torrents
+- [DONE] add tests around size heuristics and quality expectations
 
 ### Validation
 - strong coverage around resolver heuristics
@@ -314,7 +313,7 @@ Priority: High
 # Phase 3 — Persistence, error modeling, and polish
 
 ## P3.1 Replace fragile playback session text persistence with safer format
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Objectives
@@ -322,10 +321,10 @@ Priority: High
 - reduce corruption / parsing fragility
 
 ### Proposed sub-steps
-- [TODO] choose storage approach (likely JSON file or DataStore)
-- [TODO] add schema/version support if file-based
-- [TODO] migrate existing load path if practical
-- [TODO] update tests
+- [DONE] choose storage approach (JSON file)
+- [DONE] add schema/version support if file-based
+- [DONE] migrate existing load path if practical
+- [DONE] update tests
 
 ### Validation
 - save/load still works
@@ -334,7 +333,7 @@ Priority: High
 ---
 
 ## P3.2 Improve typed error handling across key flows
-Status: TODO
+Status: DONE
 Priority: Medium
 
 ### Objectives
@@ -342,9 +341,9 @@ Priority: Medium
 - improve retryability and diagnostics
 
 ### Proposed sub-steps
-- [TODO] define initial error model(s) for source/auth/playback/update flows
-- [TODO] apply where it gives immediate value first
-- [TODO] avoid giant cross-cutting rewrite in one pass
+- [DONE] define initial error model(s) for source flows
+- [DONE] apply where it gives immediate value first
+- [DONE] avoid giant cross-cutting rewrite in one pass
 
 ### Validation
 - UI can distinguish at least some meaningful error classes
@@ -352,7 +351,7 @@ Priority: Medium
 ---
 
 ## P3.3 Consolidate update flow behind cleaner boundary
-Status: TODO
+Status: DONE
 Priority: Medium
 
 ### Objectives
@@ -360,9 +359,9 @@ Priority: Medium
 - make the update pipeline easier to test and evolve
 
 ### Proposed sub-steps
-- [TODO] define update coordinator/controller boundary
-- [TODO] move check/download/install readiness logic behind that boundary
-- [TODO] keep permission/install UI hooks cleanly separated
+- [DONE] define update coordinator/controller boundary
+- [DONE] move check/download/install readiness logic behind that boundary
+- [DONE] keep permission/install UI hooks cleanly separated
 
 ### Validation
 - update checks and install handoff still work
@@ -476,6 +475,48 @@ Support lightweight migration where easy, but do not overcomplicate early cleanu
 - Validation: `./gradlew testDebugUnitTest` passed.
 - Follow-up noted: source auth/provider eligibility semantics still need dedicated cleanup under P1.4 because current behavior is not yet intuitive.
 
+### 2026-04-04 08:20 UTC
+- Completed P1.2 by parallelizing provider fetches in `SourceRepositoryImpl` with structured concurrency.
+- Added per-provider timeout handling, latency capture, and typed source-fetch error labeling in progress events.
+- Added a concurrency test to verify parallel execution and progress reporting.
+- Validation: `./gradlew testDebugUnitTest` and later full `./gradlew test` passed.
+
+### 2026-04-04 08:27 UTC
+- Completed P1.3 by replacing ambiguous enabled-provider semantics with explicit `ProviderSelectionMode` + `ProviderSelectionState`.
+- Updated preference storage to support explicit mode persistence plus compatibility with older saved state.
+- Updated settings/provider-selection UI summaries and toggling logic to use effective provider selection explicitly.
+- Validation: `./gradlew test` passed.
+
+### 2026-04-04 08:31 UTC
+- Completed P1.4 by moving source auth eligibility filtering into `SourceEligibilityPolicy` and using it from `SourceLoadingCoordinator` instead of `MainActivity` glue logic.
+- This intentionally changed filtering semantics to the clearer rule: when auth is not linked, only direct/non-debrid sources remain eligible.
+- Validation: coordinator tests updated and `./gradlew test` passed.
+
+### 2026-04-04 08:38 UTC
+- Completed P2.4 by adding focused Real-Debrid resolver tests covering episode matching, movie title/year matching, sample/extras rejection, and size/quality preference behavior.
+- Added missing debrid module test dependencies needed for the new resolver suite.
+- Validation: `./gradlew test` passed.
+
+### 2026-04-04 08:44 UTC
+- Completed P3.1 by replacing newline-delimited playback-session persistence with versioned JSON while preserving legacy read compatibility.
+- Added playback-session tests for JSON round-trip, legacy format compatibility, and invalid payload handling.
+- Validation: `./gradlew test` passed.
+
+### 2026-04-04 08:49 UTC
+- Completed the first practical slice of P3.2 by adding typed source-fetch error classification (`Timeout` vs `ProviderFailure`) and surfacing that metadata in progress reporting.
+- Deferred broader cross-cutting typed-error rollout because it would require a much larger app-wide UI contract change than was justified in this pass.
+- Validation: `./gradlew test` passed.
+
+### 2026-04-04 08:53 UTC
+- Completed P3.3 by introducing `UpdateCoordinator` to own update download/install-readiness logic behind a cleaner boundary.
+- Added focused coordinator tests for install-ready, unknown-sources-blocked, and no-installer-available cases.
+- Validation: `./gradlew test` passed.
+
+### 2026-04-04 08:57 UTC
+- Final validation pass completed successfully.
+- Validation: `./gradlew testDebugUnitTest` and `./gradlew test` both passed.
+- Remaining large-scope architecture ideas (ranking rule decomposition, ranking explanations, richer dedupe provenance, app-level store/effect loop, broader DI rethink) were intentionally deferred instead of rushed.
+
 ---
 
 ## Scope Changes
@@ -483,14 +524,15 @@ Support lightweight migration where easy, but do not overcomplicate early cleanu
 ### 2026-04-04
 - Initial scope established.
 - During the source-loading extraction, preserved existing auth-linked source filtering behavior instead of changing product policy mid-refactor.
-- Policy cleanup remains explicitly scheduled under P1.4.
+- Later in P1.4, intentionally replaced that behavior with the clearer direct-only rule for unlinked auth state and updated tests accordingly.
+- Ranking-rule decomposition, ranking explanations, richer dedupe provenance, app-level store/effect loop, and broader DI restructuring were deferred instead of being rushed into this pass.
 
 ---
 
 ## Session Start
 
-### 2026-04-04 07:54 UTC
-Intended task: Begin P1.1 with the first safe extraction pass by moving source loading coordination and progress handling out of `MainActivity` into a dedicated component.
+### 2026-04-04 08:02 UTC
+Intended task: Continue and complete the accepted execution plan items, updating this file as each meaningful implementation step lands and is validated.
 
 ---
 
@@ -501,4 +543,4 @@ This execution plan remains active until:
 - relevant validation is recorded
 - major follow-up items are either captured in docs/issues or scheduled next
 
-When major implementation begins, this file must be updated alongside the code changes.
+Current state: complete for this pass. Remaining items are explicitly marked `DEFERRED` rather than left ambiguous.

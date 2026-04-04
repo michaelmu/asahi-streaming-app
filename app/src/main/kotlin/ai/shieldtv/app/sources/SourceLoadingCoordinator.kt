@@ -6,6 +6,7 @@ import ai.shieldtv.app.core.model.source.SourceFilters
 import ai.shieldtv.app.core.model.source.SourceResult
 import ai.shieldtv.app.core.model.source.SourceSearchRequest
 import ai.shieldtv.app.domain.repository.SourceFetchProgress
+import ai.shieldtv.app.domain.source.SourceEligibilityPolicy
 import ai.shieldtv.app.feature.sources.presentation.SourcesViewModel
 import ai.shieldtv.app.settings.SourcePreferences
 import kotlinx.coroutines.Job
@@ -18,6 +19,7 @@ data class SourceLoadRequest(
     val episodeNumber: Int? = null,
     val authLinked: Boolean,
     val preferences: SourcePreferences,
+    val availableProviderIds: Set<String>,
     val filters: SourceFilters,
     val searchLabel: String
 )
@@ -30,7 +32,8 @@ data class SourceLoadResult(
 
 class SourceLoadingCoordinator(
     private val lifecycleScope: LifecycleCoroutineScope,
-    private val sourcesViewModel: SourcesViewModel
+    private val sourcesViewModel: SourcesViewModel,
+    private val sourceEligibilityPolicy: SourceEligibilityPolicy = SourceEligibilityPolicy()
 ) {
     private var loadJob: Job? = null
     private val providerProgress = linkedMapOf<String, SourceFetchProgress>()
@@ -60,16 +63,17 @@ class SourceLoadingCoordinator(
                     episodeNumber = request.episodeNumber,
                     filters = request.filters
                 ),
-                enabledProviderIds = request.preferences.enabledProviders,
+                enabledProviderIds = request.preferences.providerSelection.effectiveEnabledProviders(request.availableProviderIds),
                 onProgress = { progress ->
                     providerProgress[progress.providerId] = progress
                     onProgressUpdated(currentProgress())
                 }
             )
 
-            val filteredSources = state.sources.filter { source ->
-                source.debridService != DebridService.NONE || request.authLinked
-            }
+            val filteredSources = sourceEligibilityPolicy.filterForAuth(
+                sources = state.sources,
+                authLinked = request.authLinked
+            )
 
             onCompleted(
                 SourceLoadResult(

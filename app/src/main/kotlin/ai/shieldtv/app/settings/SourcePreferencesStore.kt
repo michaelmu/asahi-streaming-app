@@ -8,11 +8,34 @@ class SourcePreferencesStore(context: Context) {
     fun load(): SourcePreferences {
         val movieMax = prefs.takeIf { it.contains(KEY_MOVIE_MAX_GB) }?.getInt(KEY_MOVIE_MAX_GB, 0)?.takeIf { it > 0 }
         val episodeMax = prefs.takeIf { it.contains(KEY_EPISODE_MAX_GB) }?.getInt(KEY_EPISODE_MAX_GB, 0)?.takeIf { it > 0 }
-        val enabled = prefs.getStringSet(KEY_ENABLED_PROVIDERS, emptySet())?.toSet().orEmpty()
+
+        val explicitMode = prefs.getString(KEY_PROVIDER_SELECTION_MODE, null)
+        val storedEnabled = prefs.getStringSet(KEY_ENABLED_PROVIDERS, emptySet())?.toSet().orEmpty()
+        val selectionState = when (explicitMode) {
+            ProviderSelectionMode.CUSTOM.name -> ProviderSelectionState(
+                mode = ProviderSelectionMode.CUSTOM,
+                enabledProviders = storedEnabled
+            )
+            ProviderSelectionMode.ALL_ENABLED.name -> ProviderSelectionState(
+                mode = ProviderSelectionMode.ALL_ENABLED,
+                enabledProviders = emptySet()
+            )
+            else -> {
+                if (storedEnabled.isEmpty()) {
+                    ProviderSelectionState(mode = ProviderSelectionMode.ALL_ENABLED)
+                } else {
+                    ProviderSelectionState(
+                        mode = ProviderSelectionMode.CUSTOM,
+                        enabledProviders = storedEnabled
+                    )
+                }
+            }
+        }
+
         return SourcePreferences(
             movieMaxSizeGb = movieMax,
             episodeMaxSizeGb = episodeMax,
-            enabledProviders = enabled
+            providerSelection = selectionState
         )
     }
 
@@ -28,8 +51,24 @@ class SourcePreferencesStore(context: Context) {
         }.apply()
     }
 
+    fun saveProviderSelection(state: ProviderSelectionState) {
+        prefs.edit()
+            .putString(KEY_PROVIDER_SELECTION_MODE, state.mode.name)
+            .putStringSet(KEY_ENABLED_PROVIDERS, state.enabledProviders)
+            .apply()
+    }
+
     fun saveEnabledProviders(value: Set<String>) {
-        prefs.edit().putStringSet(KEY_ENABLED_PROVIDERS, value).apply()
+        saveProviderSelection(
+            if (value.isEmpty()) {
+                ProviderSelectionState(mode = ProviderSelectionMode.ALL_ENABLED)
+            } else {
+                ProviderSelectionState(
+                    mode = ProviderSelectionMode.CUSTOM,
+                    enabledProviders = value
+                )
+            }
+        )
     }
 
     fun reset() {
@@ -40,5 +79,6 @@ class SourcePreferencesStore(context: Context) {
         private const val KEY_MOVIE_MAX_GB = "movie_max_size_gb"
         private const val KEY_EPISODE_MAX_GB = "episode_max_size_gb"
         private const val KEY_ENABLED_PROVIDERS = "enabled_providers"
+        private const val KEY_PROVIDER_SELECTION_MODE = "provider_selection_mode"
     }
 }

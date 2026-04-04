@@ -8,10 +8,10 @@ import android.provider.Settings
 import androidx.core.content.FileProvider
 import java.io.File
 
-class ApkInstaller(
+open class ApkInstaller(
     private val context: Context
 ) {
-    fun buildInstallIntent(apkFile: File): Intent {
+    open fun buildInstallIntent(apkFile: File): Intent {
         val apkUri: Uri = FileProvider.getUriForFile(
             context,
             "${context.packageName}.fileprovider",
@@ -24,15 +24,15 @@ class ApkInstaller(
         }
     }
 
-    fun canResolveInstallIntent(intent: Intent): Boolean {
+    open fun canResolveInstallIntent(intent: Intent): Boolean {
         return intent.resolveActivity(context.packageManager) != null
     }
 
-    fun canRequestPackageInstalls(): Boolean {
+    open fun canRequestPackageInstalls(): Boolean {
         return Build.VERSION.SDK_INT < Build.VERSION_CODES.O || context.packageManager.canRequestPackageInstalls()
     }
 
-    fun buildManageUnknownAppsIntent(): Intent {
+    open fun buildManageUnknownAppsIntent(): Intent {
         return Intent(
             Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
             Uri.parse("package:${context.packageName}")

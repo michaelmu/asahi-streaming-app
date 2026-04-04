@@ -36,26 +36,30 @@ open class PlaybackSessionStoreBase(
         } else {
             0
         }
-        file.writeText(
-            listOf(
-                item.mediaRef.title,
-                item.subtitle.orEmpty(),
-                item.artworkUrl.orEmpty(),
-                item.mediaRef.title,
-                state.positionMs.toString(),
-                state.durationMs.toString(),
-                progressPercent.toString(),
-                item.stream.url,
-                seasonNumber?.toString().orEmpty(),
-                episodeNumber?.toString().orEmpty(),
-                System.currentTimeMillis().toString()
-            ).joinToString("\n")
+        val record = PlaybackSessionRecord(
+            mediaTitle = item.mediaRef.title,
+            subtitle = item.subtitle.orEmpty(),
+            artworkUrl = item.artworkUrl,
+            queryHint = item.mediaRef.title,
+            positionMs = state.positionMs,
+            durationMs = state.durationMs,
+            progressPercent = progressPercent,
+            playbackUrl = item.stream.url,
+            seasonNumber = seasonNumber,
+            episodeNumber = episodeNumber,
+            updatedAtEpochMs = System.currentTimeMillis()
         )
+        file.writeText(PlaybackSessionJson.encode(record))
     }
 
     fun load(): PlaybackSessionRecord? {
         if (!file.exists()) return null
-        val lines = file.readLines()
+        val raw = file.readText()
+        return PlaybackSessionJson.decode(raw) ?: loadLegacy(raw)
+    }
+
+    private fun loadLegacy(raw: String): PlaybackSessionRecord? {
+        val lines = raw.lines()
         if (lines.size < 8) return null
         return PlaybackSessionRecord(
             mediaTitle = lines[0],

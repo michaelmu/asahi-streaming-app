@@ -75,6 +75,7 @@ class SourceLoadingCoordinatorTest {
                     mediaRef = mediaRef(),
                     authLinked = false,
                     preferences = SourcePreferences(),
+                    availableProviderIds = setOf("test", "torrentio"),
                     filters = SourceFilters(),
                     searchLabel = "The Matrix"
                 ),
@@ -88,7 +89,7 @@ class SourceLoadingCoordinatorTest {
             assertTrue(startedCalled)
             assertEquals(2, progressSnapshots.size)
             assertEquals(1, result?.sources?.size)
-            assertTrue(result?.sources?.all { it.debridService == DebridService.REAL_DEBRID } == true)
+            assertTrue(result?.sources?.all { it.debridService == DebridService.NONE } == true)
             assertEquals(SourceFetchProgress.State.COMPLETED, coordinator.currentProgress().last().state)
         } finally {
             Dispatchers.resetMain()
@@ -118,6 +119,7 @@ class SourceLoadingCoordinatorTest {
                     mediaRef = mediaRef(),
                     authLinked = true,
                     preferences = SourcePreferences(),
+                    availableProviderIds = setOf("test", "torrentio"),
                     filters = SourceFilters(),
                     searchLabel = "The Matrix"
                 ),

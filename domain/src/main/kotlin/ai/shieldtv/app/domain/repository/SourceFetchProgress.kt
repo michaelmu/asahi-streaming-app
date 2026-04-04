@@ -5,7 +5,9 @@ data class SourceFetchProgress(
     val providerDisplayName: String,
     val state: State,
     val resultCount: Int? = null,
-    val message: String? = null
+    val message: String? = null,
+    val latencyMs: Long? = null,
+    val errorType: String? = null
 ) {
     enum class State {
         STARTED,

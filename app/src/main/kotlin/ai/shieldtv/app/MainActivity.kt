@@ -814,6 +814,7 @@ class MainActivity : ComponentActivity() {
                 episodeNumber = episodeNumber,
                 authLinked = authState.isLinked,
                 preferences = prefs,
+                availableProviderIds = AppContainer.availableProviderIds().toSet(),
                 filters = currentSourceFilters(),
                 searchLabel = searchLabel
             ),
@@ -1165,7 +1166,18 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun buildProviderSummary(): String {
-        return AppContainer.availableProviderLabels().values.joinToString(" • ")
+        val labels = AppContainer.availableProviderLabels()
+        val allProviders = labels.keys.toSet()
+        val prefs = currentSourcePreferences()
+        val enabled = prefs.providerSelection.effectiveEnabledProviders(allProviders)
+        val modeLabel = when (prefs.providerSelection.mode) {
+            ai.shieldtv.app.settings.ProviderSelectionMode.ALL_ENABLED -> "all enabled"
+            ai.shieldtv.app.settings.ProviderSelectionMode.CUSTOM -> "custom"
+        }
+        return labels.entries.joinToString(" • ") { (id, label) ->
+            val marker = if (id in enabled) "on" else "off"
+            "$label:$marker"
+        } + " ($modeLabel)"
     }
 
     private fun currentSourcePreferences(): SourcePreferences = AppContainer.sourcePreferencesStore.load()
@@ -1180,10 +1192,11 @@ class MainActivity : ComponentActivity() {
 
     private fun buildSourcePreferencesSummary(): String {
         val prefs = currentSourcePreferences()
-        val providerMode = if (prefs.enabledProviders.isEmpty()) {
-            "Providers: all enabled"
-        } else {
-            "Providers: ${prefs.enabledProviders.joinToString(", ")}"
+        val allProviders = AppContainer.availableProviderIds().toSet()
+        val effectiveProviders = prefs.providerSelection.effectiveEnabledProviders(allProviders)
+        val providerMode = when (prefs.providerSelection.mode) {
+            ai.shieldtv.app.settings.ProviderSelectionMode.ALL_ENABLED -> "Providers: all enabled"
+            ai.shieldtv.app.settings.ProviderSelectionMode.CUSTOM -> "Providers: ${effectiveProviders.joinToString(", ")}"
         }
         val movieLimit = "Movies max: ${prefs.movieMaxSizeGb?.let { "${it}GB" } ?: "none"}"
         val tvLimit = "TV max: ${prefs.episodeMaxSizeGb?.let { "${it}GB" } ?: "none"}"
@@ -1233,8 +1246,8 @@ class MainActivity : ComponentActivity() {
     private fun showProviderSelectionModal() {
         val labels = AppContainer.availableProviderLabels()
         val allProviders = labels.keys.toList()
-        val current = currentSourcePreferences().enabledProviders
-        val effectiveEnabled = if (current.isEmpty()) allProviders.toSet() else current
+        val current = currentSourcePreferences().providerSelection
+        val effectiveEnabled = current.effectiveEnabledProviders(allProviders.toSet())
         val providerLines = allProviders.joinToString("\n") { id ->
             val enabled = id in effectiveEnabled
             val marker = if (enabled) "[x]" else "[ ]"
@@ -1262,8 +1275,8 @@ class MainActivity : ComponentActivity() {
 
     private fun showProviderSelectionPage(allProviders: List<String>, startIndex: Int) {
         val labels = AppContainer.availableProviderLabels()
-        val current = currentSourcePreferences().enabledProviders
-        val effectiveEnabled = if (current.isEmpty()) allProviders.toSet() else current
+        val current = currentSourcePreferences().providerSelection
+        val effectiveEnabled = current.effectiveEnabledProviders(allProviders.toSet())
         val visible = allProviders.drop(startIndex).take(3)
         if (visible.isEmpty()) {
             showProviderSelectionActions(allProviders)
@@ -1296,8 +1309,8 @@ class MainActivity : ComponentActivity() {
 
     private fun showProviderSelectionActions(allProviders: List<String>) {
         val labels = AppContainer.availableProviderLabels()
-        val current = currentSourcePreferences().enabledProviders
-        val effectiveEnabled = if (current.isEmpty()) allProviders.toSet() else current
+        val current = currentSourcePreferences().providerSelection
+        val effectiveEnabled = current.effectiveEnabledProviders(allProviders.toSet())
         val providerLines = allProviders.joinToString("\n") { id ->
             val enabled = id in effectiveEnabled
             val marker = if (enabled) "[x]" else "[ ]"
@@ -1320,25 +1333,44 @@ class MainActivity : ComponentActivity() {
     private fun toggleProvider(providerId: String) {
         val allProviders = AppContainer.availableProviderIds().toSet()
         val store = AppContainer.sourcePreferencesStore
-        val current = currentSourcePreferences().enabledProviders
-        val working = if (current.isEmpty()) allProviders.toMutableSet() else current.toMutableSet()
+        val current = currentSourcePreferences().providerSelection
+        val working = current.effectiveEnabledProviders(allProviders).toMutableSet()
         if (!working.add(providerId)) {
             working.remove(providerId)
         }
-        store.saveEnabledProviders(if (working == allProviders) emptySet() else working)
+        store.saveProviderSelection(
+            if (working == allProviders) {
+                ai.shieldtv.app.settings.ProviderSelectionState(
+                    mode = ai.shieldtv.app.settings.ProviderSelectionMode.ALL_ENABLED
+                )
+            } else {
+                ai.shieldtv.app.settings.ProviderSelectionState(
+                    mode = ai.shieldtv.app.settings.ProviderSelectionMode.CUSTOM,
+                    enabledProviders = working
+                )
+            }
+        )
         showProviderSelectionModal()
         renderCurrentScreen()
     }
 
     private fun setAllProvidersEnabled() {
-        AppContainer.sourcePreferencesStore.saveEnabledProviders(emptySet())
+        AppContainer.sourcePreferencesStore.saveProviderSelection(
+            ai.shieldtv.app.settings.ProviderSelectionState(
+                mode = ai.shieldtv.app.settings.ProviderSelectionMode.ALL_ENABLED
+            )
+        )
         showProviderSelectionModal()
         renderCurrentScreen()
     }
 
     private fun setNoProviderOverrides() {
-        val allProviders = AppContainer.availableProviderIds().toSet()
-        AppContainer.sourcePreferencesStore.saveEnabledProviders(allProviders)
+        AppContainer.sourcePreferencesStore.saveProviderSelection(
+            ai.shieldtv.app.settings.ProviderSelectionState(
+                mode = ai.shieldtv.app.settings.ProviderSelectionMode.CUSTOM,
+                enabledProviders = emptySet()
+            )
+        )
         showProviderSelectionModal()
         renderCurrentScreen()
     }
