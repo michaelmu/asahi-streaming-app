@@ -67,24 +67,24 @@ class NavigationRailRenderer(
         host.addView(viewFactory.sectionTitle("Navigate"))
         host.addView(viewFactory.spacer(12))
 
-        val homeButton = focusableButton("Home", onHome, selected = inHome)
+        val homeButton = focusableButton("Home", R.drawable.ic_nav_home, onHome, selected = inHome)
         host.addView(homeButton)
         host.addView(viewFactory.spacer(10))
-        host.addView(focusableButton("Movies", onMovies, selected = inSearch && !inSettings && selectedMode == SearchMode.MOVIES))
+        host.addView(focusableButton("Movies", R.drawable.ic_nav_movie, onMovies, selected = inSearch && !inSettings && selectedMode == SearchMode.MOVIES))
         host.addView(viewFactory.spacer(10))
-        host.addView(focusableButton("TV Shows", onShows, selected = inSearch && !inSettings && selectedMode == SearchMode.SHOWS))
+        host.addView(focusableButton("TV Shows", R.drawable.ic_nav_tv, onShows, selected = inSearch && !inSettings && selectedMode == SearchMode.SHOWS))
         host.addView(viewFactory.spacer(10))
-        host.addView(focusableButton("Settings", onSettings, selected = inSettings))
+        host.addView(focusableButton("Settings", R.drawable.ic_nav_settings, onSettings, selected = inSettings))
         host.addView(viewFactory.spacer(18))
         host.addView(viewFactory.sectionTitle("Session"))
         host.addView(viewFactory.spacer(12))
-        host.addView(focusableButton("Quit", onQuit))
+        host.addView(focusableButton("Quit", R.drawable.ic_nav_history, onQuit))
 
         homeButton.post { onFirstFocusTarget(homeButton) }
     }
 
-    private fun focusableButton(text: String, onClick: () -> Unit, selected: Boolean = false): View {
-        return viewFactory.button(text, onClick, selected = selected)
+    private fun focusableButton(text: String, iconResId: Int, onClick: () -> Unit, selected: Boolean = false): View {
+        return viewFactory.button(text, onClick, selected = selected, iconResId = iconResId)
     }
 }
 
@@ -187,10 +187,10 @@ class HomeScreenRenderer(
             addView(viewFactory.spacer(10))
             addView(viewFactory.body(if (authLinked) "Linked and ready for cached-source playback." else "Not linked yet. Open Settings to connect it."))
             addView(viewFactory.spacer(12))
-            addView(actionButton("Settings / Accounts", onOpenSettings))
+            addView(actionButton("Settings / Accounts", onOpenSettings, R.drawable.ic_nav_settings))
             onResumeSearch?.let {
                 addView(viewFactory.spacer(10))
-                addView(actionButton("Resume Last Flow", it))
+                addView(actionButton("Resume Last Flow", it, R.drawable.ic_nav_search))
             }
         })
         host.addView(viewFactory.spacer(14))
@@ -202,13 +202,13 @@ class HomeScreenRenderer(
             addView(viewFactory.spacer(8))
             addView(buildDashboardList(movieFavorites, emptyMessage = "No movie favorites yet.", onItemSelected = onFavoriteSelected))
             addView(viewFactory.spacer(10))
-            addView(actionButton("Open Movie Favorites", onMovieFavorites))
+            addView(actionButton("Open Movie Favorites", onMovieFavorites, R.drawable.ic_nav_favorite))
             addView(viewFactory.spacer(12))
             addView(viewFactory.caption("TV Shows"))
             addView(viewFactory.spacer(8))
             addView(buildDashboardList(showFavorites, emptyMessage = "No TV favorites yet.", onItemSelected = onFavoriteSelected))
             addView(viewFactory.spacer(10))
-            addView(actionButton("Open TV Favorites", onShowFavorites))
+            addView(actionButton("Open TV Favorites", onShowFavorites, R.drawable.ic_nav_favorite))
         })
         host.addView(viewFactory.spacer(14))
 
@@ -222,7 +222,7 @@ class HomeScreenRenderer(
             addView(viewFactory.spacer(10))
             addView(buildDashboardList(movieHistory, emptyMessage = "No movie watch history yet.", onItemSelected = onHistorySelected))
             addView(viewFactory.spacer(10))
-            addView(actionButton("Open Movie Watch History", onMovieHistory))
+            addView(actionButton("Open Movie Watch History", onMovieHistory, R.drawable.ic_nav_history))
         }
         val showHistoryPanel = viewFactory.panel(elevated = false).apply {
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
@@ -232,7 +232,7 @@ class HomeScreenRenderer(
             addView(viewFactory.spacer(10))
             addView(buildDashboardList(showHistory, emptyMessage = "No TV watch history yet.", onItemSelected = onHistorySelected))
             addView(viewFactory.spacer(10))
-            addView(actionButton("Open TV Watch History", onShowHistory))
+            addView(actionButton("Open TV Watch History", onShowHistory, R.drawable.ic_nav_history))
         }
         historyRow.addView(movieHistoryPanel)
         historyRow.addView(showHistoryPanel)
@@ -259,9 +259,9 @@ class HomeScreenRenderer(
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             addView(viewFactory.sectionTitle("Browse"))
             addView(viewFactory.spacer(12))
-            addView(actionButton("Browse Movies", onBrowseMovies))
+            addView(actionButton("Browse Movies", onBrowseMovies, R.drawable.ic_nav_movie))
             addView(viewFactory.spacer(10))
-            addView(actionButton("Browse TV Shows", onBrowseShows))
+            addView(actionButton("Browse TV Shows", onBrowseShows, R.drawable.ic_nav_tv))
         }
         val recentPanel = viewFactory.panel(elevated = false).apply {
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
@@ -273,7 +273,7 @@ class HomeScreenRenderer(
                 addView(viewFactory.body("Nothing recent yet. Search for a title and it’ll show up here."))
             } else {
                 state.recentQueries.take(6).forEachIndexed { index, query ->
-                    val button = actionButton(query, onClick = { onRecentQuery(query) })
+                    val button = actionButton(query, onClick = { onRecentQuery(query) }, iconResId = R.drawable.ic_nav_search)
                     addView(button)
                     if (index < state.recentQueries.take(6).lastIndex) addView(viewFactory.spacer(10))
                 }
@@ -409,8 +409,8 @@ class HomeScreenRenderer(
         }
     }
 
-    private fun actionButton(text: String, onClick: () -> Unit, startMarginDp: Int = 0): View {
-        return viewFactory.button(text, onClick).apply {
+    private fun actionButton(text: String, onClick: () -> Unit, iconResId: Int? = null, startMarginDp: Int = 0): View {
+        return viewFactory.button(text, onClick, iconResId = iconResId).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -469,10 +469,10 @@ class SearchScreenRenderer(
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
             }
-            val favoritesButton = viewFactory.button("Favorites", onClick = onOpenFavorites).apply {
+            val favoritesButton = viewFactory.button("Favorites", onClick = onOpenFavorites, iconResId = R.drawable.ic_nav_favorite).apply {
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             }
-            val historyButton = viewFactory.button("Watch History", onClick = onOpenHistory).apply {
+            val historyButton = viewFactory.button("Watch History", onClick = onOpenHistory, iconResId = R.drawable.ic_nav_history).apply {
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
                     it.marginStart = viewFactory.dp(16)
                 }
@@ -498,7 +498,7 @@ class SearchScreenRenderer(
             }
             val searchButton = viewFactory.button("Search", onClick = {
                 onSearch(state.searchMode, queryInput.text.toString())
-            }).apply {
+            }, iconResId = R.drawable.ic_nav_search).apply {
                 layoutParams = LinearLayout.LayoutParams(
                     viewFactory.dp(180),
                     LinearLayout.LayoutParams.WRAP_CONTENT
@@ -570,7 +570,7 @@ class ResultsScreenRenderer(
                     }
                 ))
                 addView(viewFactory.spacer(16))
-                addView(viewFactory.button(if (isFavoritesBrowse || isHistoryBrowse) "Go to Search" else "Try another search", onNewSearch))
+                addView(viewFactory.button(if (isFavoritesBrowse || isHistoryBrowse) "Go to Search" else "Try another search", onNewSearch, iconResId = R.drawable.ic_nav_search))
             })
             return
         }
@@ -629,7 +629,7 @@ class ResultsScreenRenderer(
             if (index == 0) card.post { onFirstFocusTarget(card) }
         }
 
-        host.addView(viewFactory.button("New Search", onNewSearch))
+        host.addView(viewFactory.button("New Search", onNewSearch, iconResId = R.drawable.ic_nav_search))
     }
 
     private fun focusableMediaCard(onClick: () -> Unit, onLongPress: () -> Unit, elevated: Boolean = true): LinearLayout {
@@ -757,7 +757,8 @@ class DetailsScreenRenderer(
 
         val primaryAction = viewFactory.button(
             if (details.mediaRef.mediaType == MediaType.SHOW) "Browse Episodes" else "Find Sources",
-            if (details.mediaRef.mediaType == MediaType.SHOW) onBrowseEpisodes else onFindSources
+            if (details.mediaRef.mediaType == MediaType.SHOW) onBrowseEpisodes else onFindSources,
+            iconResId = if (details.mediaRef.mediaType == MediaType.SHOW) R.drawable.ic_nav_tv else R.drawable.ic_nav_play
         )
         host.addView(primaryAction)
         primaryAction.post { onFirstFocusTarget(primaryAction) }
@@ -922,7 +923,8 @@ class EpisodePickerScreenRenderer(
 
         host.addView(viewFactory.button(
             "Find Sources for S${selectedSeason.toString().padStart(2, '0')}E${selectedEpisode.toString().padStart(2, '0')}",
-            onFindSources
+            onFindSources,
+            iconResId = R.drawable.ic_nav_play
         ))
     }
 }
@@ -1269,32 +1271,33 @@ class SettingsScreenRenderer(
 
         val primaryButton = viewFactory.button(
             "Start Real-Debrid Link",
-            onStartLink
+            onStartLink,
+            iconResId = R.drawable.ic_nav_link
         )
         host.addView(primaryButton)
         primaryButton.post { onFirstFocusTarget(primaryButton) }
         host.addView(viewFactory.spacer(10))
 
         if (authState.isLinked) {
-            host.addView(viewFactory.button("Reset Real-Debrid Auth", onResetAuth))
+            host.addView(viewFactory.button("Reset Real-Debrid Auth", onResetAuth, iconResId = R.drawable.ic_nav_link))
             host.addView(viewFactory.spacer(10))
         }
-        host.addView(viewFactory.button("Check for Updates", onCheckForUpdates))
+        host.addView(viewFactory.button("Check for Updates", onCheckForUpdates, iconResId = R.drawable.ic_nav_download))
         host.addView(viewFactory.spacer(10))
         onOpenLatestUpdate?.let { openLatest ->
-            host.addView(viewFactory.button("Open Latest APK", openLatest))
+            host.addView(viewFactory.button("Open Latest APK", openLatest, iconResId = R.drawable.ic_nav_download))
             host.addView(viewFactory.spacer(10))
         }
-        host.addView(viewFactory.button("Movie Max Size ($movieMaxSizeLabel)", onConfigureMovieMaxSize))
+        host.addView(viewFactory.button("Movie Max Size ($movieMaxSizeLabel)", onConfigureMovieMaxSize, iconResId = R.drawable.ic_nav_movie))
         host.addView(viewFactory.spacer(10))
-        host.addView(viewFactory.button("TV Max Size ($tvMaxSizeLabel)", onConfigureTvMaxSize))
+        host.addView(viewFactory.button("TV Max Size ($tvMaxSizeLabel)", onConfigureTvMaxSize, iconResId = R.drawable.ic_nav_tv))
         host.addView(viewFactory.spacer(10))
-        host.addView(viewFactory.button("Choose Providers ($providerSelectionLabel)", onToggleProviders))
+        host.addView(viewFactory.button("Choose Providers ($providerSelectionLabel)", onToggleProviders, iconResId = R.drawable.ic_nav_settings))
         host.addView(viewFactory.spacer(10))
-        host.addView(viewFactory.button("Reset Source Preferences", onResetSourcePreferences))
+        host.addView(viewFactory.button("Reset Source Preferences", onResetSourcePreferences, iconResId = R.drawable.ic_nav_settings))
         host.addView(viewFactory.spacer(10))
-        host.addView(viewFactory.button("Copy Debug Info", onCopyDebugInfo))
+        host.addView(viewFactory.button("Copy Debug Info", onCopyDebugInfo, iconResId = R.drawable.ic_nav_history))
         host.addView(viewFactory.spacer(10))
-        host.addView(viewFactory.button("Back to Browse", onBackToHome))
+        host.addView(viewFactory.button("Back to Browse", onBackToHome, iconResId = R.drawable.ic_nav_home))
     }
 }

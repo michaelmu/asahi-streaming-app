@@ -13,6 +13,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.annotation.DrawableRes
 import androidx.core.content.ContextCompat
 import coil.load
 import ai.shieldtv.app.R
@@ -147,7 +148,12 @@ class ScreenViewFactory(
         }
     }
 
-    fun button(text: String, onClick: () -> Unit, selected: Boolean = false): View {
+    fun button(
+        text: String,
+        onClick: () -> Unit,
+        selected: Boolean = false,
+        @DrawableRes iconResId: Int? = null
+    ): View {
         return Button(context).apply {
             this.text = text
             gravity = Gravity.START or Gravity.CENTER_VERTICAL
@@ -160,6 +166,10 @@ class ScreenViewFactory(
             isAllCaps = false
             minHeight = dp(56)
             setPadding(dp(20), dp(16), dp(20), dp(16))
+            iconResId?.let {
+                setCompoundDrawablesRelativeWithIntrinsicBounds(it, 0, 0, 0)
+                compoundDrawablePadding = dp(12)
+            }
             elevation = 0f
             stateListAnimator = null
             isFocusable = true
