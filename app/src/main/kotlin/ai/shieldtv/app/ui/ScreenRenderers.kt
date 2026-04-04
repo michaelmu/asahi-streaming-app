@@ -52,8 +52,10 @@ class NavigationRailRenderer(
     private val viewFactory: ScreenViewFactory
 ) {
     fun render(
+        inHome: Boolean,
         selectedMode: SearchMode,
         inSettings: Boolean,
+        onHome: () -> Unit,
         onMovies: () -> Unit,
         onMovieFavorites: () -> Unit,
         onMovieHistory: () -> Unit,
@@ -65,29 +67,32 @@ class NavigationRailRenderer(
         onFirstFocusTarget: (View) -> Unit = {}
     ) {
         host.removeAllViews()
-        host.addView(viewFactory.sectionTitle("Library"))
+        host.addView(viewFactory.sectionTitle("Navigate"))
         host.addView(viewFactory.spacer(12))
 
-        val movieButton = focusableButton(
-            if (!inSettings && selectedMode == SearchMode.MOVIES) "Movies •" else "Movies",
-            onMovies
-        )
-        host.addView(movieButton)
+        val homeButton = focusableButton(if (inHome) "Home •" else "Home", onHome)
+        host.addView(homeButton)
+        host.addView(viewFactory.spacer(10))
+
+        host.addView(viewFactory.sectionTitle("Movies"))
+        host.addView(viewFactory.spacer(10))
+        host.addView(focusableButton(if (!inSettings && selectedMode == SearchMode.MOVIES) "Browse Movies •" else "Browse Movies", onMovies))
         host.addView(viewFactory.spacer(10))
         host.addView(focusableButton("Movie Favorites", onMovieFavorites))
         host.addView(viewFactory.spacer(10))
         host.addView(focusableButton("Movie Watch History", onMovieHistory))
+        host.addView(viewFactory.spacer(14))
+
+        host.addView(viewFactory.sectionTitle("TV Shows"))
         host.addView(viewFactory.spacer(10))
-        host.addView(
-            focusableButton(
-                if (!inSettings && selectedMode == SearchMode.SHOWS) "TV Shows •" else "TV Shows",
-                onShows
-            )
-        )
+        host.addView(focusableButton(if (!inSettings && selectedMode == SearchMode.SHOWS) "Browse TV Shows •" else "Browse TV Shows", onShows))
         host.addView(viewFactory.spacer(10))
         host.addView(focusableButton("TV Favorites", onShowFavorites))
         host.addView(viewFactory.spacer(10))
         host.addView(focusableButton("TV Watch History", onShowHistory))
+        host.addView(viewFactory.spacer(14))
+
+        host.addView(viewFactory.sectionTitle("System"))
         host.addView(viewFactory.spacer(10))
         host.addView(focusableButton(if (inSettings) "Settings •" else "Settings", onSettings))
         host.addView(viewFactory.spacer(18))
@@ -95,7 +100,7 @@ class NavigationRailRenderer(
         host.addView(viewFactory.spacer(12))
         host.addView(focusableButton("Quit", onQuit))
 
-        movieButton.post { onFirstFocusTarget(movieButton) }
+        homeButton.post { onFirstFocusTarget(homeButton) }
     }
 
     private fun focusableButton(text: String, onClick: () -> Unit): View {
@@ -159,6 +164,10 @@ class HomeScreenRenderer(
         state: AppState,
         authLinked: Boolean,
         statusMessage: String,
+        movieFavorites: List<SearchResult>,
+        showFavorites: List<SearchResult>,
+        movieHistory: List<SearchResult>,
+        showHistory: List<SearchResult>,
         onBrowseMovies: () -> Unit,
         onMovieFavorites: () -> Unit,
         onMovieHistory: () -> Unit,
@@ -170,6 +179,8 @@ class HomeScreenRenderer(
         onQuickPick: (SearchResult) -> Unit,
         onRecentQuery: (String) -> Unit,
         onContinueWatching: (ContinueWatchingItem) -> Unit,
+        onFavoriteSelected: (SearchResult) -> Unit,
+        onHistorySelected: (SearchResult) -> Unit,
         onFirstFocusTarget: (View) -> Unit = {}
     ) {
         host.removeAllViews()
@@ -177,36 +188,6 @@ class HomeScreenRenderer(
 
         val libraryPicks = if (state.searchMode == SearchMode.SHOWS) featuredShows else featuredMovies
         val featured = dynamicPicks(state, libraryPicks)
-
-        val firstMovieShortcut = actionButton("Browse Movies", onBrowseMovies)
-        host.addView(buildActionSection(
-            title = "Movies",
-            buttons = listOf(
-                firstMovieShortcut,
-                actionButton("Favorites", onMovieFavorites),
-                actionButton("Watch History", onMovieHistory)
-            ),
-            elevated = true
-        ))
-        host.addView(viewFactory.spacer(14))
-
-        host.addView(buildActionSection(
-            title = "TV Shows",
-            buttons = listOf(
-                actionButton("Browse TV Shows", onBrowseShows),
-                actionButton("Favorites", onShowFavorites),
-                actionButton("Watch History", onShowHistory)
-            ),
-            elevated = false
-        ))
-        host.addView(viewFactory.spacer(14))
-
-        host.addView(buildActionSection(
-            title = "Settings",
-            buttons = listOf(actionButton("Settings / Accounts", onOpenSettings)),
-            elevated = false
-        ))
-        host.addView(viewFactory.spacer(14))
 
         val statusRow = LinearLayout(host.context).apply { orientation = LinearLayout.HORIZONTAL }
         statusRow.addView(
@@ -217,12 +198,65 @@ class HomeScreenRenderer(
             )
         )
         statusRow.addView(horizontalGap())
-        statusRow.addView(viewFactory.statPill("Search Mode", state.searchMode.label, StatTone.ACCENT))
-        state.selectedMedia?.title?.takeIf { it.isNotBlank() }?.let {
-            statusRow.addView(horizontalGap())
-            statusRow.addView(viewFactory.statPill("Selected", it.take(18), StatTone.NORMAL))
-        }
+        statusRow.addView(viewFactory.statPill("Status", statusMessage.ifBlank { "Ready" }.take(24), StatTone.ACCENT))
         host.addView(HorizontalScrollView(host.context).apply { addView(statusRow) })
+        host.addView(viewFactory.spacer(14))
+
+        host.addView(viewFactory.panel(elevated = true).apply {
+            addView(viewFactory.sectionTitle("Real-Debrid"))
+            addView(viewFactory.spacer(10))
+            addView(viewFactory.body(if (authLinked) "Linked and ready for cached-source playback." else "Not linked yet. Open Settings to connect it."))
+            addView(viewFactory.spacer(12))
+            addView(actionButton("Settings / Accounts", onOpenSettings))
+            onResumeSearch?.let {
+                addView(viewFactory.spacer(10))
+                addView(actionButton("Resume Last Flow", it))
+            }
+        })
+        host.addView(viewFactory.spacer(14))
+
+        host.addView(viewFactory.panel(elevated = false).apply {
+            addView(viewFactory.sectionTitle("Favorites"))
+            addView(viewFactory.spacer(10))
+            addView(viewFactory.caption("Movies"))
+            addView(viewFactory.spacer(8))
+            addView(buildDashboardList(movieFavorites, emptyMessage = "No movie favorites yet.", onItemSelected = onFavoriteSelected))
+            addView(viewFactory.spacer(10))
+            addView(actionButton("Open Movie Favorites", onMovieFavorites))
+            addView(viewFactory.spacer(12))
+            addView(viewFactory.caption("TV Shows"))
+            addView(viewFactory.spacer(8))
+            addView(buildDashboardList(showFavorites, emptyMessage = "No TV favorites yet.", onItemSelected = onFavoriteSelected))
+            addView(viewFactory.spacer(10))
+            addView(actionButton("Open TV Favorites", onShowFavorites))
+        })
+        host.addView(viewFactory.spacer(14))
+
+        val historyRow = LinearLayout(host.context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.TOP
+        }
+        val movieHistoryPanel = viewFactory.panel(elevated = true).apply {
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            addView(viewFactory.sectionTitle("Recently Watched Movies"))
+            addView(viewFactory.spacer(10))
+            addView(buildDashboardList(movieHistory, emptyMessage = "No movie watch history yet.", onItemSelected = onHistorySelected))
+            addView(viewFactory.spacer(10))
+            addView(actionButton("Open Movie Watch History", onMovieHistory))
+        }
+        val showHistoryPanel = viewFactory.panel(elevated = false).apply {
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
+                it.marginStart = viewFactory.dp(14)
+            }
+            addView(viewFactory.sectionTitle("Recently Watched TV"))
+            addView(viewFactory.spacer(10))
+            addView(buildDashboardList(showHistory, emptyMessage = "No TV watch history yet.", onItemSelected = onHistorySelected))
+            addView(viewFactory.spacer(10))
+            addView(actionButton("Open TV Watch History", onShowHistory))
+        }
+        historyRow.addView(movieHistoryPanel)
+        historyRow.addView(showHistoryPanel)
+        host.addView(historyRow)
         host.addView(viewFactory.spacer(14))
 
         if (state.continueWatching.isNotEmpty()) {
@@ -241,19 +275,15 @@ class HomeScreenRenderer(
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.TOP
         }
-        val leftPanel = viewFactory.panel(elevated = true).apply {
+        val browsePanel = viewFactory.panel(elevated = true).apply {
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            addView(viewFactory.sectionTitle("What’s Ready"))
+            addView(viewFactory.sectionTitle("Browse"))
             addView(viewFactory.spacer(12))
-            addView(viewFactory.body(statusMessage))
-            addView(viewFactory.spacer(12))
-            addView(viewFactory.caption("TMDb metadata, Torrentio source lookup, Real-Debrid auth/resolve, and Media3 playback are all in the loop."))
-            onResumeSearch?.let {
-                addView(viewFactory.spacer(16))
-                addView(actionButton("Resume Last Flow", it))
-            }
+            addView(actionButton("Browse Movies", onBrowseMovies))
+            addView(viewFactory.spacer(10))
+            addView(actionButton("Browse TV Shows", onBrowseShows))
         }
-        val rightPanel = viewFactory.panel(elevated = false).apply {
+        val recentPanel = viewFactory.panel(elevated = false).apply {
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
                 it.marginStart = viewFactory.dp(14)
             }
@@ -269,11 +299,13 @@ class HomeScreenRenderer(
                 }
             }
         }
-        lowerRow.addView(leftPanel)
-        lowerRow.addView(rightPanel)
+        lowerRow.addView(browsePanel)
+        lowerRow.addView(recentPanel)
         host.addView(lowerRow)
 
-        firstMovieShortcut.post { onFirstFocusTarget(firstMovieShortcut) }
+        host.post {
+            host.findFocus()?.let(onFirstFocusTarget)
+        }
     }
 
     private fun dynamicPicks(state: AppState, fallback: List<SearchResult>): List<SearchResult> {
@@ -375,13 +407,24 @@ class HomeScreenRenderer(
         }
     }
 
-    private fun buildActionSection(title: String, buttons: List<View>, elevated: Boolean): View {
-        return viewFactory.panel(elevated = elevated).apply {
-            addView(viewFactory.sectionTitle(title))
-            addView(viewFactory.spacer(10))
-            buttons.forEachIndexed { index, view ->
-                addView(view)
-                if (index < buttons.lastIndex) addView(viewFactory.spacer(10))
+    private fun buildDashboardList(
+        items: List<SearchResult>,
+        emptyMessage: String,
+        onItemSelected: (SearchResult) -> Unit
+    ): View {
+        return LinearLayout(host.context).apply {
+            orientation = LinearLayout.VERTICAL
+            if (items.isEmpty()) {
+                addView(viewFactory.body(emptyMessage))
+            } else {
+                items.take(4).forEachIndexed { index, item ->
+                    addView(actionButton(item.mediaRef.title, onClick = { onItemSelected(item) }))
+                    item.subtitle?.takeIf { it.isNotBlank() }?.let { subtitle ->
+                        addView(viewFactory.spacer(4))
+                        addView(viewFactory.caption(subtitle.take(44)))
+                    }
+                    if (index < items.take(4).lastIndex) addView(viewFactory.spacer(10))
+                }
             }
         }
     }

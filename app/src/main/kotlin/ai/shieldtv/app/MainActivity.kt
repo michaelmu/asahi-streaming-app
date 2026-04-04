@@ -556,8 +556,14 @@ class MainActivity : ComponentActivity() {
         railHost.removeAllViews()
         if (destination != AppDestination.PLAYER) {
             navigationRailRenderer.render(
+                inHome = destination == AppDestination.HOME,
                 selectedMode = coordinator.currentState().searchMode,
                 inSettings = destination == AppDestination.SETTINGS,
+                onHome = {
+                    AppContainer.playbackEngine.stop()
+                    coordinator.openHome()
+                    renderCurrentScreen()
+                },
                 onMovies = {
                     AppContainer.playbackEngine.stop()
                     if (coordinator.currentState().searchMode == SearchMode.MOVIES && coordinator.currentState().destination == AppDestination.SEARCH) {
@@ -635,6 +641,10 @@ class MainActivity : ComponentActivity() {
                     state = coordinator.currentState(),
                     authLinked = authState.isLinked,
                     statusMessage = statusText.text?.toString().orEmpty(),
+                    movieFavorites = AppContainer.favoritesCoordinator.listByType(ai.shieldtv.app.core.model.media.MediaType.MOVIE),
+                    showFavorites = AppContainer.favoritesCoordinator.listByType(ai.shieldtv.app.core.model.media.MediaType.SHOW),
+                    movieHistory = AppContainer.watchHistoryCoordinator.listResultsByType(ai.shieldtv.app.core.model.media.MediaType.MOVIE),
+                    showHistory = AppContainer.watchHistoryCoordinator.listResultsByType(ai.shieldtv.app.core.model.media.MediaType.SHOW),
                     onBrowseMovies = {
                         coordinator.openSearch(SearchMode.MOVIES)
                         renderCurrentScreen()
@@ -702,6 +712,12 @@ class MainActivity : ComponentActivity() {
                     },
                     onContinueWatching = { item ->
                         runSearch(coordinator.currentState().searchMode, item.queryHint)
+                    },
+                    onFavoriteSelected = { result ->
+                        onSearchResultSelected(result)
+                    },
+                    onHistorySelected = { result ->
+                        onSearchResultSelected(result)
                     },
                     onFirstFocusTarget = ::focusView
                 )
