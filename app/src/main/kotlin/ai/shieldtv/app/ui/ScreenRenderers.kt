@@ -146,8 +146,12 @@ class HomeScreenRenderer(
         state: AppState,
         authLinked: Boolean,
         statusMessage: String,
-        onOpenMovies: () -> Unit,
-        onOpenShows: () -> Unit,
+        onBrowseMovies: () -> Unit,
+        onMovieFavorites: () -> Unit,
+        onMovieHistory: () -> Unit,
+        onBrowseShows: () -> Unit,
+        onShowFavorites: () -> Unit,
+        onShowHistory: () -> Unit,
         onOpenSettings: () -> Unit,
         onResumeSearch: (() -> Unit)?,
         onQuickPick: (SearchResult) -> Unit,
@@ -158,15 +162,34 @@ class HomeScreenRenderer(
         val libraryPicks = if (state.searchMode == SearchMode.SHOWS) featuredShows else featuredMovies
         val featured = dynamicPicks(state, libraryPicks)
 
+        val firstMovieShortcut = actionButton("Browse Movies", onBrowseMovies)
+        host.addView(viewFactory.sectionTitle("Movies"))
+        host.addView(viewFactory.spacer(10))
+        host.addView(shortcutRow(
+            listOf(
+                firstMovieShortcut,
+                actionButton("Favorites", onMovieFavorites, 12),
+                actionButton("Watch History", onMovieHistory, 12)
+            )
+        ))
+        host.addView(viewFactory.spacer(14))
+
+        host.addView(viewFactory.sectionTitle("TV Shows"))
+        host.addView(viewFactory.spacer(10))
+        host.addView(shortcutRow(
+            listOf(
+                actionButton("Browse TV Shows", onBrowseShows),
+                actionButton("Favorites", onShowFavorites, 12),
+                actionButton("Watch History", onShowHistory, 12)
+            )
+        ))
+        host.addView(viewFactory.spacer(14))
+
         val actionRow = LinearLayout(host.context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.START
         }
-        val moviesButton = actionButton("Browse Movies", onOpenMovies)
-        val showsButton = actionButton("Browse TV Shows", onOpenShows, startMarginDp = 12)
-        val settingsButton = actionButton("Settings / Accounts", onOpenSettings, startMarginDp = 12)
-        actionRow.addView(moviesButton)
-        actionRow.addView(showsButton)
+        val settingsButton = actionButton("Settings / Accounts", onOpenSettings)
         actionRow.addView(settingsButton)
         host.addView(actionRow)
         host.addView(viewFactory.spacer(14))
@@ -236,7 +259,7 @@ class HomeScreenRenderer(
         lowerRow.addView(rightPanel)
         host.addView(lowerRow)
 
-        moviesButton.post { onFirstFocusTarget(moviesButton) }
+        firstMovieShortcut.post { onFirstFocusTarget(firstMovieShortcut) }
     }
 
     private fun dynamicPicks(state: AppState, fallback: List<SearchResult>): List<SearchResult> {
@@ -335,6 +358,16 @@ class HomeScreenRenderer(
                 addView(card)
                 if (index == 0) card.post { onFirstFocusTarget(card) }
             }
+        }
+    }
+
+    private fun shortcutRow(shortcuts: List<View>): View {
+        return HorizontalScrollView(host.context).apply {
+            addView(LinearLayout(host.context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.START
+                shortcuts.forEach { addView(it) }
+            })
         }
     }
 

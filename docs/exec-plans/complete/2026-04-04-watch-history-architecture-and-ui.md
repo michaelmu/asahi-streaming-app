@@ -1,7 +1,7 @@
 # Asahi Execution Plan — Watch History Architecture and UI
 
 Last updated: 2026-04-04 UTC
-Status: IN_PROGRESS
+Status: COMPLETE
 Owner: shield-tv-bot + Mike
 Location: `docs/exec-plans/in_progress/2026-04-04-watch-history-architecture-and-ui.md`
 Supersedes: none
@@ -61,19 +61,12 @@ A task is only `DONE` when:
 
 ## Current Focus
 
-**Current phase:** Phase A — watch history model and storage design
+This pass is complete.
 
-**Immediate target:** define the local storage/model shape and the event rules for when a movie/show should enter watch history.
-
-**Why this now:**
-Watch history touches multiple layers:
-- playback/session completion signals
-- media models
-- local persistence
-- Movies/TV menu entry points
-- list rendering and sort behavior
-
-If the write rules are vague, the history list will feel noisy or unreliable.
+Remaining follow-up is optional polish only:
+- optional history long-press/action refinement
+- optional broader watched-state surfacing beyond movie search results and TV episode rows
+- optional stronger emulator/device UX validation for focus/discoverability
 
 ---
 
@@ -200,17 +193,17 @@ If it writes too late, users will think it is broken.
 ---
 
 ## B2. Record history from playback flow
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
 Actually write history entries from the chosen playback seam.
 
 ### Proposed sub-steps
-- [TODO] connect the chosen playback lifecycle event to history recording
-- [TODO] store the right metadata for movies and shows
-- [TODO] ensure repeat watches refresh recency
-- [TODO] avoid duplicate spam from the same viewing session if possible
+- [DONE] connect the chosen playback lifecycle event to history recording
+- [DONE] store the right metadata for movies and shows
+- [DONE] ensure repeat watches refresh recency
+- [DONE] avoid duplicate spam from the same viewing session if possible for the first pass
 
 ### Validation
 - watching a movie creates/updates movie history
@@ -288,11 +281,11 @@ This could mirror the favorites pattern and provide actions like open details or
 Not required for the first pass unless requested.
 
 ## D2. Add per-item or global history clearing controls
-Status: OPTIONAL
+Status: DONE
 Priority: Medium
 
 ### Notes
-Useful eventually, but not required for the initial browse/use case unless Mike wants explicit history management in v1.
+Implemented in a pragmatic first pass via history-list long-press actions and clear-history handling from the same modal flow.
 
 ---
 
@@ -360,7 +353,7 @@ This keeps TV history honest about what was actually watched and gives the store
 ### Phase C browse integration
 - Validated by: full Gradle unit/build validation for the app
 - Not validated: end-to-end on emulator/device yet
-- Known uncertainty: current Movies/TV home entry-point seam is reused for watch history directly, which means exposing both favorites and history simultaneously may need a later menu-layout expansion
+- Known uncertainty: Home/menu layout expansion now exposes both favorites and history for Movies/TV, but real remote testing would still be useful for focus/discoverability
 
 ### Phase D watched indicators
 - Validated by: full Gradle unit/build validation for the app
@@ -399,6 +392,12 @@ This keeps TV history honest about what was actually watched and gives the store
 - Kept the scope intentionally narrow: indicators now cover movie search results and episode lists, not broader show-level summaries.
 - Validation: `./gradlew testDebugUnitTest assembleDebug` passed.
 
+### 2026-04-04 20:22 UTC
+- Completed B2/D2 and the remaining Home integration work by expanding the Movies/TV home shortcuts to expose both Favorites and Watch History simultaneously.
+- Added first-pass history management: long-press on history items can remove a single entry, and the same modal flow can clear the current movie/TV history list.
+- This makes the watch-history pass functionally complete for the originally intended browse/use/indicator scope.
+- Validation: `./gradlew testDebugUnitTest assembleDebug` passed.
+
 ---
 
 ## Scope Changes
@@ -409,15 +408,15 @@ This keeps TV history honest about what was actually watched and gives the store
 - History write rules are treated as first-class scope because they determine whether the browse experience feels trustworthy.
 - Stored history data should be designed so it can later drive watched badges/indicators in search results and episode lists.
 - Future hooks to preserve: stable per-movie and per-episode lookup keys for watched-indicator rendering.
-- First browse pass reuses the current Movies/TV home entry seam for watch history directly; if both favorites and history need simultaneous top-level exposure, Home/menu layout should be expanded in a later pass.
+- Home/menu layout was expanded so Movies and TV now expose browse, favorites, and watch history simultaneously.
 - Watched indicators currently focus on movie search results and TV episode rows; broader watched-state surfacing can be added later if still useful.
 
 ---
 
 ## Session Start
 
-### 2026-04-04 20:01 UTC
-Intended task: update the plan with episode-level TV history and future watched-indicator support before implementation.
+### 2026-04-04 20:25 UTC
+Intended task: close the watch-history plan after the remaining management/home-integration work validated successfully.
 
 ---
 
@@ -427,3 +426,5 @@ This plan is complete for its intended pass when:
 - accepted watch history items are marked `DONE`, `DEFERRED`, `OPTIONAL`, or removed
 - validation is recorded for completed work
 - follow-up work is explicitly captured
+
+Result: complete for this pass. Remaining items are optional polish only.

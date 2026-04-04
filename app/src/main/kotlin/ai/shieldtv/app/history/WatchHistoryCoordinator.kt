@@ -1,6 +1,5 @@
 package ai.shieldtv.app.history
 
-import ai.shieldtv.app.core.model.media.EpisodeSummary
 import ai.shieldtv.app.core.model.media.MediaIds
 import ai.shieldtv.app.core.model.media.MediaRef
 import ai.shieldtv.app.core.model.media.MediaType
@@ -41,6 +40,14 @@ class WatchHistoryCoordinator(
         return store.listByType(MediaType.SHOW)
             .filter { it.ids == showIds && it.seasonNumber != null && it.episodeNumber != null }
             .mapTo(linkedSetOf()) { it.episodeStableKey() }
+    }
+
+    fun removeByResult(result: SearchResult) {
+        store.removeMatching(result.toWatchHistoryRemover())
+    }
+
+    fun clearByType(mediaType: MediaType) {
+        store.clearByType(mediaType)
     }
 }
 
@@ -106,6 +113,20 @@ fun episodeWatchKey(showIds: MediaIds, showTitle: String, seasonNumber: Int, epi
         seasonNumber = seasonNumber,
         episodeNumber = episodeNumber
     ).episodeStableKey()
+}
+
+private fun SearchResult.toWatchHistoryRemover(): WatchHistoryItem {
+    val episodeMatch = subtitle?.let { subtitleText ->
+        Regex("S(\\d{2})E(\\d{2})").find(subtitleText)
+    }
+    return WatchHistoryItem(
+        mediaType = mediaRef.mediaType,
+        ids = mediaRef.ids,
+        title = mediaRef.title,
+        year = mediaRef.year,
+        seasonNumber = episodeMatch?.groupValues?.getOrNull(1)?.toIntOrNull(),
+        episodeNumber = episodeMatch?.groupValues?.getOrNull(2)?.toIntOrNull()
+    )
 }
 
 private fun WatchHistoryItem.episodeStableKey(): String = stableKey()

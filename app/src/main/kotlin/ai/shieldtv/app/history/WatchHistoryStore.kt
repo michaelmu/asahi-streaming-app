@@ -42,6 +42,14 @@ open class WatchHistoryStoreBase(
         return load().any { it.stableKey() == item.stableKey() }
     }
 
+    fun removeMatching(item: WatchHistoryItem) {
+        save(load().filterNot { it.stableKey() == item.stableKey() })
+    }
+
+    fun clearByType(mediaType: MediaType) {
+        save(load().filterNot { it.mediaType == mediaType })
+    }
+
     fun clear() {
         if (file.exists()) file.delete()
     }

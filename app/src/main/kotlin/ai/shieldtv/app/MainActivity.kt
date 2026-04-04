@@ -592,7 +592,19 @@ class MainActivity : ComponentActivity() {
                     state = coordinator.currentState(),
                     authLinked = authState.isLinked,
                     statusMessage = statusText.text?.toString().orEmpty(),
-                    onOpenMovies = {
+                    onBrowseMovies = {
+                        coordinator.openSearch(SearchMode.MOVIES)
+                        renderCurrentScreen()
+                    },
+                    onMovieFavorites = {
+                        coordinator.showFavorites(
+                            SearchMode.MOVIES,
+                            AppContainer.favoritesCoordinator.listByType(ai.shieldtv.app.core.model.media.MediaType.MOVIE)
+                        )
+                        statusText.text = "Movie favorites"
+                        renderCurrentScreen()
+                    },
+                    onMovieHistory = {
                         coordinator.showHistory(
                             SearchMode.MOVIES,
                             AppContainer.watchHistoryCoordinator.listResultsByType(ai.shieldtv.app.core.model.media.MediaType.MOVIE)
@@ -600,7 +612,19 @@ class MainActivity : ComponentActivity() {
                         statusText.text = "Movie watch history"
                         renderCurrentScreen()
                     },
-                    onOpenShows = {
+                    onBrowseShows = {
+                        coordinator.openSearch(SearchMode.SHOWS)
+                        renderCurrentScreen()
+                    },
+                    onShowFavorites = {
+                        coordinator.showFavorites(
+                            SearchMode.SHOWS,
+                            AppContainer.favoritesCoordinator.listByType(ai.shieldtv.app.core.model.media.MediaType.SHOW)
+                        )
+                        statusText.text = "TV favorites"
+                        renderCurrentScreen()
+                    },
+                    onShowHistory = {
                         coordinator.showHistory(
                             SearchMode.SHOWS,
                             AppContainer.watchHistoryCoordinator.listResultsByType(ai.shieldtv.app.core.model.media.MediaType.SHOW)
@@ -831,39 +855,62 @@ class MainActivity : ComponentActivity() {
     private fun showResultActions(result: SearchResult) {
         val isFavorite = AppContainer.favoritesCoordinator.isFavorited(result)
         val isFavoritesBrowse = coordinator.currentState().favoritesBrowseMode != null
+        val isHistoryBrowse = coordinator.currentState().historyBrowseMode != null
         showInfoModal(
             title = result.mediaRef.title,
-            message = if (isFavoritesBrowse) {
-                "Choose what to do with this favorite."
-            } else {
-                "Open details or manage this item from here."
+            message = when {
+                isFavoritesBrowse -> "Choose what to do with this favorite."
+                isHistoryBrowse -> "Choose what to do with this history item."
+                else -> "Open details or manage this item from here."
             },
             primaryLabel = "Open",
             onPrimary = {
                 onSearchResultSelected(result)
             },
-            secondaryLabel = if (isFavorite) "Remove Favorite" else "Add Favorite",
+            secondaryLabel = when {
+                isHistoryBrowse -> "Remove from History"
+                isFavorite -> "Remove Favorite"
+                else -> "Add Favorite"
+            },
             onSecondary = {
-                val nowFavorite = AppContainer.favoritesCoordinator.toggle(result)
-                if (coordinator.currentState().favoritesBrowseMode != null) {
-                    refreshFavoritesBrowse()
-                } else {
-                    statusText.text = if (nowFavorite) {
-                        "Added ${result.mediaRef.title} to favorites"
-                    } else {
-                        "Removed ${result.mediaRef.title} from favorites"
+                when {
+                    isHistoryBrowse -> {
+                        AppContainer.watchHistoryCoordinator.removeByResult(result)
+                        refreshHistoryBrowse()
                     }
-                    renderCurrentScreen()
+                    else -> {
+                        val nowFavorite = AppContainer.favoritesCoordinator.toggle(result)
+                        if (coordinator.currentState().favoritesBrowseMode != null) {
+                            refreshFavoritesBrowse()
+                        } else {
+                            statusText.text = if (nowFavorite) {
+                                "Added ${result.mediaRef.title} to favorites"
+                            } else {
+                                "Removed ${result.mediaRef.title} from favorites"
+                            }
+                            renderCurrentScreen()
+                        }
+                    }
                 }
             },
-            tertiaryLabel = if (isFavoritesBrowse) "Back to Search" else null,
-            onTertiary = if (isFavoritesBrowse) {
-                {
-                    coordinator.openSearch(coordinator.currentState().searchMode)
-                    renderCurrentScreen()
+            tertiaryLabel = when {
+                isHistoryBrowse -> "Clear History"
+                isFavoritesBrowse -> "Back to Search"
+                else -> null
+            },
+            onTertiary = when {
+                isHistoryBrowse -> {
+                    {
+                        clearCurrentHistoryBrowse()
+                    }
                 }
-            } else {
-                null
+                isFavoritesBrowse -> {
+                    {
+                        coordinator.openSearch(coordinator.currentState().searchMode)
+                        renderCurrentScreen()
+                    }
+                }
+                else -> null
             }
         )
     }
@@ -874,6 +921,21 @@ class MainActivity : ComponentActivity() {
         coordinator.showFavorites(mode, AppContainer.favoritesCoordinator.listByType(mediaType))
         statusText.text = if (mode == SearchMode.SHOWS) "TV favorites" else "Movie favorites"
         renderCurrentScreen()
+    }
+
+    private fun refreshHistoryBrowse() {
+        val mode = coordinator.currentState().historyBrowseMode ?: return
+        val mediaType = if (mode == SearchMode.SHOWS) ai.shieldtv.app.core.model.media.MediaType.SHOW else ai.shieldtv.app.core.model.media.MediaType.MOVIE
+        coordinator.showHistory(mode, AppContainer.watchHistoryCoordinator.listResultsByType(mediaType))
+        statusText.text = if (mode == SearchMode.SHOWS) "TV watch history" else "Movie watch history"
+        renderCurrentScreen()
+    }
+
+    private fun clearCurrentHistoryBrowse() {
+        val mode = coordinator.currentState().historyBrowseMode ?: return
+        val mediaType = if (mode == SearchMode.SHOWS) ai.shieldtv.app.core.model.media.MediaType.SHOW else ai.shieldtv.app.core.model.media.MediaType.MOVIE
+        AppContainer.watchHistoryCoordinator.clearByType(mediaType)
+        refreshHistoryBrowse()
     }
 
     private fun ensureRealDebridLinkedForSources(): Boolean {
