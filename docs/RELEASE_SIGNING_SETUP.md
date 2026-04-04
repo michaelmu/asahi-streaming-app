@@ -53,12 +53,20 @@ That means the first migration usually requires:
 2. install the new release-signed build once
 3. future in-app updates will work normally as long as signing + package name stay the same
 
-## CI later
+## GitHub Actions / CI
 
-For GitHub Actions, store these as secrets:
+GitHub Actions is already wired to build a signed release APK using repo secrets.
+
+Required secrets:
 - `ASAHI_RELEASE_KEYSTORE_B64`
 - `ASAHI_RELEASE_STORE_PASSWORD`
 - `ASAHI_RELEASE_KEY_ALIAS`
 - `ASAHI_RELEASE_KEY_PASSWORD`
 
-Then decode the keystore during the workflow and point `ASAHI_RELEASE_STORE_FILE` at it.
+Workflow behavior:
+- decodes the keystore during CI
+- points `ASAHI_RELEASE_STORE_FILE` at the decoded file
+- builds `assembleRelease`
+- publishes the signed release artifact
+
+If CI signing fails, first verify that `ASAHI_RELEASE_KEYSTORE_B64` is a clean single-line base64 string with no extra characters or wrapping.

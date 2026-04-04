@@ -2,6 +2,8 @@
 
 Last updated: 2026-04-01 UTC
 
+> Foundational architecture/planning doc. Some implementation-specific notes below predate the current validated provider/signing/runtime state and should be read as historical context plus design intent.
+
 ## Goal
 Build a standalone Android TV / Google TV / NVIDIA Shield app that reproduces the most valuable Fenlight workflows natively:
 - title search

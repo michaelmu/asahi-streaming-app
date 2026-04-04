@@ -1,8 +1,10 @@
 # Asahi Build Notes
 
-Current state: the repo is still early and may not build cleanly yet, but the goal is to progressively reduce fake scaffolding.
+> Historical / evolving implementation notes. Some entries below reflect earlier milestones and are retained for context.
 
-Update: the real Gradle wrapper has now been generated successfully. The next step is verifying actual project/module build behavior.
+Current state: the repo now builds cleanly for the main local sanity flow (`testDebugUnitTest assembleDebug`), and connected emulator/instrumentation execution has been partially validated in a headless environment.
+
+Update: the real Gradle wrapper has now been generated successfully and is part of the normal workflow.
 
 A debug preview runner is now also being used as a lightweight way to inspect runtime provider/metadata flow without needing the full Android UI path.
 Use mainstream/high-confidence test titles for provider probing so identifier/provider failures are easier to interpret.
@@ -19,15 +21,14 @@ Follow-up runtime finding: once the transport crash was fixed, the next Android 
 
 Current validation snapshot:
 - app installs and launches on the emulator with the broader graph enabled
-- TMDb live search/details work in the debug preview path
+- TMDb live search/details work
 - Real-Debrid device auth is proven end-to-end in manual testing: start, browser approval, poll, token exchange, and persisted token reuse all succeed
 - the RD polling path was fixed to use `device_code` instead of `user_code`
-- RD token persistence now writes to `app/debug/rd-tokens.txt` and is visible to fresh preview/debug JVM runs
-- Torrentio live results are working and return real hashed sources in direct probes and preview
-- the source pipeline can now prefer live Torrentio-only results when enabled instead of mixing fake/sample providers into the same slice
-- a debrid-aware Torrentio path now produces RD-tagged/cached results in preview when linked token state exists
-- source pipeline preview runs without the old transport/runtime crash
-- the main remaining gap is no longer RD auth persistence; it is turning the validated debug/preview slice into a real TV sources/playback UX
+- signed release builds are now supported locally and in GitHub Actions
+- validated provider stack currently includes Torrentio, Comet, BitSearch, and Knaben
+- source/provider UI visibility has been improved in the app
+- headless emulator launch has been validated in this environment and `app:connectedDebugAndroidTest` can be started once SDK tools are referenced correctly
+- the main remaining gap is continued product hardening of the real TV browse → sources → playback flow
 
 Current RD cache-awareness note:
 - the direct Torrentio cache probe still shows RD `instantAvailability` returning `HTTP 403` with `disabled_endpoint`

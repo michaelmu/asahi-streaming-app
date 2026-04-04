@@ -2,6 +2,8 @@
 
 Last updated: 2026-04-01 UTC
 
+> Roadmap/planning document. Several checkpoints below have already been partially or fully achieved; treat this as directional planning rather than a literal current-state checklist.
+
 ## Purpose
 Define the execution order for building the app from planning into a working vertical slice.
 

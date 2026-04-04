@@ -156,6 +156,10 @@ Implement later:
 - [ ] Basic navigation smoke test
 - [ ] Player shell smoke test
 
+Status note:
+- connected emulator test execution has now been launched successfully in a headless environment
+- the next useful testing cleanup would be to document or commit the minimal instrumentation cases that are actually worth keeping long-term
+
 ---
 
 ## Refactors That May Be Needed First

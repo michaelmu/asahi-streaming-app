@@ -1,5 +1,9 @@
 # Provider Research Notes
 
+Related docs:
+- `docs/PROVIDER_ARCHITECTURE_NOTES.md`
+- `docs/EMULATOR_TESTING.md`
+
 ## Goal
 
 Identify which local `cocoscrapers` providers are worth porting into Asahi.

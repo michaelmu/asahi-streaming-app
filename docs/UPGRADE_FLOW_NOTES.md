@@ -1,10 +1,16 @@
 # Upgrade Flow Notes
 
+> Historical notes plus current update-flow context.
+
 ## Problem
 
-The current update experience is weak:
-- the app only opens a browser/download link for the latest APK
-- Android TV install/update may fail with `App not installed`
+The update experience started weak and some of these notes describe the earlier state.
+
+Current update work has already improved the flow substantially:
+- in-app update checks exist
+- in-app APK download/install handoff exists
+- update gating now checks that the remote build number is higher
+- Android TV install/update may still fail with `App not installed` if signing identity differs
 
 ## Most likely causes
 
@@ -39,13 +45,13 @@ Priority order:
 2. fallback to git commit count locally
 
 ### CI flow
-The GitHub Actions APK workflow now sets:
+GitHub Actions now sets:
 - `ASAHI_VERSION_CODE = github.run_number`
 
-That means CI-produced debug APKs should now monotonically increase version code over time.
+The current pipeline builds signed release APKs, so CI-produced release artifacts should monotonically increase version code over time.
 
 ### Release notes
-The rolling debug release body now includes:
+The rolling release body includes:
 - `Version code: <run_number>`
 
 This makes update diagnostics easier.
@@ -70,19 +76,16 @@ Android may still report:
 ### 1. Ensure consistent signing for updateable builds
 This is mandatory for a smooth update path.
 
-### 2. Add in-app APK download + install flow
-Instead of opening a browser URL:
-- download APK in-app
-- expose via `FileProvider`
-- launch package installer directly
-
-### 3. Improve update diagnostics in UI
-Show:
+### 2. Continue improving update diagnostics in UI
+Show clearly:
 - current versionName
 - current versionCode
 - latest versionName
 - latest versionCode hint when available
 - warning that signature mismatch will block upgrade
+
+### 3. Optionally add signer preflight checks
+A future improvement would be comparing the installed app signer and downloaded APK signer before launching install, so the app can explain signature mismatch directly instead of relying on Android's generic `App not installed` error.
 
 ---
 

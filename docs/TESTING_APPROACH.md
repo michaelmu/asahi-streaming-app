@@ -76,6 +76,10 @@ Why this matters:
 
 Instrumentation should be used sparingly and strategically.
 
+Update:
+- headless emulator launch has now been validated in this environment
+- connected instrumentation execution can be started when the Android SDK tools are referenced explicitly
+
 Good smoke tests:
 - app launches without crashing
 - home screen renders

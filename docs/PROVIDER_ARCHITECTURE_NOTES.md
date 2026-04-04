@@ -1,5 +1,9 @@
 # Provider Architecture Notes
 
+Related docs:
+- `docs/PROVIDER_RESEARCH.md`
+- `docs/EMULATOR_TESTING.md`
+
 ## Current assessment
 
 Asahi already has the beginnings of a good multi-provider architecture:
