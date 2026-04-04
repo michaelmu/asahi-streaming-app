@@ -44,6 +44,28 @@ class RealDebridAuthCoordinatorTest {
     }
 
     @Test
+    fun startLink_returns_typed_failure() = runTest(dispatcher) {
+        Dispatchers.setMain(dispatcher)
+        try {
+            val coordinator = RealDebridAuthCoordinator(
+                scope = this,
+                startDeviceFlow = { error("nope") },
+                pollDeviceFlow = { RealDebridAuthState(isLinked = true, username = "mike") },
+                clearAuth = {},
+                buildAuthUrl = { it.verificationUrl },
+                buildStartFailureMessage = { "boom" }
+            )
+
+            val result = coordinator.startLink()
+            assertTrue(result is RealDebridLinkStartResult.Failure)
+            val failure = (result as RealDebridLinkStartResult.Failure).value
+            assertEquals("StartFailed", failure.errorType)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
     fun startAutoPolling_reports_link_success() = runTest(dispatcher) {
         Dispatchers.setMain(dispatcher)
         try {

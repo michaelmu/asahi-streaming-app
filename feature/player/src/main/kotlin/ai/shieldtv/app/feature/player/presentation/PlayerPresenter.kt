@@ -17,22 +17,38 @@ class PlayerPresenter(
         episodeNumber: Int? = source.episodeNumber,
         startPositionMs: Long = 0L
     ): PlayerUiState {
-        return try {
-            val resolvedStream = resolveSourceUseCase(
+        val resolvedStream = try {
+            resolveSourceUseCase(
                 source = source,
                 seasonNumber = seasonNumber,
                 episodeNumber = episodeNumber
             )
+        } catch (error: Throwable) {
+            return PlayerUiState(
+                prepared = false,
+                playbackUrl = null,
+                error = error.message,
+                errorType = PlaybackPrepareErrorType.ResolveFailed::class.simpleName
+            )
+        }
+
+        return try {
             val playbackItem = buildPlaybackItemUseCase(resolvedStream)
             playbackEngine.prepare(playbackItem, startPositionMs)
             PlayerUiState(
                 loading = false,
                 prepared = true,
                 playbackUrl = resolvedStream.url,
-                error = null
+                error = null,
+                errorType = null
             )
         } catch (error: Throwable) {
-            PlayerUiState(prepared = false, playbackUrl = null, error = error.message)
+            PlayerUiState(
+                prepared = false,
+                playbackUrl = null,
+                error = error.message,
+                errorType = PlaybackPrepareErrorType.PrepareFailed::class.simpleName
+            )
         }
     }
 }

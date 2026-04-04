@@ -2,6 +2,7 @@ package ai.shieldtv.app.auth
 
 import ai.shieldtv.app.core.model.auth.DeviceCodeFlow
 import ai.shieldtv.app.core.model.auth.RealDebridAuthState
+import ai.shieldtv.app.errors.AuthFlowError
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -16,7 +17,8 @@ data class RealDebridLinkStartSuccess(
 data class RealDebridLinkStartFailure(
     val authState: RealDebridAuthState,
     val statusMessage: String,
-    val debugMessage: String
+    val debugMessage: String,
+    val errorType: String
 )
 
 sealed class RealDebridLinkStartResult {
@@ -28,13 +30,15 @@ data class RealDebridPollSuccess(
     val authState: RealDebridAuthState,
     val activeDeviceFlow: DeviceCodeFlow?,
     val statusMessage: String? = null,
-    val linkedMessage: String? = null
+    val linkedMessage: String? = null,
+    val errorType: String? = null
 )
 
 data class RealDebridPollTimeout(
     val authState: RealDebridAuthState,
     val statusMessage: String,
-    val timeoutMessage: String
+    val timeoutMessage: String,
+    val errorType: String
 )
 
 class RealDebridAuthCoordinator(
@@ -83,7 +87,8 @@ class RealDebridAuthCoordinator(
                                 lastError = buildStartFailureMessage(error)
                             ),
                             statusMessage = "Failed to start Real-Debrid link flow.",
-                            debugMessage = buildStartFailureMessage(error)
+                            debugMessage = buildStartFailureMessage(error),
+                            errorType = AuthFlowError.StartFailed::class.simpleName ?: "StartFailed"
                         )
                     )
                 }
@@ -112,7 +117,8 @@ class RealDebridAuthCoordinator(
                                 authState = state,
                                 activeDeviceFlow = null,
                                 statusMessage = "Real-Debrid linked successfully.",
-                                linkedMessage = state.username?.let { "Connected as $it." } ?: "Real-Debrid linked successfully."
+                                linkedMessage = state.username?.let { "Connected as $it." } ?: "Real-Debrid linked successfully.",
+                                errorType = null
                             )
                         )
                         return@launch
@@ -120,7 +126,8 @@ class RealDebridAuthCoordinator(
                     onStateUpdated(
                         RealDebridPollSuccess(
                             authState = state,
-                            activeDeviceFlow = flow
+                            activeDeviceFlow = flow,
+                            errorType = null
                         )
                     )
                 }.onFailure { error ->
@@ -131,7 +138,8 @@ class RealDebridAuthCoordinator(
                                 authInProgress = true,
                                 lastError = error.message
                             ),
-                            activeDeviceFlow = flow
+                            activeDeviceFlow = flow,
+                            errorType = AuthFlowError.PollFailed::class.simpleName ?: "PollFailed"
                         )
                     )
                 }
@@ -145,7 +153,8 @@ class RealDebridAuthCoordinator(
                     RealDebridPollTimeout(
                         authState = timedOut,
                         statusMessage = "Real-Debrid link polling timed out.",
-                        timeoutMessage = timedOut.lastError ?: "The device link flow expired before authorization completed."
+                        timeoutMessage = timedOut.lastError ?: "The device link flow expired before authorization completed.",
+                        errorType = AuthFlowError.TimedOut::class.simpleName ?: "TimedOut"
                     )
                 )
             }

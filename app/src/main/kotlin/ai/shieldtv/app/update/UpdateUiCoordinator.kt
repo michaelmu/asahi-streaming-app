@@ -1,11 +1,13 @@
 package ai.shieldtv.app.update
 
+import ai.shieldtv.app.errors.UpdateFlowError
 import java.io.File
 
 data class UpdateCheckUiResult(
     val updateInfo: AppUpdateInfo?,
     val statusMessage: String,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val errorType: String? = null
 )
 
 sealed class UpdateInstallUiResult {
@@ -26,7 +28,8 @@ sealed class UpdateInstallUiResult {
 
     data class Failure(
         val statusMessage: String,
-        val errorMessage: String
+        val errorMessage: String,
+        val errorType: String
     ) : UpdateInstallUiResult()
 }
 
@@ -59,7 +62,8 @@ class UpdateUiCoordinator(
                     UpdateCheckUiResult(
                         updateInfo = null,
                         statusMessage = message,
-                        errorMessage = message
+                        errorMessage = message,
+                        errorType = UpdateFlowError.CheckFailed::class.simpleName
                     )
                 }
             )
@@ -88,7 +92,8 @@ class UpdateUiCoordinator(
             onFailure = { error ->
                 UpdateInstallUiResult.Failure(
                     statusMessage = "Update download/install failed: ${error.message ?: error::class.simpleName}",
-                    errorMessage = error.message ?: error::class.simpleName ?: "Unknown update error."
+                    errorMessage = error.message ?: error::class.simpleName ?: "Unknown update error.",
+                    errorType = UpdateFlowError.DownloadFailed::class.simpleName ?: "DownloadFailed"
                 )
             }
         )

@@ -60,7 +60,7 @@ A task is only `DONE` when:
 
 **Current phase:** Phase A — product-quality source pipeline and app orchestration
 
-**Immediate target:** B2 — clarify and tighten the continue-watching / playback persistence direction so the current single-session approach is explicit and less ambiguous.
+**Immediate target:** B1 — broaden typed error handling selectively where it improves playback, update, and auth behavior without forcing a giant rewrite.
 
 **Why this now:**
 The repo is in a better structural state than before, but the current bottlenecks are obvious:
@@ -267,17 +267,17 @@ You already parallelized the backend path; now the UI should benefit from it.
 # Phase B — Targeted product and architecture polish
 
 ## B1. Broaden typed error handling beyond source-fetch progress
-Status: TODO
+Status: DONE
 Priority: Medium
 
 ### Goal
 Extend typed errors only where they now buy real value.
 
 ### Proposed sub-steps
-- [TODO] add typed errors for playback prepare failures
-- [TODO] add typed errors for update/install readiness failures
-- [TODO] add typed auth-flow failure classes if useful
-- [TODO] avoid giant rewrite for weak benefit
+- [DONE] add typed errors for playback prepare failures
+- [DONE] add typed errors for update/install readiness failures
+- [DONE] add typed auth-flow failure classes if useful
+- [DONE] avoid giant rewrite for weak benefit
 
 ### Validation
 - at least one UI path becomes meaningfully better because of typed error distinctions
@@ -469,6 +469,13 @@ Keep ranking opinionated by default, but design A2/A3 so profile-based variation
 - Added focused hydrator coverage and updated playback-store tests around the explicit active-resume semantics.
 - Validation: `./gradlew testDebugUnitTest` passed.
 
+### 2026-04-04 16:15 UTC
+- Completed B1 by adding selective typed error handling where it improved behavior immediately instead of attempting a full app-wide error model rewrite.
+- Added app-layer typed errors for update/auth flow diagnostics and feature-layer typed playback prepare errors for resolve-vs-prepare failure separation.
+- Updated update/auth coordinators and playback messaging to surface error types in a more structured way.
+- Added focused tests for auth typed failures and player presenter typed playback failures.
+- Validation: `./gradlew testDebugUnitTest`, `feature:player:test`, and `app:testDebugUnitTest` passed.
+
 ---
 
 ## Scope Changes
@@ -483,13 +490,14 @@ Keep ranking opinionated by default, but design A2/A3 so profile-based variation
 - During A5 execution, chose to drive incremental updates from the repository layer where provider completion is known, instead of trying to fake partial results inside the loading coordinator.
 - During B3 execution, chose to keep provider health tracking in-memory and per-lookup-window rather than persist history yet, which keeps the feature cheap and useful without prematurely inventing a telemetry subsystem.
 - During B2 execution, chose to make the current single-record persistence model explicit instead of prematurely building a multi-entry history system without a clear UX/storage design.
+- During B1 execution, chose to add typed errors only at boundaries that immediately improved diagnostics or behavior, rather than forcing a cross-cutting rewrite of every UI state and error path.
 
 ---
 
 ## Session Start
 
-### 2026-04-04 16:01 UTC
-Intended task: Continue the active next-pass plan by starting B2 and making the current playback persistence / continue-watching direction explicit and less ambiguous.
+### 2026-04-04 16:07 UTC
+Intended task: Continue the active next-pass plan by starting B1 and introducing selective typed errors for better playback/update/auth behavior.
 
 ---
 

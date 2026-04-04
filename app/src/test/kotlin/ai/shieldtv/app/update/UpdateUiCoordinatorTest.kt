@@ -31,6 +31,7 @@ class UpdateUiCoordinatorTest {
         val result = coordinator.checkForUpdates()
         assertEquals("Update available", result.statusMessage)
         assertEquals("1.2.3", result.updateInfo?.versionName)
+        assertEquals(null, result.errorType)
     }
 
     @Test

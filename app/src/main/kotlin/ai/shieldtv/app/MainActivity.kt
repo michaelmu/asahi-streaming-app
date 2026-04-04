@@ -967,7 +967,7 @@ class MainActivity : ComponentActivity() {
                     setLoading(false, result.value.statusMessage)
                     showInfoModal(
                         title = "Real-Debrid Link Failed",
-                        message = result.value.debugMessage,
+                        message = "${result.value.errorType}: ${result.value.debugMessage}",
                         primaryLabel = "OK",
                         secondaryLabel = "Copy Debug Info",
                         onSecondary = ::copyDebugInfoToClipboard
@@ -1035,6 +1035,7 @@ class MainActivity : ComponentActivity() {
                 authState = result.authState
                 activeDeviceFlow = result.activeDeviceFlow
                 result.statusMessage?.let { statusText.text = it }
+                result.errorType?.let { latestPlaybackMessage = "Auth flow warning: $it" }
                 result.linkedMessage?.let { linkedMessage ->
                     dismissModal()
                     showInfoModal(
@@ -1051,7 +1052,7 @@ class MainActivity : ComponentActivity() {
                 statusText.text = timeout.statusMessage
                 showInfoModal(
                     title = "Real-Debrid Link Timed Out",
-                    message = timeout.timeoutMessage,
+                    message = "${timeout.errorType}: ${timeout.timeoutMessage}",
                     primaryLabel = "Try Again",
                     onPrimary = ::startRealDebridLink,
                     secondaryLabel = "Close",
@@ -1161,6 +1162,8 @@ class MainActivity : ComponentActivity() {
                 appendLine("Player state: ${latestPlaybackState.playerStateLabel}")
                 appendLine("Video format: ${latestPlaybackState.videoFormat ?: "unknown"}")
                 appendLine("Video size: ${latestPlaybackState.videoSizeLabel ?: "unknown"}")
+                append("Playback error type: ${state.errorType ?: "unknown"}")
+                appendLine()
                 append("Playback error: ${latestPlaybackState.errorMessage ?: state.error ?: "none"}")
             }
             setLoading(false, state.error ?: if (state.prepared) "Playback item prepared." else "Playback not prepared.")
