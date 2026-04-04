@@ -250,15 +250,15 @@ class MainActivity : ComponentActivity() {
 
         sidebar = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.26f)
-            setPadding(0, 0, 32, 0)
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.21f)
+            setPadding(0, 0, 28, 0)
             setBackgroundResource(ai.shieldtv.app.R.drawable.asahi_panel_bg)
-            setPadding(24, 24, 24, 24)
+            setPadding(22, 22, 22, 22)
         }
 
         contentPane = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.74f)
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.79f)
             setBackgroundResource(ai.shieldtv.app.R.drawable.asahi_panel_elevated_bg)
             setPadding(28, 28, 28, 28)
         }
@@ -557,6 +557,7 @@ class MainActivity : ComponentActivity() {
         if (destination != AppDestination.PLAYER) {
             navigationRailRenderer.render(
                 inHome = destination == AppDestination.HOME,
+                inSearch = destination == AppDestination.SEARCH,
                 selectedMode = coordinator.currentState().searchMode,
                 inSettings = destination == AppDestination.SETTINGS,
                 onHome = {

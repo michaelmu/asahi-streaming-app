@@ -53,6 +53,7 @@ class NavigationRailRenderer(
 ) {
     fun render(
         inHome: Boolean,
+        inSearch: Boolean,
         selectedMode: SearchMode,
         inSettings: Boolean,
         onHome: () -> Unit,
@@ -69,9 +70,9 @@ class NavigationRailRenderer(
         val homeButton = focusableButton("Home", onHome, selected = inHome)
         host.addView(homeButton)
         host.addView(viewFactory.spacer(10))
-        host.addView(focusableButton("Movies", onMovies, selected = !inSettings && selectedMode == SearchMode.MOVIES))
+        host.addView(focusableButton("Movies", onMovies, selected = inSearch && !inSettings && selectedMode == SearchMode.MOVIES))
         host.addView(viewFactory.spacer(10))
-        host.addView(focusableButton("TV Shows", onShows, selected = !inSettings && selectedMode == SearchMode.SHOWS))
+        host.addView(focusableButton("TV Shows", onShows, selected = inSearch && !inSettings && selectedMode == SearchMode.SHOWS))
         host.addView(viewFactory.spacer(10))
         host.addView(focusableButton("Settings", onSettings, selected = inSettings))
         host.addView(viewFactory.spacer(18))

@@ -151,8 +151,11 @@ class ScreenViewFactory(
         return Button(context).apply {
             this.text = text
             gravity = Gravity.START or Gravity.CENTER_VERTICAL
-            background = ContextCompat.getDrawable(context, R.drawable.asahi_button_bg)
-            setTextColor(if (selected) accentColor else textPrimaryColor)
+            background = ContextCompat.getDrawable(
+                context,
+                if (selected) R.drawable.asahi_button_selected_bg else R.drawable.asahi_button_bg
+            )
+            setTextColor(textPrimaryColor)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
             isAllCaps = false
             minHeight = dp(56)
@@ -169,13 +172,14 @@ class ScreenViewFactory(
                 view.scaleX = if (hasFocus) 1.015f else 1f
                 view.scaleY = if (hasFocus) 1.015f else 1f
                 view.alpha = if (hasFocus || isSelected) 1f else 0.98f
-                setTextColor(
+                background = ContextCompat.getDrawable(
+                    context,
                     when {
-                        hasFocus -> textPrimaryColor
-                        isSelected -> accentColor
-                        else -> textPrimaryColor
+                        isSelected -> R.drawable.asahi_button_selected_bg
+                        else -> R.drawable.asahi_button_bg
                     }
                 )
+                setTextColor(textPrimaryColor)
             }
             setOnKeyListener { _, keyCode, event ->
                 if (event.action == KeyEvent.ACTION_DOWN && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)) {
