@@ -241,7 +241,16 @@ Before calling a new exec plan ready, confirm:
 
 ---
 
+# Template
+
+Use:
+- `docs/exec-plans/TEMPLATE.md`
+
+Start from the template when creating a new plan, then move the created file into the correct status folder with a properly dated filename.
+
+---
+
 # Current Canonical Plans
 
 See subfolders for current status.
-The root `docs/exec-plans/` directory should mainly contain this guide and the three state folders.
+The root `docs/exec-plans/` directory should mainly contain this guide, the template, and the three state folders.
