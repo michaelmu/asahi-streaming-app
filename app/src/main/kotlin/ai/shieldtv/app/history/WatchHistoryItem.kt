@@ -24,12 +24,10 @@ data class WatchHistoryItem(
             title.ifBlank { null }
         )
         return if (mediaType == MediaType.SHOW) {
-            base.plus(
-                listOfNotNull(
-                    seasonNumber?.let { "season:$it" },
-                    episodeNumber?.let { "episode:$it" }
-                )
-            ).joinToString("|")
+            (base + listOfNotNull(
+                seasonNumber?.let { "season:$it" },
+                episodeNumber?.let { "episode:$it" }
+            )).joinToString("|")
         } else {
             base.joinToString("|")
         }

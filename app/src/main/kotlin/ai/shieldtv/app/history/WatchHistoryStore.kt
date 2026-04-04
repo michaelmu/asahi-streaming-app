@@ -24,7 +24,7 @@ open class WatchHistoryStoreBase(
 
     fun record(item: WatchHistoryItem) {
         val existing = load().associateBy { it.stableKey() }.toMutableMap()
-        existing[item.stableKey()] = item.copy(watchedAtEpochMs = System.currentTimeMillis())
+        existing[item.stableKey()] = item
         save(existing.values.toList())
     }
 

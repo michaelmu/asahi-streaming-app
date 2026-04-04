@@ -698,6 +698,7 @@ class EpisodePickerScreenRenderer(
 ) {
     fun render(
         state: AppState,
+        watchedEpisodeKeys: Set<String>,
         onSeasonSelected: (Int) -> Unit,
         onEpisodeSelected: (Int) -> Unit,
         onFindSources: () -> Unit,
@@ -762,6 +763,14 @@ class EpisodePickerScreenRenderer(
 
         episodeChoices.forEachIndexed { index, episode ->
             val isSelected = selectedEpisode == episode.episodeNumber
+            val isWatched = watchedEpisodeKeys.contains(
+                ai.shieldtv.app.history.episodeWatchKey(
+                    showIds = details.mediaRef.ids,
+                    showTitle = details.mediaRef.title,
+                    seasonNumber = selectedSeason,
+                    episodeNumber = episode.episodeNumber
+                )
+            )
             val card = viewFactory.panel(vertical = false, elevated = isSelected).apply {
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(viewFactory.dp(16), viewFactory.dp(12), viewFactory.dp(16), viewFactory.dp(12))
@@ -810,12 +819,15 @@ class EpisodePickerScreenRenderer(
             card.addView(TextView(activity).apply {
                 text = buildString {
                     append("S${selectedSeason.toString().padStart(2, '0')}E${episode.episodeNumber.toString().padStart(2, '0')}")
+                    if (isWatched) {
+                        append(" • Watched")
+                    }
                     episode.airDate?.takeIf { it.isNotBlank() }?.let {
                         append(" • ")
                         append(it)
                     }
                 }
-                setTextColor(viewFactory.textSecondaryColor)
+                setTextColor(if (isWatched) viewFactory.accentAltColor else viewFactory.textSecondaryColor)
                 textSize = 13f
                 maxLines = 1
             })

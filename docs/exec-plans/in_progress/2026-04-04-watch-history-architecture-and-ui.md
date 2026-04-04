@@ -259,7 +259,25 @@ Show movie/show watch history lists newest first.
 
 ---
 
-# Phase D — Optional polish
+# Phase D — Watched indicators and optional polish
+
+## D0. Add watched indicators in browsing flows
+Status: DONE
+Priority: Medium
+
+### Goal
+Use stored history data to show watched state outside the history lists themselves.
+
+### Proposed sub-steps
+- [DONE] add watched indicator support for movie search results
+- [DONE] add watched indicator support for TV episode rows
+- [DONE] reuse stable history keys so indicators are driven by the same underlying storage model
+
+### Validation
+- watched movies show a watched badge in movie search results
+- watched TV episodes show watched state in the episode picker/list
+
+---
 
 ## D1. Add long-press item actions in history lists
 Status: OPTIONAL
@@ -340,9 +358,14 @@ This keeps TV history honest about what was actually watched and gives the store
 - Known uncertainty: first-pass write rule uses playback preparation success, which is pragmatic but may later want refinement if it proves too eager in real use
 
 ### Phase C browse integration
-- Validated by: full Gradle unit/build validation for the app once current run completes
+- Validated by: full Gradle unit/build validation for the app
 - Not validated: end-to-end on emulator/device yet
 - Known uncertainty: current Movies/TV home entry-point seam is reused for watch history directly, which means exposing both favorites and history simultaneously may need a later menu-layout expansion
+
+### Phase D watched indicators
+- Validated by: full Gradle unit/build validation for the app
+- Not validated: end-to-end on emulator/device yet
+- Known uncertainty: watched indicators currently cover movie search results and TV episode rows, but broader show-level summaries are still out of scope
 
 ---
 
@@ -368,7 +391,13 @@ This keeps TV history honest about what was actually watched and gives the store
 - Completed C1/C2 by adding movie and TV watch-history browse entry points and reusing the existing results renderer for history lists.
 - Added dedicated history browse state so results UI can distinguish watch history from favorites and normal search results.
 - Added history-to-results mapping with watched badges and episode-aware subtitles for TV entries.
-- Validation pending current Gradle run.
+- Validation: `./gradlew testDebugUnitTest assembleDebug` passed.
+
+### 2026-04-04 20:17 UTC
+- Completed D0 by using watch-history data to decorate movie search results with watched badges and TV episode rows with watched markers.
+- Added stable-key lookup helpers in `WatchHistoryCoordinator` so browse indicators are driven by the same data model as history storage.
+- Kept the scope intentionally narrow: indicators now cover movie search results and episode lists, not broader show-level summaries.
+- Validation: `./gradlew testDebugUnitTest assembleDebug` passed.
 
 ---
 
@@ -381,6 +410,7 @@ This keeps TV history honest about what was actually watched and gives the store
 - Stored history data should be designed so it can later drive watched badges/indicators in search results and episode lists.
 - Future hooks to preserve: stable per-movie and per-episode lookup keys for watched-indicator rendering.
 - First browse pass reuses the current Movies/TV home entry seam for watch history directly; if both favorites and history need simultaneous top-level exposure, Home/menu layout should be expanded in a later pass.
+- Watched indicators currently focus on movie search results and TV episode rows; broader watched-state surfacing can be added later if still useful.
 
 ---
 

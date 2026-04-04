@@ -678,6 +678,9 @@ class MainActivity : ComponentActivity() {
             )
             AppDestination.EPISODES -> episodesRenderer.render(
                 state = coordinator.currentState(),
+                watchedEpisodeKeys = coordinator.currentState().selectedDetails?.mediaRef?.ids?.let {
+                    AppContainer.watchHistoryCoordinator.watchedEpisodeKeys(it)
+                }.orEmpty(),
                 onSeasonSelected = { season ->
                     coordinator.currentState().selectedDetails?.let { details ->
                         coordinator.showEpisodes(details, season, 1)
@@ -791,7 +794,8 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             val state = searchViewModel.search(query)
             val filteredResults = state.results.filter { it.mediaRef.mediaType == mode.mediaType }
-            coordinator.showResults(query = query, results = filteredResults)
+            val decoratedResults = AppContainer.watchHistoryCoordinator.applyWatchedBadges(filteredResults)
+            coordinator.showResults(query = query, results = decoratedResults)
             setLoading(false, state.error ?: "Found ${filteredResults.size} result(s) for \"$query\".")
             if (state.error != null && filteredResults.isEmpty()) {
                 latestSourcesError = state.error

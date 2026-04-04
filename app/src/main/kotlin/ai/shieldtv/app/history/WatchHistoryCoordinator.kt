@@ -1,5 +1,7 @@
 package ai.shieldtv.app.history
 
+import ai.shieldtv.app.core.model.media.EpisodeSummary
+import ai.shieldtv.app.core.model.media.MediaIds
 import ai.shieldtv.app.core.model.media.MediaRef
 import ai.shieldtv.app.core.model.media.MediaType
 import ai.shieldtv.app.core.model.media.SearchResult
@@ -21,6 +23,24 @@ class WatchHistoryCoordinator(
         episodeNumber: Int?
     ) {
         store.record(item.toWatchHistoryItem(seasonNumber, episodeNumber))
+    }
+
+    fun applyWatchedBadges(results: List<SearchResult>): List<SearchResult> {
+        val watchedKeys = store.load().mapTo(hashSetOf()) { it.stableKey() }
+        return results.map { result ->
+            val key = result.toWatchHistoryKey()
+            if (key != null && key in watchedKeys && "Watched" !in result.badges) {
+                result.copy(badges = result.badges + "Watched")
+            } else {
+                result
+            }
+        }
+    }
+
+    fun watchedEpisodeKeys(showIds: MediaIds): Set<String> {
+        return store.listByType(MediaType.SHOW)
+            .filter { it.ids == showIds && it.seasonNumber != null && it.episodeNumber != null }
+            .mapTo(linkedSetOf()) { it.episodeStableKey() }
     }
 }
 
@@ -65,3 +85,27 @@ fun WatchHistoryItem.toSearchResult(): SearchResult {
         badges = listOf("Watched")
     )
 }
+
+fun SearchResult.toWatchHistoryKey(): String? {
+    return when (mediaRef.mediaType) {
+        MediaType.MOVIE -> WatchHistoryItem(
+            mediaType = mediaRef.mediaType,
+            ids = mediaRef.ids,
+            title = mediaRef.title,
+            year = mediaRef.year
+        ).stableKey()
+        else -> null
+    }
+}
+
+fun episodeWatchKey(showIds: MediaIds, showTitle: String, seasonNumber: Int, episodeNumber: Int): String {
+    return WatchHistoryItem(
+        mediaType = MediaType.SHOW,
+        ids = showIds,
+        title = showTitle,
+        seasonNumber = seasonNumber,
+        episodeNumber = episodeNumber
+    ).episodeStableKey()
+}
+
+private fun WatchHistoryItem.episodeStableKey(): String = stableKey()
