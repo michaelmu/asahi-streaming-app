@@ -130,6 +130,7 @@ object AppContainer {
 
     fun availableProviderIds(): List<String> = providerRegistry.allProviders().map { it.id }
     fun availableProviderLabels(): Map<String, String> = providerRegistry.allProviders().associate { it.id to it.displayName }
+    fun explainSourceRanking(source: ai.shieldtv.app.core.model.source.SourceResult) = sourceRanker.explain(source)
 
     private val sourceRepository by lazy {
         SourceRepositoryImpl(

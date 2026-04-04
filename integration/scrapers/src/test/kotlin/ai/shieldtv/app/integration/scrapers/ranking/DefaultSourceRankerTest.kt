@@ -10,6 +10,7 @@ import ai.shieldtv.app.core.model.source.Quality
 import ai.shieldtv.app.core.model.source.SourceFilters
 import ai.shieldtv.app.core.model.source.SourceResult
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -67,6 +68,25 @@ class DefaultSourceRankerTest {
         assertTrue(score.contributions.any { it.rule == "quality" })
         assertTrue(score.contributions.any { it.rule == "provider" })
         assertTrue(score.contributions.any { it.rule == "seeders" })
+    }
+
+    @Test
+    fun ranker_exposes_explanations_for_debugging() {
+        val source = source(
+            id = "explained",
+            providerId = "torrentio",
+            providerDisplayName = "Torrentio",
+            cacheStatus = CacheStatus.CACHED,
+            rawMetadata = mapOf("seeders" to "55")
+        )
+
+        val explanation = ranker.explain(source)
+
+        assertNotNull(explanation)
+        requireNotNull(explanation)
+        assertTrue(explanation.totalScore > 0)
+        assertTrue(explanation.contributions.any { it.rule == "cache" })
+        assertTrue(explanation.contributions.any { it.rule == "provider" })
     }
 
     private fun source(

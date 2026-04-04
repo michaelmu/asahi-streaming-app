@@ -60,7 +60,7 @@ A task is only `DONE` when:
 
 **Current phase:** Phase A — product-quality source pipeline and app orchestration
 
-**Immediate target:** A2 — refactor source ranking into composable scoring rules while preserving behavior broadly enough to avoid user-visible ranking regressions.
+**Immediate target:** A3 — add ranking explanations and diagnostics on top of the new composable scoring pipeline.
 
 **Why this now:**
 The repo is in a better structural state than before, but the current bottlenecks are obvious:
@@ -194,7 +194,7 @@ This is the highest-value deferred item from the prior pass.
 ---
 
 ## A3. Add ranking explanations / diagnostics
-Status: TODO
+Status: DONE
 Priority: Medium
 
 ### Goal
@@ -205,10 +205,10 @@ Once ranking is composable, explanations become the best debugging tool you can 
 They also create a path toward user-facing trust signals later.
 
 ### Proposed sub-steps
-- [TODO] Define a score explanation model
-- [TODO] Capture per-rule contributions
-- [TODO] Add debug/diagnostic rendering path first
-- [TODO] Keep UI impact minimal initially
+- [DONE] Define a score explanation model
+- [DONE] Capture per-rule contributions
+- [DONE] Add debug/diagnostic rendering path first
+- [DONE] Keep UI impact minimal initially
 
 ### Validation
 - explanation data is available for selected sources
@@ -436,6 +436,12 @@ Keep ranking opinionated by default, but design A2/A3 so profile-based variation
 - Added focused ranker tests covering cache preference, tiny-file penalty behavior, provider preference, and contribution visibility.
 - Validation: full `./gradlew test` passed.
 
+### 2026-04-04 15:48 UTC
+- Completed A3 by introducing explicit ranking explanation models in the domain layer and wiring the ranker to expose per-rule score contributions.
+- Exposed ranking explanations through debug diagnostics first by enriching source diagnostics with the top-ranked source's score and top contribution rules.
+- Kept UI impact intentionally minimal and avoided broad source-model churn in this pass.
+- Validation: full `./gradlew test` passed.
+
 ---
 
 ## Scope Changes
@@ -445,13 +451,14 @@ Keep ranking opinionated by default, but design A2/A3 so profile-based variation
 - Deferred items from the prior pass were retained, but reclassified as either core-next or optional depending on expected value/churn tradeoff.
 - During A1 execution, chose to extract auth/update workflow coordination first because it offered the cleanest boundary with low regression risk compared with modal-system or playback-flow extraction.
 - During A2 execution, chose to keep the public `SourceRanker` interface unchanged and make scoring-rule composition an internal implementation detail to avoid unnecessary API churn.
+- During A3 execution, chose to expose explanations via `SourceRanker.explain(...)` and source diagnostics first instead of pushing explanation data through all UI state models immediately.
 
 ---
 
 ## Session Start
 
-### 2026-04-04 15:31 UTC
-Intended task: Continue the active next-pass plan by starting A2 and refactoring source ranking into composable rules with focused validation.
+### 2026-04-04 15:39 UTC
+Intended task: Continue the active next-pass plan by starting A3 and surfacing ranking explanations through diagnostics with minimal UI churn.
 
 ---
 

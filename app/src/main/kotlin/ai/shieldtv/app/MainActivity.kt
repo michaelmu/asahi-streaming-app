@@ -1176,7 +1176,24 @@ class MainActivity : ComponentActivity() {
         val cachedCount = sources.count { it.cacheStatus == CacheStatus.CACHED }
         val directCount = sources.count { it.cacheStatus == CacheStatus.DIRECT }
         val fallbackCount = sources.count { it.cacheStatus == CacheStatus.UNCACHED || it.cacheStatus == CacheStatus.UNCHECKED }
-        return "providers=$providerSummary | cached=$cachedCount | direct=$directCount | fallback=$fallbackCount | results=${sources.size}"
+        val topRankExplanation = sources.firstOrNull()?.let { top ->
+            val explanation = AppContainer.explainSourceRanking(top) ?: return@let null
+            val topContributions = explanation.contributions
+                .sortedByDescending { kotlin.math.abs(it.value) }
+                .take(4)
+                .joinToString(", ") { contribution ->
+                    "${contribution.rule}:${contribution.value}"
+                }
+            "top=${top.displayName.take(60)} score=${explanation.totalScore} [$topContributions]"
+        }
+        return listOf(
+            "providers=$providerSummary",
+            "cached=$cachedCount",
+            "direct=$directCount",
+            "fallback=$fallbackCount",
+            "results=${sources.size}",
+            topRankExplanation
+        ).filterNotNull().joinToString(" | ")
     }
 
     private fun buildProviderSummary(): String {

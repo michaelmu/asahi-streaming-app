@@ -1,6 +1,8 @@
 package ai.shieldtv.app.integration.scrapers.ranking
 
 import ai.shieldtv.app.core.model.source.SourceResult
+import ai.shieldtv.app.domain.source.ranking.SourceRankingContribution
+import ai.shieldtv.app.domain.source.ranking.SourceRankingExplanation
 
 data class SourceScoreContribution(
     val rule: String,
@@ -25,6 +27,20 @@ internal class SourceScorer(
         return SourceScore(
             total = contributions.sumOf { it.value },
             contributions = contributions
+        )
+    }
+
+    fun explain(source: SourceResult): SourceRankingExplanation {
+        val score = score(source)
+        return SourceRankingExplanation(
+            totalScore = score.total,
+            contributions = score.contributions.map {
+                SourceRankingContribution(
+                    rule = it.rule,
+                    value = it.value,
+                    reason = it.reason
+                )
+            }
         )
     }
 }

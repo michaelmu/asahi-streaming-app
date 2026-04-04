@@ -5,14 +5,20 @@ import ai.shieldtv.app.core.model.source.SourceResult
 import ai.shieldtv.app.domain.source.ranking.SourceDeduper
 import ai.shieldtv.app.domain.source.ranking.SourceFilterEngine
 import ai.shieldtv.app.domain.source.ranking.SourceRanker
+import ai.shieldtv.app.domain.source.ranking.SourceRankingExplanation
 
 class DefaultSourceRanker(
     private val sourceFilterEngine: SourceFilterEngine = DefaultSourceFilterEngine(),
     private val sourceDeduper: SourceDeduper = DefaultSourceDeduper()
 ) : SourceRanker {
     private val scorer = SourceScorer(DefaultSourceScoreRules.create())
+
     override fun rank(sources: List<SourceResult>, filters: SourceFilters): List<SourceResult> {
         return sourceFilterEngine.apply(sourceDeduper.dedupe(sources), filters)
             .sortedByDescending { scorer.score(it).total }
+    }
+
+    override fun explain(source: SourceResult): SourceRankingExplanation {
+        return scorer.explain(source)
     }
 }
