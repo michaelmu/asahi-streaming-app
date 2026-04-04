@@ -23,7 +23,7 @@ class PlaybackSessionStoreTest {
         val file = File(tempDir, "session.txt")
         val store = PlaybackSessionStoreBase(file)
 
-        store.save(
+        store.saveActiveResume(
             playbackItem(),
             PlaybackState(
                 isBuffering = false,
@@ -35,7 +35,7 @@ class PlaybackSessionStoreTest {
             episodeNumber = 2
         )
 
-        val loaded = store.load()
+        val loaded = store.loadActiveResume()
         assertNotNull(loaded)
         assertEquals("The Matrix", loaded?.mediaTitle)
         assertEquals(50, loaded?.progressPercent)
@@ -63,7 +63,7 @@ class PlaybackSessionStoreTest {
             ).joinToString("\n")
         )
 
-        val loaded = PlaybackSessionStoreBase(file).load()
+        val loaded = PlaybackSessionStoreBase(file).loadActiveResume()
         assertNotNull(loaded)
         assertEquals("The Matrix", loaded?.mediaTitle)
         assertEquals(50, loaded?.progressPercent)
@@ -75,7 +75,7 @@ class PlaybackSessionStoreTest {
         val file = File(tempDir, "session.txt")
         file.writeText("{bad json")
 
-        val loaded = PlaybackSessionStoreBase(file).load()
+        val loaded = PlaybackSessionStoreBase(file).loadActiveResume()
         assertNull(loaded)
     }
 

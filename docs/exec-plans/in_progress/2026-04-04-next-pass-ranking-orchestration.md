@@ -60,7 +60,7 @@ A task is only `DONE` when:
 
 **Current phase:** Phase A — product-quality source pipeline and app orchestration
 
-**Immediate target:** B3 — add lightweight provider health diagnostics using the latency/failure/progress data already available in the source pipeline.
+**Immediate target:** B2 — clarify and tighten the continue-watching / playback persistence direction so the current single-session approach is explicit and less ambiguous.
 
 **Why this now:**
 The repo is in a better structural state than before, but the current bottlenecks are obvious:
@@ -285,16 +285,16 @@ Extend typed errors only where they now buy real value.
 ---
 
 ## B2. Convert single-session playback persistence into a clearer continue-watching direction
-Status: TODO
+Status: DONE
 Priority: Medium
 
 ### Goal
 Decide whether playback persistence remains intentionally single-item or begins evolving into a real multi-entry continue-watching subsystem.
 
 ### Proposed sub-steps
-- [TODO] document intended scope
-- [TODO] if staying small, tighten current behavior and naming
-- [TODO] if expanding, define storage evolution path before more ad-hoc growth
+- [DONE] document intended scope
+- [DONE] if staying small, tighten current behavior and naming
+- [DEFERRED] if expanding, define storage evolution path before more ad-hoc growth
 
 ### Validation
 - persisted playback/resume behavior is easier to reason about than it is now
@@ -462,6 +462,13 @@ Keep ranking opinionated by default, but design A2/A3 so profile-based variation
 - Exposed provider health only through source diagnostics/debug text in this pass; no polished settings/debug UI yet.
 - Added focused tracker tests and validated with `./gradlew testDebugUnitTest`.
 
+### 2026-04-04 16:07 UTC
+- Completed B2 by clarifying that playback persistence currently stores one active resume record, not a real multi-entry continue-watching history.
+- Introduced explicit `ActivePlaybackResumeRecord` naming and a `PlaybackPersistencePolicy` description while keeping backward-compatible type/function aliases for existing callers.
+- Tightened the storage/hydration path around `saveActiveResume`, `loadActiveResume`, and `ContinueWatchingHydrator.fromActiveResume(...)`.
+- Added focused hydrator coverage and updated playback-store tests around the explicit active-resume semantics.
+- Validation: `./gradlew testDebugUnitTest` passed.
+
 ---
 
 ## Scope Changes
@@ -475,13 +482,14 @@ Keep ranking opinionated by default, but design A2/A3 so profile-based variation
 - During A4 execution, chose to extend `SourceResult` with explicit `origins` rather than replacing existing provider label fields, which kept UI churn low while still preserving provenance for diagnostics and future work.
 - During A5 execution, chose to drive incremental updates from the repository layer where provider completion is known, instead of trying to fake partial results inside the loading coordinator.
 - During B3 execution, chose to keep provider health tracking in-memory and per-lookup-window rather than persist history yet, which keeps the feature cheap and useful without prematurely inventing a telemetry subsystem.
+- During B2 execution, chose to make the current single-record persistence model explicit instead of prematurely building a multi-entry history system without a clear UX/storage design.
 
 ---
 
 ## Session Start
 
-### 2026-04-04 15:57 UTC
-Intended task: Continue the active next-pass plan by starting B3 and surfacing lightweight provider health diagnostics for debugging.
+### 2026-04-04 16:01 UTC
+Intended task: Continue the active next-pass plan by starting B2 and making the current playback persistence / continue-watching direction explicit and less ambiguous.
 
 ---
 

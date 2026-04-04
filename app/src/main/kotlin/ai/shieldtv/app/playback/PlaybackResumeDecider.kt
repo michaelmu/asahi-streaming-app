@@ -5,7 +5,7 @@ import ai.shieldtv.app.core.model.source.SourceResult
 
 object PlaybackResumeDecider {
     fun resumePositionFor(
-        record: PlaybackSessionRecord?,
+        record: ActivePlaybackResumeRecord?,
         source: SourceResult,
         seasonNumber: Int?,
         episodeNumber: Int?

@@ -419,7 +419,7 @@ class MainActivity : ComponentActivity() {
 
     private fun hydrateContinueWatchingFromPersistedSession() {
         val record = persistedPlaybackSession ?: return
-        val item = ContinueWatchingHydrator.fromPersistedSession(record) ?: return
+        val item = ContinueWatchingHydrator.fromActiveResume(record) ?: return
         coordinator.recordContinueWatching(
             mediaRef = coordinator.currentState().selectedMedia
                 ?: ai.shieldtv.app.core.model.media.MediaRef(
@@ -1178,13 +1178,13 @@ class MainActivity : ComponentActivity() {
                     progressPercent = progressPercent
                 )
                 AppContainer.playbackEngine.getCurrentItem()?.let { currentItem ->
-                    AppContainer.playbackSessionStore.save(
+                    AppContainer.playbackSessionStore.saveActiveResume(
                         item = currentItem,
                         state = latestPlaybackState,
                         seasonNumber = seasonNumber,
                         episodeNumber = episodeNumber
                     )
-                    persistedPlaybackSession = AppContainer.playbackSessionStore.load()
+                    persistedPlaybackSession = AppContainer.playbackSessionStore.loadActiveResume()
                 }
                 coordinator.showPlayer(source)
                 AppContainer.playbackEngine.play()
@@ -1236,6 +1236,7 @@ class MainActivity : ComponentActivity() {
             "direct=$directCount",
             "fallback=$fallbackCount",
             "results=${sources.size}",
+            "resumePolicy=${ai.shieldtv.app.playback.PlaybackPersistencePolicy.SUMMARY}",
             topRankExplanation
         ).filterNotNull().joinToString(" | ")
     }

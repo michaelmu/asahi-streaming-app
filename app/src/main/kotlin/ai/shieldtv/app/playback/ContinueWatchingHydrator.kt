@@ -3,7 +3,7 @@ package ai.shieldtv.app.playback
 import ai.shieldtv.app.ContinueWatchingItem
 
 object ContinueWatchingHydrator {
-    fun fromPersistedSession(record: PlaybackSessionRecord?): ContinueWatchingItem? {
+    fun fromActiveResume(record: ActivePlaybackResumeRecord?): ContinueWatchingItem? {
         if (record == null) return null
         if (record.progressPercent !in 3..92) return null
         return ContinueWatchingItem(
@@ -20,4 +20,6 @@ object ContinueWatchingHydrator {
             progressPercent = record.progressPercent
         )
     }
+
+    fun fromPersistedSession(record: PlaybackSessionRecord?): ContinueWatchingItem? = fromActiveResume(record)
 }

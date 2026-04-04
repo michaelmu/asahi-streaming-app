@@ -2,24 +2,10 @@ package ai.shieldtv.app.playback
 
 import ai.shieldtv.app.core.model.playback.PlaybackItem
 import ai.shieldtv.app.core.model.playback.PlaybackState
-import ai.shieldtv.app.core.model.source.ResolvedStream
-import ai.shieldtv.app.core.model.source.SourceResult
 import android.content.Context
 import java.io.File
 
-data class PlaybackSessionRecord(
-    val mediaTitle: String,
-    val subtitle: String,
-    val artworkUrl: String? = null,
-    val queryHint: String,
-    val positionMs: Long,
-    val durationMs: Long,
-    val progressPercent: Int,
-    val playbackUrl: String,
-    val seasonNumber: Int? = null,
-    val episodeNumber: Int? = null,
-    val updatedAtEpochMs: Long = System.currentTimeMillis()
-)
+typealias PlaybackSessionRecord = ActivePlaybackResumeRecord
 
 class PlaybackSessionStore(
     context: Context
@@ -29,14 +15,14 @@ open class PlaybackSessionStoreBase(
     private val file: File
 ) {
 
-    fun save(item: PlaybackItem, state: PlaybackState, seasonNumber: Int?, episodeNumber: Int?) {
+    fun saveActiveResume(item: PlaybackItem, state: PlaybackState, seasonNumber: Int?, episodeNumber: Int?) {
         file.parentFile?.mkdirs()
         val progressPercent = if (state.durationMs > 0) {
             ((state.positionMs * 100) / state.durationMs).toInt().coerceIn(0, 100)
         } else {
             0
         }
-        val record = PlaybackSessionRecord(
+        val record = ActivePlaybackResumeRecord(
             mediaTitle = item.mediaRef.title,
             subtitle = item.subtitle.orEmpty(),
             artworkUrl = item.artworkUrl,
@@ -52,16 +38,16 @@ open class PlaybackSessionStoreBase(
         file.writeText(PlaybackSessionJson.encode(record))
     }
 
-    fun load(): PlaybackSessionRecord? {
+    fun loadActiveResume(): ActivePlaybackResumeRecord? {
         if (!file.exists()) return null
         val raw = file.readText()
         return PlaybackSessionJson.decode(raw) ?: loadLegacy(raw)
     }
 
-    private fun loadLegacy(raw: String): PlaybackSessionRecord? {
+    private fun loadLegacy(raw: String): ActivePlaybackResumeRecord? {
         val lines = raw.lines()
         if (lines.size < 8) return null
-        return PlaybackSessionRecord(
+        return ActivePlaybackResumeRecord(
             mediaTitle = lines[0],
             subtitle = lines[1],
             artworkUrl = lines[2].ifBlank { null },
@@ -76,7 +62,15 @@ open class PlaybackSessionStoreBase(
         )
     }
 
-    fun clear() {
+    fun clearActiveResume() {
         if (file.exists()) file.delete()
     }
+
+    // Backward-compatible names for existing callers.
+    fun save(item: PlaybackItem, state: PlaybackState, seasonNumber: Int?, episodeNumber: Int?) =
+        saveActiveResume(item, state, seasonNumber, episodeNumber)
+
+    fun load(): ActivePlaybackResumeRecord? = loadActiveResume()
+
+    fun clear() = clearActiveResume()
 }

@@ -6,38 +6,42 @@ import org.junit.Test
 
 class ContinueWatchingHydratorTest {
     @Test
-    fun returns_null_when_record_missing() {
-        assertNull(ContinueWatchingHydrator.fromPersistedSession(null))
+    fun fromActiveResume_returns_item_for_resume_worthy_progress() {
+        val item = ContinueWatchingHydrator.fromActiveResume(
+            ActivePlaybackResumeRecord(
+                mediaTitle = "The Matrix",
+                subtitle = "",
+                artworkUrl = "https://example.com/poster.jpg",
+                queryHint = "The Matrix",
+                positionMs = 1000,
+                durationMs = 2000,
+                progressPercent = 50,
+                playbackUrl = "https://example.com/video.mkv",
+                seasonNumber = 1,
+                episodeNumber = 2
+            )
+        )
+
+        requireNotNull(item)
+        assertEquals("The Matrix", item.mediaTitle)
+        assertEquals("S01E02", item.subtitle)
     }
 
     @Test
-    fun returns_null_when_progress_too_low() {
-        assertNull(ContinueWatchingHydrator.fromPersistedSession(record(progressPercent = 2)))
-    }
+    fun fromActiveResume_returns_null_when_progress_not_resume_worthy() {
+        val item = ContinueWatchingHydrator.fromActiveResume(
+            ActivePlaybackResumeRecord(
+                mediaTitle = "The Matrix",
+                subtitle = "",
+                artworkUrl = null,
+                queryHint = "The Matrix",
+                positionMs = 10,
+                durationMs = 2000,
+                progressPercent = 1,
+                playbackUrl = "https://example.com/video.mkv"
+            )
+        )
 
-    @Test
-    fun returns_null_when_progress_too_high() {
-        assertNull(ContinueWatchingHydrator.fromPersistedSession(record(progressPercent = 95)))
+        assertNull(item)
     }
-
-    @Test
-    fun creates_continue_watching_item_for_valid_progress() {
-        val item = ContinueWatchingHydrator.fromPersistedSession(record(progressPercent = 42))
-        assertEquals("Severance", item?.mediaTitle)
-        assertEquals(42, item?.progressPercent)
-        assertEquals("S01E02", item?.subtitle)
-    }
-
-    private fun record(progressPercent: Int) = PlaybackSessionRecord(
-        mediaTitle = "Severance",
-        subtitle = "S01E02",
-        artworkUrl = "https://example.com/art.jpg",
-        queryHint = "Severance",
-        positionMs = 42000,
-        durationMs = 100000,
-        progressPercent = progressPercent,
-        playbackUrl = "https://example.com/video.mp4",
-        seasonNumber = 1,
-        episodeNumber = 2
-    )
 }
