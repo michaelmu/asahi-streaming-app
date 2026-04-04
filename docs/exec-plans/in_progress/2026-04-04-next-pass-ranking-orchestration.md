@@ -60,7 +60,7 @@ A task is only `DONE` when:
 
 **Current phase:** Phase A — product-quality source pipeline and app orchestration
 
-**Immediate target:** A1 — continue breaking up `MainActivity`, starting with extraction of Real-Debrid auth coordination and update interaction flow.
+**Immediate target:** A2 — refactor source ranking into composable scoring rules while preserving behavior broadly enough to avoid user-visible ranking regressions.
 
 **Why this now:**
 The repo is in a better structural state than before, but the current bottlenecks are obvious:
@@ -163,7 +163,7 @@ Adding more features before reducing this concentration of logic will make every
 ---
 
 ## A2. Refactor ranking into composable scoring rules
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
@@ -174,17 +174,17 @@ The current ranker is good enough to ship, but not good enough to evolve confide
 This is the highest-value deferred item from the prior pass.
 
 ### Proposed sub-steps
-- [TODO] Define a score-rule model (`SourceScoreRule` or equivalent)
-- [TODO] Split rank contributions into separate rules:
+- [DONE] Define a score-rule model (`SourceScoreRule` or equivalent)
+- [DONE] Split rank contributions into separate rules:
   - cache/direct preference
   - quality preference
   - provider preference
   - size penalties
   - tiny-file penalties
   - remux/cam penalties
-- [TODO] Preserve behavior approximately in the first pass
-- [TODO] Add focused tests for representative score outcomes
-- [TODO] Keep the public ranker entry point simple
+- [DONE] Preserve behavior approximately in the first pass
+- [DONE] Add focused tests for representative score outcomes
+- [DONE] Keep the public ranker entry point simple
 
 ### Validation
 - ranked order stays sensible on real-world source sets
@@ -430,6 +430,12 @@ Keep ranking opinionated by default, but design A2/A3 so profile-based variation
 - Added focused coordinator tests for auth and update UI coordination.
 - Validation: `./gradlew testDebugUnitTest` passed.
 
+### 2026-04-04 15:42 UTC
+- Completed A2 by refactoring `DefaultSourceRanker` to use a composable scoring pipeline (`SourceScoreRule`, `SourceScorer`, and default rule set) instead of a monolithic score function.
+- Preserved the existing scoring shape closely by expressing the old heuristics as separate additive/penalty rules.
+- Added focused ranker tests covering cache preference, tiny-file penalty behavior, provider preference, and contribution visibility.
+- Validation: full `./gradlew test` passed.
+
 ---
 
 ## Scope Changes
@@ -438,13 +444,14 @@ Keep ranking opinionated by default, but design A2/A3 so profile-based variation
 - New plan created after prior plan reached a clean “complete for this pass” state.
 - Deferred items from the prior pass were retained, but reclassified as either core-next or optional depending on expected value/churn tradeoff.
 - During A1 execution, chose to extract auth/update workflow coordination first because it offered the cleanest boundary with low regression risk compared with modal-system or playback-flow extraction.
+- During A2 execution, chose to keep the public `SourceRanker` interface unchanged and make scoring-rule composition an internal implementation detail to avoid unnecessary API churn.
 
 ---
 
 ## Session Start
 
-### 2026-04-04 15:23 UTC
-Intended task: Resume the active next-pass plan and begin A1 by extracting Real-Debrid auth coordination and update interaction flow from `MainActivity`.
+### 2026-04-04 15:31 UTC
+Intended task: Continue the active next-pass plan by starting A2 and refactoring source ranking into composable rules with focused validation.
 
 ---
 
