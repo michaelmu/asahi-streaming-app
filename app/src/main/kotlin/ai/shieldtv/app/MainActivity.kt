@@ -250,15 +250,15 @@ class MainActivity : ComponentActivity() {
 
         sidebar = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.26f)
-            setPadding(0, 0, 32, 0)
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.18f)
+            setPadding(0, 0, 24, 0)
             setBackgroundResource(ai.shieldtv.app.R.drawable.asahi_panel_bg)
-            setPadding(24, 24, 24, 24)
+            setPadding(20, 20, 20, 20)
         }
 
         contentPane = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.74f)
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.82f)
             setBackgroundResource(ai.shieldtv.app.R.drawable.asahi_panel_elevated_bg)
             setPadding(28, 28, 28, 28)
         }

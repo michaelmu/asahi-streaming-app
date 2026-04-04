@@ -70,13 +70,13 @@ class NavigationRailRenderer(
         host.addView(viewFactory.sectionTitle("Navigate"))
         host.addView(viewFactory.spacer(12))
 
-        val homeButton = focusableButton(if (inHome) "Home •" else "Home", onHome)
+        val homeButton = focusableButton("Home", onHome, selected = inHome)
         host.addView(homeButton)
         host.addView(viewFactory.spacer(10))
 
         host.addView(viewFactory.sectionTitle("Movies"))
         host.addView(viewFactory.spacer(10))
-        host.addView(focusableButton(if (!inSettings && selectedMode == SearchMode.MOVIES) "Browse Movies •" else "Browse Movies", onMovies))
+        host.addView(focusableButton("Browse Movies", onMovies, selected = !inSettings && selectedMode == SearchMode.MOVIES))
         host.addView(viewFactory.spacer(10))
         host.addView(focusableButton("Movie Favorites", onMovieFavorites))
         host.addView(viewFactory.spacer(10))
@@ -85,7 +85,7 @@ class NavigationRailRenderer(
 
         host.addView(viewFactory.sectionTitle("TV Shows"))
         host.addView(viewFactory.spacer(10))
-        host.addView(focusableButton(if (!inSettings && selectedMode == SearchMode.SHOWS) "Browse TV Shows •" else "Browse TV Shows", onShows))
+        host.addView(focusableButton("Browse TV Shows", onShows, selected = !inSettings && selectedMode == SearchMode.SHOWS))
         host.addView(viewFactory.spacer(10))
         host.addView(focusableButton("TV Favorites", onShowFavorites))
         host.addView(viewFactory.spacer(10))
@@ -94,7 +94,7 @@ class NavigationRailRenderer(
 
         host.addView(viewFactory.sectionTitle("System"))
         host.addView(viewFactory.spacer(10))
-        host.addView(focusableButton(if (inSettings) "Settings •" else "Settings", onSettings))
+        host.addView(focusableButton("Settings", onSettings, selected = inSettings))
         host.addView(viewFactory.spacer(18))
         host.addView(viewFactory.sectionTitle("Session"))
         host.addView(viewFactory.spacer(12))
@@ -103,8 +103,8 @@ class NavigationRailRenderer(
         homeButton.post { onFirstFocusTarget(homeButton) }
     }
 
-    private fun focusableButton(text: String, onClick: () -> Unit): View {
-        return viewFactory.button(text, onClick)
+    private fun focusableButton(text: String, onClick: () -> Unit, selected: Boolean = false): View {
+        return viewFactory.button(text, onClick, selected = selected)
     }
 }
 
@@ -497,9 +497,9 @@ class SearchScreenRenderer(
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 inputType = InputType.TYPE_CLASS_TEXT
             }
-            val searchButton = viewFactory.button("Search") {
+            val searchButton = viewFactory.button("Search", onClick = {
                 onSearch(state.searchMode, queryInput.text.toString())
-            }.apply {
+            }).apply {
                 layoutParams = LinearLayout.LayoutParams(
                     viewFactory.dp(180),
                     LinearLayout.LayoutParams.WRAP_CONTENT
@@ -1240,9 +1240,9 @@ class SettingsScreenRenderer(
                     letterSpacing = 0.14f
                 })
                 addView(viewFactory.spacer(12))
-                addView(viewFactory.button("Open Real-Debrid Link Page") {
+                addView(viewFactory.button("Open Real-Debrid Link Page", onClick = {
                     activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(buildAuthUrl(flow))))
-                })
+                }))
             }
         }
         host.addView(accountPanel)
