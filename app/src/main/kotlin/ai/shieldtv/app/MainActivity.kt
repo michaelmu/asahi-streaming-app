@@ -17,6 +17,8 @@ import android.widget.ScrollView
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.ui.PlayerView
+import ai.shieldtv.app.auth.RealDebridAuthCoordinator
+import ai.shieldtv.app.auth.RealDebridLinkStartResult
 import ai.shieldtv.app.core.model.auth.DeviceCodeFlow
 import ai.shieldtv.app.core.model.auth.RealDebridAuthState
 import ai.shieldtv.app.core.model.media.MediaRef
@@ -63,14 +65,15 @@ import ai.shieldtv.app.ui.SettingsScreenRenderer
 import ai.shieldtv.app.ui.SourcesScreenRenderer
 import ai.shieldtv.app.update.AppUpdateInfo
 import ai.shieldtv.app.update.GitHubReleaseUpdateChecker
+import ai.shieldtv.app.update.UpdateCoordinator
+import ai.shieldtv.app.update.UpdateInstallUiResult
+import ai.shieldtv.app.update.UpdateUiCoordinator
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     private val searchViewModel by lazy {
@@ -106,6 +109,35 @@ class MainActivity : ComponentActivity() {
     private lateinit var playerRenderer: PlayerScreenRenderer
     private lateinit var settingsRenderer: SettingsScreenRenderer
     private lateinit var overlayPopup: OverlayPopup
+
+    private val realDebridAuthCoordinator by lazy {
+        RealDebridAuthCoordinator(
+            scope = lifecycleScope,
+            startDeviceFlow = { AppContainer.startRealDebridDeviceFlowUseCase() },
+            pollDeviceFlow = { flow -> AppContainer.pollRealDebridDeviceFlowUseCase(flow) },
+            clearAuth = { AppContainer.clearRealDebridAuth() },
+            buildAuthUrl = ::buildRealDebridAuthUrl,
+            buildStartFailureMessage = ::buildRealDebridStartFailureMessage
+        )
+    }
+
+    private val updateUiCoordinator by lazy {
+        UpdateUiCoordinator(
+            updateCoordinator = UpdateCoordinator(
+                updateCheckerFactory = {
+                    GitHubReleaseUpdateChecker(
+                        owner = "michaelmu",
+                        repo = "asahi-streaming-app",
+                        currentVersionName = BuildConfig.VERSION_NAME,
+                        currentVersionCode = BuildConfig.VERSION_CODE
+                    )
+                },
+                apkDownloadManager = apkDownloadManager,
+                apkInstaller = apkInstaller
+            ),
+            cacheDirProvider = { cacheDir }
+        )
+    }
 
     private lateinit var root: LinearLayout
     private lateinit var sidebar: LinearLayout
@@ -180,6 +212,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         authPollingJob?.cancel()
+        realDebridAuthCoordinator.cancel()
         sourceLoadingCoordinator.cancel()
         AppContainer.playbackEngine.getCurrentItem()?.let { currentItem ->
             AppContainer.playbackSessionStore.save(
@@ -877,10 +910,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun resetRealDebridAuth() {
-        AppContainer.clearRealDebridAuth()
         activeDeviceFlow = null
-        authPollingJob?.cancel()
-        authState = RealDebridAuthState(isLinked = false, authInProgress = false, lastError = null)
+        authState = realDebridAuthCoordinator.resetAuth()
         latestSourcesError = null
         statusText.text = "Real-Debrid auth reset."
         renderCurrentScreen()
@@ -890,28 +921,28 @@ class MainActivity : ComponentActivity() {
         dismissModal()
         setLoading(true, "Starting Real-Debrid link flow…")
         lifecycleScope.launch {
-            runCatching {
-                AppContainer.startRealDebridDeviceFlowUseCase()
-            }.onSuccess { flow ->
-                activeDeviceFlow = flow
-                authState = RealDebridAuthState(isLinked = false, authInProgress = true, lastError = null)
-                setLoading(false, "Real-Debrid device flow started: ${flow.userCode}")
-                showRealDebridFlowModal(flow)
-                refreshAuthUiOnly()
-                startAutoPolling(flow)
-            }.onFailure { error ->
-                authPollingJob?.cancel()
-                val debugMessage = buildRealDebridStartFailureMessage(error)
-                authState = RealDebridAuthState(isLinked = false, authInProgress = false, lastError = debugMessage)
-                setLoading(false, "Failed to start Real-Debrid link flow.")
-                showInfoModal(
-                    title = "Real-Debrid Link Failed",
-                    message = debugMessage,
-                    primaryLabel = "OK",
-                    secondaryLabel = "Copy Debug Info",
-                    onSecondary = ::copyDebugInfoToClipboard
-                )
-                refreshAuthUiOnly()
+            when (val result = realDebridAuthCoordinator.startLink()) {
+                is RealDebridLinkStartResult.Success -> {
+                    activeDeviceFlow = result.value.flow
+                    authState = result.value.authState
+                    setLoading(false, result.value.statusMessage)
+                    showRealDebridFlowModal(result.value.flow)
+                    refreshAuthUiOnly()
+                    startAutoPolling(result.value.flow)
+                }
+                is RealDebridLinkStartResult.Failure -> {
+                    authPollingJob?.cancel()
+                    authState = result.value.authState
+                    setLoading(false, result.value.statusMessage)
+                    showInfoModal(
+                        title = "Real-Debrid Link Failed",
+                        message = result.value.debugMessage,
+                        primaryLabel = "OK",
+                        secondaryLabel = "Copy Debug Info",
+                        onSecondary = ::copyDebugInfoToClipboard
+                    )
+                    refreshAuthUiOnly()
+                }
             }
         }
     }
@@ -966,47 +997,30 @@ class MainActivity : ComponentActivity() {
 
     private fun startAutoPolling(flow: DeviceCodeFlow) {
         authPollingJob?.cancel()
-        authPollingJob = lifecycleScope.launch {
-            val startedAt = System.currentTimeMillis()
-            val timeoutMs = 2 * 60 * 1000L
-            while (System.currentTimeMillis() - startedAt < timeoutMs && !authState.isLinked) {
-                delay(flow.pollIntervalSeconds.coerceAtLeast(2) * 1000L)
-                runCatching {
-                    AppContainer.pollRealDebridDeviceFlowUseCase(flow)
-                }.onSuccess { state ->
-                    authState = state
-                    if (state.isLinked) {
-                        activeDeviceFlow = null
-                        dismissModal()
-                        statusText.text = "Real-Debrid linked successfully."
-                        showInfoModal(
-                            title = "Real-Debrid Linked",
-                            message = state.username?.let { "Connected as $it." } ?: "Real-Debrid linked successfully.",
-                            primaryLabel = "Back to Settings",
-                            defaultAction = ModalDefaultAction.PRIMARY
-                        )
-                        refreshAuthUiOnly()
-                        return@launch
-                    }
-                    refreshAuthUiOnly()
-                }.onFailure { error ->
-                    authState = RealDebridAuthState(
-                        isLinked = false,
-                        authInProgress = true,
-                        lastError = error.message
+        realDebridAuthCoordinator.startAutoPolling(
+            flow = flow,
+            currentAuthState = { authState },
+            onStateUpdated = { result ->
+                authState = result.authState
+                activeDeviceFlow = result.activeDeviceFlow
+                result.statusMessage?.let { statusText.text = it }
+                result.linkedMessage?.let { linkedMessage ->
+                    dismissModal()
+                    showInfoModal(
+                        title = "Real-Debrid Linked",
+                        message = linkedMessage,
+                        primaryLabel = "Back to Settings",
+                        defaultAction = ModalDefaultAction.PRIMARY
                     )
-                    refreshAuthUiOnly()
                 }
-            }
-            if (!authState.isLinked && activeDeviceFlow != null) {
-                authState = authState.copy(
-                    authInProgress = false,
-                    lastError = authState.lastError ?: "Real-Debrid link timed out after 2 minutes."
-                )
-                statusText.text = "Real-Debrid link polling timed out."
+                refreshAuthUiOnly()
+            },
+            onTimeout = { timeout ->
+                authState = timeout.authState
+                statusText.text = timeout.statusMessage
                 showInfoModal(
                     title = "Real-Debrid Link Timed Out",
-                    message = authState.lastError ?: "The device link flow expired before authorization completed.",
+                    message = timeout.timeoutMessage,
                     primaryLabel = "Try Again",
                     onPrimary = ::startRealDebridLink,
                     secondaryLabel = "Close",
@@ -1015,7 +1029,7 @@ class MainActivity : ComponentActivity() {
                 )
                 refreshAuthUiOnly()
             }
-        }
+        )
     }
 
     private fun buildQrCodeView(value: String): View {
@@ -1431,44 +1445,20 @@ class MainActivity : ComponentActivity() {
         dismissModal()
         setLoading(true, "Checking for updates…")
         lifecycleScope.launch {
-            val result = runCatching {
-                GitHubReleaseUpdateChecker(
-                    owner = "michaelmu",
-                    repo = "asahi-streaming-app",
-                    currentVersionName = BuildConfig.VERSION_NAME,
-                    currentVersionCode = BuildConfig.VERSION_CODE
-                ).check()
-            }
-            result.onSuccess { checkResult ->
-                latestUpdateInfo = checkResult.updateInfo
-                latestUpdateMessage = checkResult.statusMessage
-                setLoading(false, latestUpdateMessage ?: "Update check complete.")
-                if (checkResult.updateInfo != null) {
-                    showUpdateAvailableModal(checkResult.updateInfo)
-                }
-                renderCurrentScreen()
-            }.onFailure { error ->
-                latestUpdateInfo = null
-                latestUpdateMessage = buildString {
-                    append("Update check failed")
-                    error::class.simpleName?.let {
-                        append(" (")
-                        append(it)
-                        append(")")
-                    }
-                    error.message?.takeIf { it.isNotBlank() }?.let {
-                        append(": ")
-                        append(it.take(180))
-                    }
-                }
-                setLoading(false, latestUpdateMessage ?: "Update check failed.")
+            val result = updateUiCoordinator.checkForUpdates()
+            latestUpdateInfo = result.updateInfo
+            latestUpdateMessage = result.statusMessage
+            setLoading(false, result.statusMessage)
+            if (result.errorMessage != null) {
                 showInfoModal(
                     title = "Update Check Failed",
-                    message = latestUpdateMessage ?: "Could not check for updates.",
+                    message = result.errorMessage,
                     primaryLabel = "OK"
                 )
-                renderCurrentScreen()
+            } else if (result.updateInfo != null) {
+                showUpdateAvailableModal(result.updateInfo)
             }
+            renderCurrentScreen()
         }
     }
 
@@ -1503,67 +1493,54 @@ class MainActivity : ComponentActivity() {
 
     private fun openLatestUpdate(updateInfo: AppUpdateInfo) {
         dismissModal()
-        val url = updateInfo.downloadUrl.ifBlank { updateInfo.pageUrl }
-        if (url.isBlank()) {
-            setLoading(false, "No APK URL available for this update.")
-            showInfoModal(
-                title = "No APK Found",
-                message = "This release does not include a downloadable APK asset.",
-                primaryLabel = "OK"
-            )
-            return
-        }
         lifecycleScope.launch {
-            try {
-                setLoading(true, "Downloading update APK…")
-                val apkFile = withContext(Dispatchers.IO) {
-                    val destination = java.io.File(cacheDir, "updates/asahi-update.apk")
-                    apkDownloadManager.download(url, destination)
+            setLoading(true, "Downloading update APK…")
+            when (val result = updateUiCoordinator.prepareInstall(updateInfo)) {
+                is UpdateInstallUiResult.Ready -> {
+                    setLoading(false, result.statusMessage)
+                    startActivity(result.readiness.installIntent)
+                    showInfoModal(
+                        title = "Installer Launched",
+                        message = "If Android does not show the installer, check the unknown apps permission for Asahi.",
+                        primaryLabel = "Done",
+                        secondaryLabel = "Open Settings",
+                        onSecondary = {
+                            result.readiness.openSettingsIntent?.let(::startActivity)
+                                ?: startActivity(apkInstaller.buildManageUnknownAppsIntent())
+                        },
+                        defaultAction = ModalDefaultAction.PRIMARY
+                    )
                 }
-                val installIntent = apkInstaller.buildInstallIntent(apkFile)
-                if (!apkInstaller.canRequestPackageInstalls()) {
-                    setLoading(false, "Enable install unknown apps for Asahi.")
+                is UpdateInstallUiResult.RequiresSettings -> {
+                    setLoading(false, result.statusMessage)
                     showInfoModal(
                         title = "Enable APK Installs",
-                        message = "Android is blocking installs from Asahi right now. Allow installs from this app, then try again.",
+                        message = result.readiness.message ?: "Android is blocking installs from Asahi right now. Allow installs from this app, then try again.",
                         primaryLabel = "Open Settings",
                         onPrimary = {
-                            startActivity(apkInstaller.buildManageUnknownAppsIntent())
+                            result.readiness.openSettingsIntent?.let(::startActivity)
                         },
                         secondaryLabel = "Not Now",
                         onSecondary = {},
                         defaultAction = ModalDefaultAction.PRIMARY
                     )
-                    return@launch
                 }
-                if (!apkInstaller.canResolveInstallIntent(installIntent)) {
-                    setLoading(false, "No package installer available.")
+                is UpdateInstallUiResult.Unavailable -> {
+                    setLoading(false, result.statusMessage)
                     showInfoModal(
                         title = "Installer Unavailable",
-                        message = "No app on this device can handle APK installation intents right now.",
+                        message = result.readiness.message ?: "No app on this device can handle APK installation intents right now.",
                         primaryLabel = "OK"
                     )
-                    return@launch
                 }
-                setLoading(false, "Launching package installer…")
-                startActivity(installIntent)
-                showInfoModal(
-                    title = "Installer Launched",
-                    message = "If Android does not show the installer, check the unknown apps permission for Asahi.",
-                    primaryLabel = "Done",
-                    secondaryLabel = "Open Settings",
-                    onSecondary = {
-                        startActivity(apkInstaller.buildManageUnknownAppsIntent())
-                    },
-                    defaultAction = ModalDefaultAction.PRIMARY
-                )
-            } catch (error: Throwable) {
-                setLoading(false, "Update download/install failed: ${error.message ?: error::class.simpleName}")
-                showInfoModal(
-                    title = "Update Failed",
-                    message = error.message ?: error::class.simpleName ?: "Unknown update error.",
-                    primaryLabel = "OK"
-                )
+                is UpdateInstallUiResult.Failure -> {
+                    setLoading(false, result.statusMessage)
+                    showInfoModal(
+                        title = "Update Failed",
+                        message = result.errorMessage,
+                        primaryLabel = "OK"
+                    )
+                }
             }
         }
     }

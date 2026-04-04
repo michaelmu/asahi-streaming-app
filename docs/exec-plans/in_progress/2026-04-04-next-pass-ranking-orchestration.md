@@ -60,10 +60,7 @@ A task is only `DONE` when:
 
 **Current phase:** Phase A — product-quality source pipeline and app orchestration
 
-**Immediate target:** tighten the remaining high-leverage areas now that the cleanup pass is stable:
-1. finish the biggest remaining `MainActivity` extractions
-2. improve source ranking/dedupe quality and inspectability
-3. make source loading feel faster, not just technically concurrent
+**Immediate target:** A1 — continue breaking up `MainActivity`, starting with extraction of Real-Debrid auth coordination and update interaction flow.
 
 **Why this now:**
 The repo is in a better structural state than before, but the current bottlenecks are obvious:
@@ -140,7 +137,7 @@ This file is the fresh next-pass plan.
 # Phase A — Highest-value next work
 
 ## A1. Continue breaking up `MainActivity`
-Status: TODO
+Status: IN_PROGRESS
 Priority: High
 
 ### Goal
@@ -151,8 +148,8 @@ This is still the biggest maintainability risk in the app.
 Adding more features before reducing this concentration of logic will make everything slower and riskier.
 
 ### Proposed sub-steps
-- [TODO] Extract Real-Debrid auth flow into a dedicated coordinator
-- [TODO] Extract update interaction flow into a dedicated UI-facing coordinator
+- [DONE] Extract Real-Debrid auth flow into a dedicated coordinator
+- [DONE] Extract update interaction flow into a dedicated UI-facing coordinator
 - [TODO] Extract modal presentation helper/state wrapper if it meaningfully reduces repetition
 - [TODO] Move playback error message formatting out of `MainActivity`
 - [TODO] Leave `MainActivity` primarily responsible for render dispatch, shell mode, and event wiring
@@ -426,6 +423,13 @@ Keep ranking opinionated by default, but design A2/A3 so profile-based variation
 - Carried forward deferred items as optional or phased work instead of mixing them blindly into mandatory scope.
 - No code changes implemented under this plan yet.
 
+### 2026-04-04 15:35 UTC
+- Completed the first A1 extraction slice by introducing `RealDebridAuthCoordinator` and `UpdateUiCoordinator`.
+- Moved Real-Debrid device-flow start/reset/poll orchestration out of `MainActivity` into a dedicated auth coordinator.
+- Moved update check/install interaction branching onto a dedicated UI-facing update coordinator layered over `UpdateCoordinator`.
+- Added focused coordinator tests for auth and update UI coordination.
+- Validation: `./gradlew testDebugUnitTest` passed.
+
 ---
 
 ## Scope Changes
@@ -433,13 +437,14 @@ Keep ranking opinionated by default, but design A2/A3 so profile-based variation
 ### 2026-04-04
 - New plan created after prior plan reached a clean “complete for this pass” state.
 - Deferred items from the prior pass were retained, but reclassified as either core-next or optional depending on expected value/churn tradeoff.
+- During A1 execution, chose to extract auth/update workflow coordination first because it offered the cleanest boundary with low regression risk compared with modal-system or playback-flow extraction.
 
 ---
 
 ## Session Start
 
-### 2026-04-04 15:08 UTC
-Intended task: perform a fresh post-cleanup review and create the next living execution plan, including optional deferred items where justified.
+### 2026-04-04 15:23 UTC
+Intended task: Resume the active next-pass plan and begin A1 by extracting Real-Debrid auth coordination and update interaction flow from `MainActivity`.
 
 ---
 

@@ -13,17 +13,17 @@ data class UpdateInstallReadiness(
     val openSettingsIntent: Intent? = null
 )
 
-class UpdateCoordinator(
+open class UpdateCoordinator(
     private val updateCheckerFactory: () -> GitHubReleaseUpdateChecker,
     private val apkDownloadManager: ApkDownloadManager,
     private val apkInstaller: ApkInstaller,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
-    suspend fun checkForUpdates(): UpdateCheckResult {
+    open suspend fun checkForUpdates(): UpdateCheckResult {
         return updateCheckerFactory().check()
     }
 
-    suspend fun prepareInstall(
+    open suspend fun prepareInstall(
         updateInfo: AppUpdateInfo,
         cacheDir: File
     ): UpdateInstallReadiness = withContext(ioDispatcher) {
