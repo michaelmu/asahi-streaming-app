@@ -34,7 +34,8 @@ class AppCoordinator(
             selectedSeasonNumber = null,
             selectedEpisodeNumber = null,
             selectedSource = null,
-            selectedSources = emptyList()
+            selectedSources = emptyList(),
+            favoritesBrowseMode = null
         )
         navigator.goTo(AppDestination.SEARCH)
     }
@@ -52,7 +53,8 @@ class AppCoordinator(
             selectedEpisodeNumber = null,
             selectedSource = null,
             selectedSources = emptyList(),
-            recentQueries = updatedRecentQueries
+            recentQueries = updatedRecentQueries,
+            favoritesBrowseMode = null
         )
         navigator.goTo(AppDestination.RESULTS)
     }
@@ -107,6 +109,23 @@ class AppCoordinator(
             selectedSource = sourceResult
         )
         navigator.goTo(AppDestination.PLAYER)
+    }
+
+    fun showFavorites(mode: SearchMode, results: List<SearchResult>) {
+        state = state.copy(
+            destination = AppDestination.RESULTS,
+            searchMode = mode,
+            query = "Favorites",
+            searchResults = results,
+            selectedMedia = null,
+            selectedDetails = null,
+            selectedSeasonNumber = null,
+            selectedEpisodeNumber = null,
+            selectedSource = null,
+            selectedSources = emptyList(),
+            favoritesBrowseMode = mode
+        )
+        navigator.goTo(AppDestination.RESULTS)
     }
 
     fun openSettings() {

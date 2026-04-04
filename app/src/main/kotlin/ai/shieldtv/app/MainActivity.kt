@@ -593,11 +593,19 @@ class MainActivity : ComponentActivity() {
                     authLinked = authState.isLinked,
                     statusMessage = statusText.text?.toString().orEmpty(),
                     onOpenMovies = {
-                        coordinator.openSearch(SearchMode.MOVIES)
+                        coordinator.showFavorites(
+                            SearchMode.MOVIES,
+                            AppContainer.favoritesCoordinator.listByType(ai.shieldtv.app.core.model.media.MediaType.MOVIE)
+                        )
+                        statusText.text = "Movie favorites"
                         renderCurrentScreen()
                     },
                     onOpenShows = {
-                        coordinator.openSearch(SearchMode.SHOWS)
+                        coordinator.showFavorites(
+                            SearchMode.SHOWS,
+                            AppContainer.favoritesCoordinator.listByType(ai.shieldtv.app.core.model.media.MediaType.SHOW)
+                        )
+                        statusText.text = "TV favorites"
                         renderCurrentScreen()
                     },
                     onOpenSettings = {
@@ -748,15 +756,18 @@ class MainActivity : ComponentActivity() {
                 updateSummary = latestUpdateMessage,
                 providerSummary = buildProviderSummary(),
                 sourcePreferencesSummary = buildSourcePreferencesSummary(),
+                movieMaxSizeLabel = currentSourcePreferences().movieMaxSizeGb?.let { "${it}GB" } ?: "No limit",
+                tvMaxSizeLabel = currentSourcePreferences().episodeMaxSizeGb?.let { "${it}GB" } ?: "No limit",
+                providerSelectionLabel = buildProviderSelectionLabel(),
                 buildAuthUrl = ::buildRealDebridAuthUrl,
                 onStartLink = ::startRealDebridLink,
                 onResetAuth = ::resetRealDebridAuth,
                 onCopyDebugInfo = ::copyDebugInfoToClipboard,
                 onCheckForUpdates = ::checkForUpdates,
                 onOpenLatestUpdate = latestUpdateInfo?.let { { openLatestUpdate(it) } },
-                onConfigureMovieMaxSize = ::cycleMovieMaxSize,
-                onConfigureTvMaxSize = ::cycleTvMaxSize,
-                onToggleProviders = ::cycleProvidersEnabled,
+                onConfigureMovieMaxSize = ::showMovieMaxSizePicker,
+                onConfigureTvMaxSize = ::showTvMaxSizePicker,
+                onToggleProviders = ::showProviderSelectionModal,
                 onResetSourcePreferences = ::resetSourcePreferences,
                 onBackToHome = {
                     coordinator.openHome()
@@ -1282,104 +1293,90 @@ class MainActivity : ComponentActivity() {
         return listOf(providerMode, movieLimit, tvLimit).joinToString(" • ")
     }
 
-    private fun cycleMovieMaxSize() {
-        val store = AppContainer.sourcePreferencesStore
-        val current = currentSourcePreferences().movieMaxSizeGb
-        val next = when (current) {
-            null -> 10
-            10 -> 20
-            20 -> 40
-            else -> null
+    private fun buildProviderSelectionLabel(): String {
+        val prefs = currentSourcePreferences()
+        val allProviders = AppContainer.availableProviderIds().toSet()
+        val effectiveProviders = prefs.providerSelection.effectiveEnabledProviders(allProviders)
+        return when (prefs.providerSelection.mode) {
+            ai.shieldtv.app.settings.ProviderSelectionMode.ALL_ENABLED -> "All enabled"
+            ai.shieldtv.app.settings.ProviderSelectionMode.CUSTOM -> "${effectiveProviders.size} selected"
         }
-        store.saveMovieMaxSizeGb(next)
-        showInfoModal(
+    }
+
+    private fun showMovieMaxSizePicker() {
+        showSizePickerModal(
             title = "Movie Max Size",
-            message = "Movie source size limit is now ${next?.let { "${it}GB" } ?: "disabled"}.",
-            primaryLabel = "OK"
+            currentValue = currentSourcePreferences().movieMaxSizeGb,
+            values = listOf(null, 1, 2, 4, 8, 12, 16, 24, 32, 48),
+            valueLabel = { it?.let { gb -> "${gb}GB" } ?: "No limit" },
+            onSelected = {
+                AppContainer.sourcePreferencesStore.saveMovieMaxSizeGb(it)
+                renderCurrentScreen()
+            }
         )
-        renderCurrentScreen()
     }
 
-    private fun cycleTvMaxSize() {
-        val store = AppContainer.sourcePreferencesStore
-        val current = currentSourcePreferences().episodeMaxSizeGb
-        val next = when (current) {
-            null -> 2
-            2 -> 5
-            5 -> 10
-            else -> null
-        }
-        store.saveEpisodeMaxSizeGb(next)
-        showInfoModal(
+    private fun showTvMaxSizePicker() {
+        showSizePickerModal(
             title = "TV Max Size",
-            message = "TV episode source size limit is now ${next?.let { "${it}GB" } ?: "disabled"}.",
-            primaryLabel = "OK"
+            currentValue = currentSourcePreferences().episodeMaxSizeGb,
+            values = listOf(null, 1, 2, 4, 6, 8, 12, 16, 24),
+            valueLabel = { it?.let { gb -> "${gb}GB" } ?: "No limit" },
+            onSelected = {
+                AppContainer.sourcePreferencesStore.saveEpisodeMaxSizeGb(it)
+                renderCurrentScreen()
+            }
         )
-        renderCurrentScreen()
-    }
-
-    private fun cycleProvidersEnabled() {
-        showProviderSelectionModal()
     }
 
     private fun showProviderSelectionModal() {
+        showProviderSelectionPage(startIndex = 0)
+    }
+
+    private fun formatProviderChoiceLabel(label: String, enabled: Boolean): String {
+        return if (enabled) "Disable $label" else "Enable $label"
+    }
+
+    private fun showProviderSelectionPage(startIndex: Int) {
         val labels = AppContainer.availableProviderLabels()
         val allProviders = labels.keys.toList()
         val current = currentSourcePreferences().providerSelection
         val effectiveEnabled = current.effectiveEnabledProviders(allProviders.toSet())
+        val page = allProviders.drop(startIndex).take(3)
         val providerLines = allProviders.joinToString("\n") { id ->
             val enabled = id in effectiveEnabled
             val marker = if (enabled) "[x]" else "[ ]"
             "$marker ${labels[id] ?: id}"
         }
         showInfoModal(
-            title = "Provider Selection",
+            title = "Choose Providers",
             message = buildString {
-                appendLine("Enabled providers")
+                appendLine("Enabled: ${effectiveEnabled.size} / ${allProviders.size}")
                 appendLine()
                 append(providerLines)
             },
-            primaryLabel = labels[allProviders.first()] ?: allProviders.first(),
-            onPrimary = { toggleProvider(allProviders.first()) },
-            secondaryLabel = if (allProviders.size > 1) labels[allProviders[1]] ?: allProviders[1] else "Enable All",
-            onSecondary = {
-                if (allProviders.size > 1) toggleProvider(allProviders[1]) else setAllProvidersEnabled()
+            primaryLabel = page.getOrNull(0)?.let { id -> formatProviderChoiceLabel(labels[id] ?: id, id in effectiveEnabled) } ?: "Enable All",
+            onPrimary = {
+                val provider = page.getOrNull(0)
+                if (provider != null) toggleProvider(provider) else setAllProvidersEnabled()
             },
-            tertiaryLabel = "More…",
-            onTertiary = { showProviderSelectionPage(allProviders, startIndex = 2) },
-            dismissOnBack = true,
-            defaultAction = ModalDefaultAction.PRIMARY
-        )
-    }
-
-    private fun showProviderSelectionPage(allProviders: List<String>, startIndex: Int) {
-        val labels = AppContainer.availableProviderLabels()
-        val current = currentSourcePreferences().providerSelection
-        val effectiveEnabled = current.effectiveEnabledProviders(allProviders.toSet())
-        val visible = allProviders.drop(startIndex).take(3)
-        if (visible.isEmpty()) {
-            showProviderSelectionActions(allProviders)
-            return
-        }
-        val providerLines = allProviders.joinToString("\n") { id ->
-            val enabled = id in effectiveEnabled
-            val marker = if (enabled) "[x]" else "[ ]"
-            "$marker ${labels[id] ?: id}"
-        }
-        showInfoModal(
-            title = "Provider Selection",
-            message = providerLines,
-            primaryLabel = labels[visible[0]] ?: visible[0],
-            onPrimary = { toggleProvider(visible[0]) },
-            secondaryLabel = visible.getOrNull(1)?.let { labels[it] ?: it } ?: "All On",
+            secondaryLabel = page.getOrNull(1)?.let { id -> formatProviderChoiceLabel(labels[id] ?: id, id in effectiveEnabled) } ?: "Disable All",
             onSecondary = {
-                val second = visible.getOrNull(1)
-                if (second != null) toggleProvider(second) else setAllProvidersEnabled()
+                val provider = page.getOrNull(1)
+                if (provider != null) toggleProvider(provider) else setNoProviderOverrides()
             },
-            tertiaryLabel = visible.getOrNull(2)?.let { labels[it] ?: it } ?: "Actions",
+            tertiaryLabel = when {
+                page.getOrNull(2) != null -> formatProviderChoiceLabel(labels[page[2]] ?: page[2], page[2] in effectiveEnabled)
+                startIndex + 3 < allProviders.size -> "More…"
+                else -> "Actions"
+            },
             onTertiary = {
-                val third = visible.getOrNull(2)
-                if (third != null) toggleProvider(third) else showProviderSelectionActions(allProviders)
+                val provider = page.getOrNull(2)
+                when {
+                    provider != null -> toggleProvider(provider)
+                    startIndex + 3 < allProviders.size -> showProviderSelectionPage(startIndex + 3)
+                    else -> showProviderSelectionActions(allProviders)
+                }
             },
             dismissOnBack = true,
             defaultAction = ModalDefaultAction.PRIMARY
@@ -1452,6 +1449,136 @@ class MainActivity : ComponentActivity() {
         )
         showProviderSelectionModal()
         renderCurrentScreen()
+    }
+
+    private fun buildProviderToggleList(
+        labels: Map<String, String>,
+        allProviders: List<String>,
+        effectiveEnabled: Set<String>
+    ): View {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            allProviders.forEachIndexed { index, providerId ->
+                val enabled = providerId in effectiveEnabled
+                val row = viewFactory.panel(vertical = false, elevated = false).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = android.view.Gravity.CENTER_VERTICAL
+                    setPadding(viewFactory.dp(16), viewFactory.dp(12), viewFactory.dp(16), viewFactory.dp(12))
+                    isFocusable = true
+                    isFocusableInTouchMode = true
+                    alpha = 0.97f
+                    nextFocusUpId = id
+                    nextFocusDownId = id
+                    setOnClickListener {
+                        toggleProvider(providerId)
+                    }
+                    setOnFocusChangeListener { view, hasFocus ->
+                        view.scaleX = if (hasFocus) 1.01f else 1f
+                        view.scaleY = if (hasFocus) 1.01f else 1f
+                        view.alpha = if (hasFocus) 1f else 0.97f
+                        background = androidx.core.content.ContextCompat.getDrawable(
+                            context,
+                            if (hasFocus) ai.shieldtv.app.R.drawable.asahi_button_bg else ai.shieldtv.app.R.drawable.asahi_panel_bg
+                        )
+                    }
+                }
+                val name = android.widget.TextView(this@MainActivity).apply {
+                    text = labels[providerId] ?: providerId
+                    setTextColor(viewFactory.textPrimaryColor)
+                    textSize = 17f
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                }
+                val badge = android.widget.TextView(this@MainActivity).apply {
+                    text = if (enabled) "ON" else "OFF"
+                    setTextColor(if (enabled) viewFactory.textPrimaryColor else viewFactory.textSecondaryColor)
+                    textSize = 14f
+                    setTypeface(typeface, android.graphics.Typeface.BOLD)
+                    background = androidx.core.content.ContextCompat.getDrawable(
+                        context,
+                        if (enabled) ai.shieldtv.app.R.drawable.asahi_chip_bg else ai.shieldtv.app.R.drawable.asahi_panel_bg
+                    )
+                    setPadding(viewFactory.dp(12), viewFactory.dp(6), viewFactory.dp(12), viewFactory.dp(6))
+                }
+                row.addView(name)
+                row.addView(badge)
+                addView(row)
+                if (index < allProviders.lastIndex) {
+                    addView(viewFactory.spacer(8))
+                }
+            }
+        }
+    }
+
+    private fun showSizePickerModal(
+        title: String,
+        currentValue: Int?,
+        values: List<Int?>,
+        valueLabel: (Int?) -> String,
+        onSelected: (Int?) -> Unit
+    ) {
+        showSizePickerPage(
+            title = title,
+            currentValue = currentValue,
+            values = values,
+            startIndex = 0,
+            valueLabel = valueLabel,
+            onSelected = onSelected
+        )
+    }
+
+    private fun showSizePickerPage(
+        title: String,
+        currentValue: Int?,
+        values: List<Int?>,
+        startIndex: Int,
+        valueLabel: (Int?) -> String,
+        onSelected: (Int?) -> Unit
+    ) {
+        val page = values.drop(startIndex).take(3)
+        showInfoModal(
+            title = title,
+            message = buildString {
+                appendLine("Current: ${valueLabel(currentValue)}")
+                appendLine()
+                appendLine(values.joinToString("\n") { value ->
+                    val marker = if (value == currentValue) "[x]" else "[ ]"
+                    "$marker ${valueLabel(value)}"
+                })
+            },
+            primaryLabel = page.getOrNull(0)?.let(valueLabel) ?: "Done",
+            onPrimary = {
+                val value = page.getOrNull(0)
+                if (value != null) {
+                    onSelected(value)
+                    showSizePickerPage(title, value, values, startIndex, valueLabel, onSelected)
+                }
+            },
+            secondaryLabel = page.getOrNull(1)?.let(valueLabel) ?: if (startIndex + 3 < values.size) "More…" else "Done",
+            onSecondary = {
+                val value = page.getOrNull(1)
+                when {
+                    value != null -> {
+                        onSelected(value)
+                        showSizePickerPage(title, value, values, startIndex, valueLabel, onSelected)
+                    }
+                    startIndex + 3 < values.size -> showSizePickerPage(title, currentValue, values, startIndex + 3, valueLabel, onSelected)
+                    else -> {}
+                }
+            },
+            tertiaryLabel = page.getOrNull(2)?.let(valueLabel) ?: if (startIndex > 0) "Back" else "Done",
+            onTertiary = {
+                val value = page.getOrNull(2)
+                when {
+                    value != null -> {
+                        onSelected(value)
+                        showSizePickerPage(title, value, values, startIndex, valueLabel, onSelected)
+                    }
+                    startIndex > 0 -> showSizePickerPage(title, currentValue, values, (startIndex - 3).coerceAtLeast(0), valueLabel, onSelected)
+                    else -> {}
+                }
+            },
+            defaultAction = ModalDefaultAction.PRIMARY
+        )
     }
 
     private fun resetSourcePreferences() {

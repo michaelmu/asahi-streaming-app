@@ -42,6 +42,8 @@ import ai.shieldtv.app.integration.scrapers.provider.zilean.ZileanSourceProvider
 import ai.shieldtv.app.integration.scrapers.ranking.DefaultSourceRanker
 import ai.shieldtv.app.integration.scrapers.ranking.RealDebridSourceCacheMarker
 import ai.shieldtv.app.settings.SourcePreferencesStore
+import ai.shieldtv.app.favorites.FavoritesCoordinator
+import ai.shieldtv.app.favorites.FavoritesStore
 import ai.shieldtv.app.integration.scrapers.repository.SourceRepositoryImpl
 import ai.shieldtv.app.playback.PlaybackSessionStore
 import java.io.File
@@ -145,6 +147,14 @@ object AppContainer {
 
     val playbackSessionStore by lazy {
         PlaybackSessionStore(requireContext())
+    }
+
+    val favoritesStore by lazy {
+        FavoritesStore(requireContext())
+    }
+
+    val favoritesCoordinator by lazy {
+        FavoritesCoordinator(favoritesStore)
     }
 
     val searchTitlesUseCase by lazy {

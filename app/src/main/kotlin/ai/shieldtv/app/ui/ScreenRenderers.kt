@@ -450,18 +450,25 @@ class ResultsScreenRenderer(
         onNewSearch: () -> Unit,
         onFirstFocusTarget: (View) -> Unit = {}
     ) {
-        host.addView(viewFactory.title("Results for \"${state.query}\""))
+        val isFavoritesBrowse = state.favoritesBrowseMode != null
+        host.addView(viewFactory.title(if (isFavoritesBrowse) "${state.searchMode.label} Favorites" else "Results for \"${state.query}\""))
         host.addView(viewFactory.spacer(6))
-        host.addView(viewFactory.caption("${state.searchResults.size} match(es) in ${state.searchMode.label.lowercase()}."))
+        host.addView(viewFactory.caption(
+            if (isFavoritesBrowse) {
+                "${state.searchResults.size} favorite(s) in ${state.searchMode.label.lowercase()}, newest first."
+            } else {
+                "${state.searchResults.size} match(es) in ${state.searchMode.label.lowercase()}."
+            }
+        ))
         host.addView(viewFactory.spacer(16))
 
         if (state.searchResults.isEmpty()) {
             host.addView(viewFactory.panel(elevated = true).apply {
-                addView(viewFactory.title("Nothing useful yet"))
+                addView(viewFactory.title(if (isFavoritesBrowse) "No favorites yet" else "Nothing useful yet"))
                 addView(viewFactory.spacer(10))
-                addView(viewFactory.body(emptyMessage))
+                addView(viewFactory.body(if (isFavoritesBrowse) "Favorite something from search results and it’ll show up here." else emptyMessage))
                 addView(viewFactory.spacer(16))
-                addView(viewFactory.button("Try another search", onNewSearch))
+                addView(viewFactory.button(if (isFavoritesBrowse) "Go to Search" else "Try another search", onNewSearch))
             })
             return
         }
@@ -1066,6 +1073,9 @@ class SettingsScreenRenderer(
         updateSummary: String?,
         providerSummary: String?,
         sourcePreferencesSummary: String?,
+        movieMaxSizeLabel: String,
+        tvMaxSizeLabel: String,
+        providerSelectionLabel: String,
         buildAuthUrl: (DeviceCodeFlow) -> String,
         onStartLink: () -> Unit,
         onResetAuth: () -> Unit,
@@ -1161,11 +1171,11 @@ class SettingsScreenRenderer(
             host.addView(viewFactory.button("Open Latest APK", openLatest))
             host.addView(viewFactory.spacer(10))
         }
-        host.addView(viewFactory.button("Movie Max Size", onConfigureMovieMaxSize))
+        host.addView(viewFactory.button("Movie Max Size ($movieMaxSizeLabel)", onConfigureMovieMaxSize))
         host.addView(viewFactory.spacer(10))
-        host.addView(viewFactory.button("TV Max Size", onConfigureTvMaxSize))
+        host.addView(viewFactory.button("TV Max Size ($tvMaxSizeLabel)", onConfigureTvMaxSize))
         host.addView(viewFactory.spacer(10))
-        host.addView(viewFactory.button("Toggle Providers", onToggleProviders))
+        host.addView(viewFactory.button("Choose Providers ($providerSelectionLabel)", onToggleProviders))
         host.addView(viewFactory.spacer(10))
         host.addView(viewFactory.button("Reset Source Preferences", onResetSourcePreferences))
         host.addView(viewFactory.spacer(10))

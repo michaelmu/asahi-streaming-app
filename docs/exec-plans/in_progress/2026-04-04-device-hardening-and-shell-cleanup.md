@@ -58,15 +58,13 @@ A task is only `DONE` when:
 
 ## Current Focus
 
-**Current phase:** Phase A — device/runtime hardening
+**Current phase:** Phase B — remaining shell cleanup
 
-**Immediate target:** confirm and continue Android/Shield compatibility hardening after the Real-Debrid auth runtime issue, then tackle the remaining `MainActivity` shell cleanup from the previous pass.
+**Immediate target:** continue breaking up `MainActivity` by extracting the source/settings preferences workflow into a focused coordinator.
 
 **Why this now:**
 The previous plan materially improved the app’s internal architecture and source pipeline.
-The next highest-value work is now:
-- reduce device/runtime surprises on Shield
-- tighten app-shell reliability where state and modal orchestration remain too concentrated
+With the latest Shield/UI work landed, the best proactive next step is to keep shrinking app-shell glue in `MainActivity` without forcing a huge architectural rewrite.
 
 ---
 
@@ -143,7 +141,7 @@ That is normal for scraper/provider ecosystems, but it should be made easier to 
 # Phase B — Remaining shell cleanup
 
 ## B1. Continue breaking up `MainActivity`
-Status: TODO
+Status: IN_PROGRESS
 Priority: High
 
 ### Goal
@@ -154,9 +152,9 @@ Finish the highest-value remaining app-shell cleanup without forcing a giant sto
 The biggest remaining maintainability risk is still concentrated there.
 
 ### Proposed sub-steps
-- [TODO] extract modal presentation helper/state wrapper if it meaningfully reduces repetition
-- [TODO] move playback error message formatting out of `MainActivity`
-- [TODO] reduce remaining workflow glue where obvious seams already exist
+- [DONE] extract modal presentation helper/state wrapper if it meaningfully reduces repetition
+- [DONE] move playback error message formatting out of `MainActivity`
+- [IN_PROGRESS] reduce remaining workflow glue where obvious seams already exist
 - [TODO] leave `MainActivity` primarily as shell host + renderer + event wiring
 
 ### Validation
@@ -239,6 +237,29 @@ Not yet. Finish the smaller shell extractions first and reassess.
 - Scoped the next work around device/runtime hardening and remaining shell cleanup.
 - No implementation work has been completed under this plan yet.
 
+### 2026-04-04 18:24 UTC
+- Resumed the plan from the shell-cleanup side instead of forcing more speculative device hardening work.
+- Completed a small `MainActivity` cleanup slice by moving playback error/status formatting into `PlaybackStatusFormatter`.
+- Validation: `./gradlew testDebugUnitTest` and `./gradlew assembleDebug` passed.
+
+### 2026-04-04 18:27 UTC
+- Completed the next `MainActivity` cleanup slice by extracting modal attach/detach lifecycle handling into `ModalHost`.
+- `MainActivity` no longer directly owns the overlay-host add/remove bookkeeping for active modal views.
+- Kept behavior intentionally unchanged while reducing activity-level UI plumbing.
+- Validation: `./gradlew testDebugUnitTest` and `./gradlew assembleDebug` passed.
+
+### 2026-04-04 18:30 UTC
+- Continued reducing workflow glue in `MainActivity` by extracting repeated info-modal presentation behavior into `InfoModalPresenter` + `InfoModalSpec`.
+- `MainActivity` still chooses modal semantics, but no longer hand-assembles the overlay popup workflow path itself.
+- Kept behavior stable while shrinking activity-level orchestration noise.
+- Validation: `./gradlew testDebugUnitTest` and `./gradlew assembleDebug` passed.
+
+### 2026-04-04 18:34 UTC
+- Continued the shell cleanup by extracting source/settings preference mutation and label-building logic into `SourcePreferencesCoordinator`.
+- `MainActivity` now delegates provider toggling, bulk provider state changes, reset behavior, and source-preference label building instead of owning that preference mutation logic directly.
+- Kept modal/view construction in `MainActivity` for now to keep the extraction low-risk and incremental.
+- Validation: `./gradlew testDebugUnitTest` and `./gradlew assembleDebug` passed.
+
 ---
 
 ## Scope Changes
@@ -246,13 +267,17 @@ Not yet. Finish the smaller shell extractions first and reassess.
 ### 2026-04-04
 - New plan created because the prior next-pass plan was complete for its intended scope.
 - Device/runtime hardening was promoted after a real on-device Shield compatibility failure surfaced during Real-Debrid auth.
+- Later resumed the plan via shell cleanup, since recent Shield/UI work reduced immediate uncertainty and made `MainActivity` cleanup the cleaner next move.
+- Shell cleanup is currently being approached in small low-risk slices rather than a broad rewrite.
+- Modal workflow glue is being peeled away incrementally so behavior stays stable while `MainActivity` gets thinner.
+- Settings/source-preferences workflow is now also being peeled away incrementally, starting with mutation/summary logic before view-layer extraction.
 
 ---
 
 ## Session Start
 
-### 2026-04-04 16:40 UTC
-Intended task: Close out the previous plan and create a new in-progress plan focused on device hardening and remaining shell cleanup.
+### 2026-04-04 18:33 UTC
+Intended task: Continue the active device/shell plan by extracting the source/settings preferences workflow from `MainActivity`.
 
 ---
 
