@@ -362,6 +362,12 @@ Centralize common button/card focus behavior first, but keep renderer-specific d
 - Validation: `./gradlew testDebugUnitTest` and `./gradlew assembleDebug` passed.
 - Emulator/manual validation is still required to confirm the intended default-focus behavior on real D-pad navigation.
 
+### 2026-04-04 17:08 UTC
+- Attempted emulator validation for the UI polish pass.
+- Environment has an Android TV AVD (`asahi-tv-test`) and `adb`, but emulator launch failed here due to Qt/xcb platform plugin/display initialization issues.
+- Created `docs/ui-validation/2026-04-04-focus-modal-polish/README.md` with the screenshot checklist, adb screenshot command, emulator commands, and manual validation steps.
+- Result: validation artifact path is prepared, but screenshots/live emulator verification remain blocked in this environment and must be completed where the emulator display backend works.
+
 ---
 
 ## Scope Changes
@@ -370,6 +376,7 @@ Centralize common button/card focus behavior first, but keep renderer-specific d
 - New plan created specifically for UI polish instead of overloading the device-hardening/shell-cleanup plan.
 - Emulator + screenshot validation was made part of the required validation, not an optional extra.
 - During A1 implementation, started with shared drawable/factory-level focus treatment changes first because they offer the highest leverage and lowest regression risk before deeper renderer/modal work.
+- Validation scope remains unchanged, but actual emulator execution is currently blocked in this environment by the emulator display/plugin setup rather than missing tooling.
 - During A2 implementation, focused on the highest-traffic renderer-specific cards first (media, episode, source) rather than trying to restyle every focusable widget in one pass.
 - During B1 implementation, kept the modal navigation fix localized to `OverlayPopup` so all modal call sites benefit immediately without per-modal rewrites.
 - During B2 implementation, preferred safe default focus on non-destructive actions where the UX intent was ambiguous, especially for long-running source lookup and auth flows.
