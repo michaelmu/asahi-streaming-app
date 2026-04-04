@@ -166,22 +166,22 @@ class HomeScreenRenderer(
         val firstMovieShortcut = actionButton("Browse Movies", onBrowseMovies)
         host.addView(viewFactory.sectionTitle("Movies"))
         host.addView(viewFactory.spacer(10))
-        host.addView(shortcutRow(
+        host.addView(shortcutColumn(
             listOf(
                 firstMovieShortcut,
-                actionButton("Favorites", onMovieFavorites, 12),
-                actionButton("Watch History", onMovieHistory, 12)
+                actionButton("Favorites", onMovieFavorites),
+                actionButton("Watch History", onMovieHistory)
             )
         ))
         host.addView(viewFactory.spacer(14))
 
         host.addView(viewFactory.sectionTitle("TV Shows"))
         host.addView(viewFactory.spacer(10))
-        host.addView(shortcutRow(
+        host.addView(shortcutColumn(
             listOf(
                 actionButton("Browse TV Shows", onBrowseShows),
-                actionButton("Favorites", onShowFavorites, 12),
-                actionButton("Watch History", onShowHistory, 12)
+                actionButton("Favorites", onShowFavorites),
+                actionButton("Watch History", onShowHistory)
             )
         ))
         host.addView(viewFactory.spacer(14))
@@ -362,13 +362,15 @@ class HomeScreenRenderer(
         }
     }
 
-    private fun shortcutRow(shortcuts: List<View>): View {
-        return HorizontalScrollView(host.context).apply {
-            addView(LinearLayout(host.context).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.START
-                shortcuts.forEach { addView(it) }
-            })
+    private fun shortcutColumn(shortcuts: List<View>): View {
+        return LinearLayout(host.context).apply {
+            orientation = LinearLayout.VERTICAL
+            shortcuts.forEachIndexed { index, view ->
+                addView(view)
+                if (index < shortcuts.lastIndex) {
+                    addView(viewFactory.spacer(10))
+                }
+            }
         }
     }
 
