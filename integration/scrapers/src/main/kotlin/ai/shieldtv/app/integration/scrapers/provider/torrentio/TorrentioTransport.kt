@@ -6,7 +6,6 @@ import ai.shieldtv.app.integration.debrid.realdebrid.debug.RealDebridDebugState
 import ai.shieldtv.app.integration.scrapers.provider.template.ProviderRequest
 import ai.shieldtv.app.integration.scrapers.provider.template.ProviderTransport
 import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 
 class TorrentioTransport(
     private val tokenProvider: RealDebridTokenProvider? = null
@@ -34,7 +33,7 @@ class TorrentioTransport(
         val base = TorrentioConfig.baseUrl().trimEnd('/')
         if (token.isNullOrBlank()) return base + path
 
-        val encodedToken = URLEncoder.encode(token, StandardCharsets.UTF_8)
+        val encodedToken = URLEncoder.encode(token, "UTF-8")
         val normalizedPath = path.removePrefix("/")
         return "$base/realdebrid=$encodedToken/$normalizedPath"
     }

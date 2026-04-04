@@ -2,7 +2,6 @@ package ai.shieldtv.app.integration.metadata.tmdb.api
 
 import ai.shieldtv.app.core.network.http.HttpClient
 import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 
 class RealTmdbApi(
     private val apiKeyProvider: () -> String?,
@@ -10,7 +9,7 @@ class RealTmdbApi(
 ) : TmdbApi {
     override suspend fun searchMulti(query: String): String {
         val apiKey = apiKeyProvider() ?: return query
-        val encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8)
+        val encodedQuery = URLEncoder.encode(query, "UTF-8")
         return httpClient.get(
             url = "https://api.themoviedb.org/3/search/multi?api_key=$apiKey&query=$encodedQuery"
         )

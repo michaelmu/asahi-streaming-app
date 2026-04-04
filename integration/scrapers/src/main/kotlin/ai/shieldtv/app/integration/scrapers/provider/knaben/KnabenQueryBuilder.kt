@@ -6,7 +6,6 @@ import ai.shieldtv.app.integration.scrapers.provider.ProviderQuerySanitizer
 import ai.shieldtv.app.integration.scrapers.provider.template.ProviderQueryBuilder
 import ai.shieldtv.app.integration.scrapers.provider.template.ProviderRequest
 import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 
 class KnabenQueryBuilder : ProviderQueryBuilder {
     override fun build(request: SourceSearchRequest): ProviderRequest {
@@ -24,7 +23,7 @@ class KnabenQueryBuilder : ProviderQueryBuilder {
             MediaType.MOVIE -> "003000000"
             MediaType.SHOW, MediaType.EPISODE, MediaType.SEASON -> "002000000"
         }
-        val encoded = URLEncoder.encode(query, StandardCharsets.UTF_8)
+        val encoded = URLEncoder.encode(query, "UTF-8")
         return ProviderRequest(
             query = query,
             params = mapOf("url" to "${KnabenConfig.baseUrl()}/search/index.php?cat=$cat&q=$encoded&search=fast")

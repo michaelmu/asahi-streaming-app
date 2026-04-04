@@ -7,7 +7,6 @@ import ai.shieldtv.app.integration.debrid.realdebrid.auth.RealDebridTokenStore
 import ai.shieldtv.app.integration.debrid.realdebrid.config.RealDebridConfig
 import ai.shieldtv.app.integration.debrid.realdebrid.debug.RealDebridDebugState
 import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -21,7 +20,7 @@ class RealDebridHttpApi(
             val response = httpClient.get(
                 url =
                     "https://api.real-debrid.com/oauth/v2/device/code?client_id=" +
-                        URLEncoder.encode(clientId, StandardCharsets.UTF_8) +
+                        URLEncoder.encode(clientId, "UTF-8") +
                         "&new_credentials=yes"
             )
             RealDebridDebugState.lastStartDeviceFlowResponse = response
@@ -56,9 +55,9 @@ class RealDebridHttpApi(
             val response = httpClient.get(
                 url =
                     "https://api.real-debrid.com/oauth/v2/device/credentials?client_id=" +
-                        URLEncoder.encode(clientId, StandardCharsets.UTF_8) +
+                        URLEncoder.encode(clientId, "UTF-8") +
                         "&code=" +
-                        URLEncoder.encode(deviceCode, StandardCharsets.UTF_8)
+                        URLEncoder.encode(deviceCode, "UTF-8")
             )
             RealDebridDebugState.lastCredentialsResponse = response
             RealDebridDebugState.lastCredentialsError = ""
@@ -82,11 +81,11 @@ class RealDebridHttpApi(
         return runCatching {
             val body = buildString {
                 append("client_id=")
-                append(URLEncoder.encode(clientId, StandardCharsets.UTF_8))
+                append(URLEncoder.encode(clientId, "UTF-8"))
                 append("&client_secret=")
-                append(URLEncoder.encode(clientSecret, StandardCharsets.UTF_8))
+                append(URLEncoder.encode(clientSecret, "UTF-8"))
                 append("&code=")
-                append(URLEncoder.encode(deviceCode, StandardCharsets.UTF_8))
+                append(URLEncoder.encode(deviceCode, "UTF-8"))
                 append("&grant_type=http://oauth.net/grant_type/device/1.0")
             }
             val response = httpClient.post(
@@ -133,7 +132,7 @@ class RealDebridHttpApi(
 
     override suspend fun addMagnet(magnet: String): RealDebridTorrentAddResponse? {
         val accessToken = tokenStore.get()?.accessToken ?: RealDebridConfig.accessToken() ?: return null
-        val body = "magnet=${URLEncoder.encode(magnet, StandardCharsets.UTF_8)}"
+        val body = "magnet=${URLEncoder.encode(magnet, "UTF-8")}"
         return runCatching {
             val response = httpClient.post(
                 url = "https://api.real-debrid.com/rest/1.0/torrents/addMagnet",
@@ -171,7 +170,7 @@ class RealDebridHttpApi(
 
     override suspend fun selectTorrentFiles(torrentId: String, fileIdsCsv: String): Boolean {
         val accessToken = tokenStore.get()?.accessToken ?: RealDebridConfig.accessToken() ?: return false
-        val body = "files=${URLEncoder.encode(fileIdsCsv, StandardCharsets.UTF_8)}"
+        val body = "files=${URLEncoder.encode(fileIdsCsv, "UTF-8")}"
         return runCatching {
             httpClient.post(
                 url = "https://api.real-debrid.com/rest/1.0/torrents/selectFiles/$torrentId",
@@ -187,7 +186,7 @@ class RealDebridHttpApi(
 
     override suspend fun unrestrictLink(link: String): RealDebridUnrestrictedLink? {
         val accessToken = tokenStore.get()?.accessToken ?: RealDebridConfig.accessToken() ?: return null
-        val body = "link=${URLEncoder.encode(link, StandardCharsets.UTF_8)}"
+        val body = "link=${URLEncoder.encode(link, "UTF-8")}"
         return runCatching {
             val response = httpClient.post(
                 url = "https://api.real-debrid.com/rest/1.0/unrestrict/link",

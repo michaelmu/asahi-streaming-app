@@ -5,7 +5,6 @@ import ai.shieldtv.app.integration.scrapers.provider.ProviderQuerySanitizer
 import ai.shieldtv.app.integration.scrapers.provider.template.ProviderQueryBuilder
 import ai.shieldtv.app.integration.scrapers.provider.template.ProviderRequest
 import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 
 class BitSearchQueryBuilder : ProviderQueryBuilder {
     override fun build(request: SourceSearchRequest): ProviderRequest {
@@ -19,7 +18,7 @@ class BitSearchQueryBuilder : ProviderQueryBuilder {
             ProviderQuerySanitizer.toQuery(request),
             suffix.takeIf { it.isNotBlank() }
         ).filterNotNull().joinToString(" ")
-        val encoded = URLEncoder.encode(query, StandardCharsets.UTF_8)
+        val encoded = URLEncoder.encode(query, "UTF-8")
         return ProviderRequest(
             query = query,
             params = mapOf("url" to "${BitSearchConfig.baseUrl()}/search?q=$encoded&sort=size")
