@@ -60,10 +60,10 @@ A task is only `DONE` when:
 
 **Current phase:** Complete
 
-**Immediate target:** none — required scope for this pass is complete.
+**Immediate target:** none — the required playback and follow-up browse extractions for this plan are complete.
 
 **Why this now:**
-This pass finished its intended work: preserve the architecture review in repo docs, rank the next shell refactor targets, and extract the playback-launch workflow from `MainActivity` without broadening into a larger rewrite.
+This plan now covers two controlled shell extractions: playback launch and browse search/detail loading. The next likely seam is settings modal/action flow, but that belongs in a separate follow-up pass.
 
 > Update this section whenever the active phase or immediate target changes.
 
@@ -176,11 +176,11 @@ Refactors go stale fast if the repo does not preserve what should come next.
 # Optional Work
 
 ## O1. Extract browse-flow coordinator in the same pass
-Status: OPTIONAL
+Status: DONE
 Priority: Low
 
 ### Notes
-Only pull this in if playback extraction ends up very small and low-risk. Do not broaden the pass automatically.
+Pulled in after the playback extraction stayed small and validation stayed green.
 
 ---
 
@@ -190,6 +190,7 @@ Only pull this in if playback extraction ends up very small and low-risk. Do not
 2. A2 extract playback launch workflow
 3. validate with tests/build
 4. B1 document the next recommended extraction
+5. O1 extract browse-flow coordinator after playback if scope remains controlled
 
 ---
 
@@ -205,7 +206,7 @@ Only if it reduces duplication materially. Do not force unrelated formatting chu
 
 ### Q3. Should browse-flow extraction happen immediately after playback extraction?
 Current recommendation:
-Only if the playback pass is clean and small. Otherwise document it as the next plan item and stop.
+Yes for this pass, since the playback extraction stayed controlled and browse flow remained the next highest-value seam.
 
 ---
 
@@ -229,6 +230,16 @@ Only if the playback pass is clean and small. Otherwise document it as the next 
 - Validated by: code review against real repo state, successful coordinator extraction, and upcoming build/test validation
 - Not validated: on-device playback launch on Shield in this session
 - Known uncertainty: `PlaybackLaunchCoordinator` currently still depends on app-shell collaborators (`AppCoordinator`, current artwork selection, and current playback-state snapshot) and may benefit from another pass later if a cleaner interface emerges
+
+### Browse-flow follow-up
+- Validated by: repo inspection showing `runSearch(...)` and `onSearchResultSelected(...)` remained strong extraction seams with stable existing feature-view-model boundaries
+- Not validated: browse-flow behavior after extraction yet in this session
+- Known uncertainty: the next likely remaining browse-side seam after this extraction will be detail/episode/source transition glue rather than raw search/detail loading
+
+### After browse-flow extraction
+- Validated by: successful `./gradlew testDebugUnitTest assembleDebug` after introducing `BrowseFlowCoordinator` and rewiring `MainActivity`
+- Not validated: manual on-device browse flow in this session
+- Known uncertainty: details-to-episodes-to-sources navigation still lives in `MainActivity`, so browse logic is reduced but not fully extracted end-to-end
 
 ---
 
@@ -256,14 +267,31 @@ Only if the playback pass is clean and small. Otherwise document it as the next 
 - Committed the pass as `37c988b Extract playback launch workflow from MainActivity`.
 - Confirmed the unrelated UI validation folder `docs/ui-validation/2026-04-04-home-shortcuts-visible-check/` remained untracked and was not swept into the commit.
 
+### 2026-04-04 22:47 UTC
+- Resumed this plan after the playback pass to continue with the next recommended shell seam instead of creating another separate micro-plan.
+- Chose browse flow as the next extraction target.
+- Confirmed the concrete seam is currently `runSearch(...)` + `onSearchResultSelected(...)`, not yet the deeper details/episodes/sources transition logic.
+
+### 2026-04-04 22:49 UTC
+- Added `BrowseFlowCoordinator` to own search execution, result filtering, watched-badge decoration, detail loading, and the transition into details.
+- Rewired `MainActivity` to use `SearchFeatureFactory` and `DetailsFeatureFactory` instead of constructing those feature view-models inline.
+- Reduced `MainActivity` browse responsibilities to UI state reset/application, loading/status text, and screen rendering.
+
+### 2026-04-04 22:50 UTC
+- Ran `./gradlew testDebugUnitTest assembleDebug` successfully after the browse extraction.
+- The long-standing non-blocking Kotlin warning in `MainActivity` about the Elvis operator in source diagnostics remains unrelated to this pass.
+- Next likely seam remains settings modal/action flow, followed by deeper details/episodes/sources transition cleanup.
+
 ---
 
 ## Scope Changes
 
 ### 2026-04-04
 - Initial scope established as: document top refactor candidates + implement one focused extraction + update docs honestly.
-- Browse-flow extraction is explicitly kept out of required scope for this pass unless playback extraction turns out unusually small.
-- After implementation, browse-flow remains the recommended next seam; settings modal/action extraction remains the next one after that.
+- Browse-flow extraction was initially kept out of required scope unless playback extraction stayed small.
+- After playback landed cleanly, browse-flow extraction was pulled into the same plan as a controlled follow-up.
+- Settings modal/action extraction remains the next likely seam after browse-flow cleanup.
+- The deeper details/episodes/sources transition glue was intentionally not folded into the browse extraction to keep this pass controlled.
 
 ---
 
@@ -271,6 +299,9 @@ Only if the playback pass is clean and small. Otherwise document it as the next 
 
 ### 2026-04-04 22:39 UTC
 Intended task: Create the plan, document top shell refactor candidates, and extract playback launch workflow from `MainActivity`.
+
+### 2026-04-04 22:47 UTC
+Intended task: Continue the same plan by extracting the browse flow (`runSearch` and `onSearchResultSelected`) into a focused coordinator.
 
 ---
 

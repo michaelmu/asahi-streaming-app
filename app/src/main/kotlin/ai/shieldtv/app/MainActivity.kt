@@ -19,6 +19,9 @@ import androidx.lifecycle.lifecycleScope
 import androidx.media3.ui.PlayerView
 import ai.shieldtv.app.auth.RealDebridAuthCoordinator
 import ai.shieldtv.app.auth.RealDebridLinkStartResult
+import ai.shieldtv.app.browse.BrowseFlowCoordinator
+import ai.shieldtv.app.browse.BrowseSearchResult
+import ai.shieldtv.app.browse.BrowseSelectionResult
 import ai.shieldtv.app.core.model.auth.DeviceCodeFlow
 import ai.shieldtv.app.core.model.auth.RealDebridAuthState
 import ai.shieldtv.app.core.model.media.MediaRef
@@ -29,12 +32,11 @@ import ai.shieldtv.app.core.model.source.SourceSearchRequest
 import ai.shieldtv.app.di.AppContainer
 import ai.shieldtv.app.settings.SourcePreferences
 import ai.shieldtv.app.domain.repository.SourceFetchProgress
-import ai.shieldtv.app.feature.details.presentation.DetailsPresenter
+import ai.shieldtv.app.feature.DetailsFeatureFactory
+import ai.shieldtv.app.feature.PlayerFeatureFactory
+import ai.shieldtv.app.feature.SearchFeatureFactory
 import ai.shieldtv.app.feature.details.presentation.DetailsViewModel
-import ai.shieldtv.app.feature.player.presentation.PlayerPresenter
 import ai.shieldtv.app.feature.player.presentation.PlayerViewModel
-import ai.shieldtv.app.feature.search.presentation.SearchPresenter
-import ai.shieldtv.app.feature.search.presentation.SearchViewModel
 import ai.shieldtv.app.feature.sources.presentation.SourcesPresenter
 import ai.shieldtv.app.feature.sources.presentation.SourcesViewModel
 import ai.shieldtv.app.integration.debrid.realdebrid.debug.RealDebridDebugState
@@ -78,24 +80,12 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
-    private val searchViewModel by lazy {
-        SearchViewModel(SearchPresenter(AppContainer.searchTitlesUseCase))
-    }
-    private val detailsViewModel by lazy {
-        DetailsViewModel(DetailsPresenter(AppContainer.getTitleDetailsUseCase))
-    }
+    private val searchViewModel by lazy { SearchFeatureFactory.createViewModel() }
+    private val detailsViewModel by lazy { DetailsFeatureFactory.createViewModel() }
     private val sourcesViewModel by lazy {
         SourcesViewModel(SourcesPresenter(AppContainer.findSourcesUseCase))
     }
-    private val playerViewModel by lazy {
-        PlayerViewModel(
-            PlayerPresenter(
-                resolveSourceUseCase = AppContainer.resolveSourceUseCase,
-                buildPlaybackItemUseCase = AppContainer.buildPlaybackItemUseCase,
-                playbackEngine = AppContainer.playbackEngine
-            )
-        )
-    }
+    private val playerViewModel by lazy { PlayerFeatureFactory.createViewModel() }
 
     private val coordinator = AppCoordinator()
     private val apkDownloadManager by lazy { ApkDownloadManager() }
@@ -159,6 +149,13 @@ class MainActivity : ComponentActivity() {
         )
     }
     private val providerHealthTracker = ProviderHealthTracker()
+    private val browseFlowCoordinator by lazy {
+        BrowseFlowCoordinator(
+            searchViewModel = searchViewModel,
+            detailsViewModel = detailsViewModel,
+            watchHistoryCoordinator = AppContainer.watchHistoryCoordinator
+        )
+    }
     private val playbackLaunchCoordinator by lazy {
         PlaybackLaunchCoordinator(
             playerViewModel = playerViewModel,
@@ -881,13 +878,11 @@ class MainActivity : ComponentActivity() {
         setLoading(true, "Searching for \"$query\"…")
 
         lifecycleScope.launch {
-            val state = searchViewModel.search(query)
-            val filteredResults = state.results.filter { it.mediaRef.mediaType == mode.mediaType }
-            val decoratedResults = AppContainer.watchHistoryCoordinator.applyWatchedBadges(filteredResults)
-            coordinator.showResults(query = query, results = decoratedResults)
-            setLoading(false, state.error ?: "Found ${filteredResults.size} result(s) for \"$query\".")
-            if (state.error != null && filteredResults.isEmpty()) {
-                latestSourcesError = state.error
+            when (val result = browseFlowCoordinator.runSearch(coordinator, mode, query)) {
+                is BrowseSearchResult.Completed -> {
+                    setLoading(false, result.statusMessage)
+                    latestSourcesError = result.errorMessage
+                }
             }
             renderCurrentScreen()
         }
@@ -902,17 +897,12 @@ class MainActivity : ComponentActivity() {
         setLoading(true, "Loading details for ${result.mediaRef.title}…")
 
         lifecycleScope.launch {
-            val state = detailsViewModel.load(result.mediaRef)
-            val details = state.item
-            if (details == null) {
-                setLoading(false, state.error ?: "No details available.")
-                latestSourcesError = state.error ?: "No details available."
-                renderCurrentScreen()
-                return@launch
+            when (val selection = browseFlowCoordinator.openResult(coordinator, result)) {
+                is BrowseSelectionResult.Completed -> {
+                    setLoading(false, selection.statusMessage)
+                    latestSourcesError = selection.errorMessage
+                }
             }
-
-            coordinator.showDetails(result.mediaRef, details)
-            setLoading(false, "Loaded details for ${details.mediaRef.title}.")
             renderCurrentScreen()
         }
     }
