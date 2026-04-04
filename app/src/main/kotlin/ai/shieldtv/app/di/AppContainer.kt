@@ -33,6 +33,10 @@ import ai.shieldtv.app.integration.scrapers.provider.knaben.KnabenSourceProvider
 import ai.shieldtv.app.integration.scrapers.provider.comet.CometSourceProvider
 import ai.shieldtv.app.integration.scrapers.provider.torrentio.TorrentioConfig
 import ai.shieldtv.app.integration.scrapers.provider.torrentio.TorrentioSourceProvider
+import ai.shieldtv.app.integration.scrapers.provider.torz.TorzConfig
+import ai.shieldtv.app.integration.scrapers.provider.torz.TorzSourceProvider
+import ai.shieldtv.app.integration.scrapers.provider.zilean.ZileanConfig
+import ai.shieldtv.app.integration.scrapers.provider.zilean.ZileanSourceProvider
 import ai.shieldtv.app.integration.scrapers.ranking.DefaultSourceRanker
 import ai.shieldtv.app.integration.scrapers.ranking.RealDebridSourceCacheMarker
 import ai.shieldtv.app.integration.scrapers.repository.SourceRepositoryImpl
@@ -101,6 +105,12 @@ object AppContainer {
             }
             if (KnabenConfig.isEnabled()) {
                 add(KnabenSourceProvider())
+            }
+            if (ZileanConfig.isEnabled()) {
+                add(ZileanSourceProvider())
+            }
+            if (TorzConfig.isEnabled()) {
+                add(TorzSourceProvider())
             }
         }
         ProviderRegistry(providers = providers)

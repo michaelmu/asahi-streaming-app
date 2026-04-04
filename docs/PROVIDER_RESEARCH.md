@@ -39,6 +39,35 @@ From the local cocoscrapers checkout, the following torrent providers were ident
 - isohunt2
 - torrentfunk
 
+## Additional comparison set: Magneto
+
+A second scraper module (`script.module.magneto`) was reviewed after the initial cocoscrapers pass.
+
+Interesting additional providers surfaced there:
+- zilean
+- torz
+- bitmagnet
+- torrentsdb
+- meteor
+- prowlarr
+- torlock
+- rutor
+- dmm
+- torrentz2
+- tbtorznab
+
+Most of these do **not** change the overall strategy, but a few are worth tracking because they are more structured and debrid-friendly than the usual public HTML tracker scrape set.
+
+Most interesting Magneto additions:
+- **Zilean** — structured JSON, IMDb-driven, debrid-only, supports movies/episodes/packs
+- **Torz** — structured API style, IMDb-driven, debrid-only, supports packs
+- **Bitmagnet** — Torznab/XML style endpoint, structured, supports packs
+- **TorrentsDB** — structured JSON stream-style aggregator, interesting but lower-confidence than Zilean/Torz/Bitmagnet
+
+Lower-priority from Magneto for current goals:
+- **Prowlarr** — powerful, but requires provider-specific URL + API token + user-managed setup
+- **Meteor** — potentially usable, but not obviously stronger than Comet/Zilean/Torz
+
 ## Current validated status in Asahi
 
 Implemented and validated locally:
@@ -150,11 +179,15 @@ If staying focused on Real-Debrid-compatible value with minimal extra provider-s
 1. Comet ✅
 2. BitSearch ✅
 3. Knaben ✅
-4. YTSMX (deferred)
-5. TorrentGalaxy (optional later)
+4. Zilean
+5. Torz
+6. Bitmagnet
+7. YTSMX (deferred)
+8. TorrentGalaxy (optional later)
 
 Deprioritized:
 - MediaFusion (requires extra provider-specific auth/config)
+- Prowlarr (requires provider-specific URL/API token and self-managed setup)
 
 ## Strategic recommendation
 
@@ -166,6 +199,7 @@ A lean high-signal Asahi provider stack is likely better:
 - Comet
 - BitSearch
 - Knaben
+- likely next: Zilean / Torz / Bitmagnet
 - maybe YTSMX later if the upstream becomes reliably reachable
 
 This gives:
