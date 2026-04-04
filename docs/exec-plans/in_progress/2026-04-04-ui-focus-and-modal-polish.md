@@ -64,7 +64,7 @@ A task is only `DONE` when:
 
 **Current phase:** Phase A — focus-state polish and modal behavior cleanup
 
-**Immediate target:** B1 — fix modal focus trapping and directional navigation so focus stays inside active overlays.
+**Immediate target:** B2 — tighten default modal button selection behavior so the intended action is reliably focused every time.
 
 **Why this now:**
 The current UI is functional, but TV polish issues are visible:
@@ -209,7 +209,7 @@ It makes the modal feel unfinished and confusing.
 ---
 
 ## B2. Improve default modal button selection behavior
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
@@ -220,10 +220,10 @@ Make the intended modal action focused by default every time, consistently.
 The current implementation just needs to be made more reliable and consistent.
 
 ### Proposed sub-steps
-- [TODO] audit all `showInfoModal(...)` call sites in `MainActivity`
-- [TODO] confirm each modal’s desired default action
-- [TODO] tighten `OverlayPopup` so the default button reliably takes focus on show
-- [TODO] review special cases like source loading / auth timeout / update/install flows
+- [DONE] audit all `showInfoModal(...)` call sites in `MainActivity`
+- [DONE] confirm each modal’s desired default action
+- [DONE] tighten `OverlayPopup` so the default button reliably takes focus on show
+- [DONE] review special cases like source loading / auth timeout / update/install flows
 
 ### Validation
 - emulator manual check that default focus matches intent for representative modals
@@ -354,6 +354,14 @@ Centralize common button/card focus behavior first, but keep renderer-specific d
 - Validation: `./gradlew testDebugUnitTest` and `./gradlew assembleDebug` passed.
 - Emulator/manual validation is still needed to confirm real D-pad behavior matches the intended trap behavior.
 
+### 2026-04-04 17:04 UTC
+- Completed B2 by tightening default modal button selection behavior in `OverlayPopup` and auditing high-value modal call sites in `MainActivity`.
+- Added explicit generated IDs/tags for modal buttons and reinforced repeated default-focus restoration after show/focus bounce.
+- Updated key modal defaults so destructive/cancellation actions are less likely to receive accidental initial focus (for example, source lookup progress now defaults to Keep Waiting instead of Cancel).
+- Explicitly set default actions in important auth-linking modal flows for clarity and consistency.
+- Validation: `./gradlew testDebugUnitTest` and `./gradlew assembleDebug` passed.
+- Emulator/manual validation is still required to confirm the intended default-focus behavior on real D-pad navigation.
+
 ---
 
 ## Scope Changes
@@ -364,13 +372,14 @@ Centralize common button/card focus behavior first, but keep renderer-specific d
 - During A1 implementation, started with shared drawable/factory-level focus treatment changes first because they offer the highest leverage and lowest regression risk before deeper renderer/modal work.
 - During A2 implementation, focused on the highest-traffic renderer-specific cards first (media, episode, source) rather than trying to restyle every focusable widget in one pass.
 - During B1 implementation, kept the modal navigation fix localized to `OverlayPopup` so all modal call sites benefit immediately without per-modal rewrites.
+- During B2 implementation, preferred safe default focus on non-destructive actions where the UX intent was ambiguous, especially for long-running source lookup and auth flows.
 
 ---
 
 ## Session Start
 
-### 2026-04-04 16:58 UTC
-Intended task: begin B1 by fixing modal focus trapping and directional navigation in `OverlayPopup`.
+### 2026-04-04 17:02 UTC
+Intended task: begin B2 by auditing modal default-action call sites and tightening default button focus behavior in `OverlayPopup`.
 
 ---
 

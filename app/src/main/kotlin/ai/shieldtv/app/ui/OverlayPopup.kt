@@ -10,6 +10,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.view.ViewCompat
 
 enum class ModalDefaultAction {
     PRIMARY,
@@ -91,6 +92,8 @@ class OverlayPopup(
         val focusableButtons = mutableListOf<View>()
 
         val primary = viewFactory.button(primaryLabel, onPrimary).apply {
+            id = ViewCompat.generateViewId()
+            tag = ModalDefaultAction.PRIMARY
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
         buttonRow.addView(primary)
@@ -99,6 +102,8 @@ class OverlayPopup(
         var secondaryView: View? = null
         if (secondaryLabel != null && onSecondary != null) {
             val secondary = viewFactory.button(secondaryLabel, onSecondary).apply {
+                id = ViewCompat.generateViewId()
+                tag = ModalDefaultAction.SECONDARY
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
                     it.marginStart = viewFactory.dp(12)
                 }
@@ -111,6 +116,8 @@ class OverlayPopup(
         var tertiaryView: View? = null
         if (tertiaryLabel != null && onTertiary != null) {
             val tertiary = viewFactory.button(tertiaryLabel, onTertiary).apply {
+                id = ViewCompat.generateViewId()
+                tag = ModalDefaultAction.TERTIARY
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
                     it.marginStart = viewFactory.dp(12)
                 }
@@ -120,7 +127,7 @@ class OverlayPopup(
             focusableButtons += tertiary
         }
 
-        trapHorizontalFocus(focusableButtons)
+        trapDirectionalFocus(focusableButtons)
 
         card.addView(buttonRow)
         val defaultFocusView = when (defaultAction) {
@@ -146,15 +153,22 @@ class OverlayPopup(
             }
         }
 
+        fun restoreDefaultFocus() {
+            if (!defaultFocusView.isFocused) {
+                defaultFocusView.requestFocus()
+            }
+        }
+
         root.post {
-            defaultFocusView.requestFocus()
+            restoreDefaultFocus()
             root.requestFocus()
-            defaultFocusView.requestFocus()
+            restoreDefaultFocus()
+            root.post { restoreDefaultFocus() }
         }
 
         root.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus && !card.hasFocus() && focusableButtons.none { it.hasFocus() }) {
-                defaultFocusView.requestFocus()
+                restoreDefaultFocus()
             }
         }
 
@@ -178,10 +192,18 @@ class OverlayPopup(
             }
         }
 
+        focusableButtons.forEach { button ->
+            button.setOnFocusChangeListener { _, hasFocus ->
+                if (!hasFocus && focusableButtons.none { it.hasFocus() }) {
+                    root.post { restoreDefaultFocus() }
+                }
+            }
+        }
+
         return root
     }
 
-    private fun trapHorizontalFocus(buttons: List<View>) {
+    private fun trapDirectionalFocus(buttons: List<View>) {
         buttons.forEachIndexed { index, button ->
             button.nextFocusLeftId = buttons.getOrNull((index - 1).coerceAtLeast(0))?.id ?: button.id
             button.nextFocusRightId = buttons.getOrNull((index + 1).coerceAtMost(buttons.lastIndex))?.id ?: button.id
@@ -202,7 +224,7 @@ class OverlayPopup(
         var current: View? = child
         while (current != null) {
             if (current == parent) return true
-            current = (current.parent as? View)
+            current = current.parent as? View
         }
         return false
     }

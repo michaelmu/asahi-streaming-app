@@ -936,7 +936,7 @@ class MainActivity : ComponentActivity() {
                 setLoading(false, "Source lookup cancelled.")
             },
             dismissOnBack = false,
-            defaultAction = ModalDefaultAction.SECONDARY
+            defaultAction = ModalDefaultAction.PRIMARY
         )
     }
 
@@ -970,7 +970,8 @@ class MainActivity : ComponentActivity() {
                         message = "${result.value.errorType}: ${result.value.debugMessage}",
                         primaryLabel = "OK",
                         secondaryLabel = "Copy Debug Info",
-                        onSecondary = ::copyDebugInfoToClipboard
+                        onSecondary = ::copyDebugInfoToClipboard,
+                        defaultAction = ModalDefaultAction.PRIMARY
                     )
                     refreshAuthUiOnly()
                 }
@@ -1022,6 +1023,7 @@ class MainActivity : ComponentActivity() {
             onSecondary = ::copyDebugInfoToClipboard,
             tertiaryLabel = "Close",
             onTertiary = {},
+            defaultAction = ModalDefaultAction.PRIMARY,
             customContent = buildQrCodeView(flow.qrCodeUrl ?: authUrl)
         )
     }
