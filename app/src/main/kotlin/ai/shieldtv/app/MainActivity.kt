@@ -26,6 +26,7 @@ import ai.shieldtv.app.core.model.source.CacheStatus
 import ai.shieldtv.app.core.model.source.SourceResult
 import ai.shieldtv.app.core.model.source.SourceSearchRequest
 import ai.shieldtv.app.di.AppContainer
+import ai.shieldtv.app.domain.repository.SourceFetchProgress
 import ai.shieldtv.app.feature.details.presentation.DetailsPresenter
 import ai.shieldtv.app.feature.details.presentation.DetailsViewModel
 import ai.shieldtv.app.feature.player.presentation.PlayerPresenter
@@ -34,6 +35,7 @@ import ai.shieldtv.app.feature.search.presentation.SearchPresenter
 import ai.shieldtv.app.feature.search.presentation.SearchViewModel
 import ai.shieldtv.app.feature.sources.presentation.SourcesPresenter
 import ai.shieldtv.app.feature.sources.presentation.SourcesViewModel
+import ai.shieldtv.app.integration.debrid.realdebrid.debug.RealDebridDebugState
 import ai.shieldtv.app.integration.playback.media3.engine.Media3PlaybackEngine
 import ai.shieldtv.app.integration.playback.media3.engine.Media3PlaybackEngine.RenderMode
 import ai.shieldtv.app.playback.ContinueWatchingHydrator
@@ -132,6 +134,8 @@ class MainActivity : ComponentActivity() {
     private var latestUpdateMessage: String? = null
     private var persistedPlaybackSession: PlaybackSessionRecord? = null
     private var activeModalView: View? = null
+    private var loadSourcesJob: Job? = null
+    private val providerProgress = linkedMapOf<String, SourceFetchProgress>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -788,14 +792,23 @@ class MainActivity : ComponentActivity() {
         }
 
         setLoading(true, "Finding sources for $searchLabel…")
+        providerProgress.clear()
+        showSourceProgressModal(searchLabel)
 
-        lifecycleScope.launch {
+        loadSourcesJob?.cancel()
+        loadSourcesJob = lifecycleScope.launch {
             val state = sourcesViewModel.load(
                 SourceSearchRequest(
                     mediaRef = mediaRef,
                     seasonNumber = seasonNumber,
                     episodeNumber = episodeNumber
-                )
+                ),
+                onProgress = { progress ->
+                    providerProgress[progress.providerId] = progress
+                    runOnUiThread {
+                        showSourceProgressModal(searchLabel)
+                    }
+                }
             )
             val filteredSources = state.sources.filter { it.debridService != DebridService.NONE || authState.isLinked }
             latestSourceDiagnostics = state.diagnostics ?: buildSourceDiagnostics(filteredSources)
@@ -807,9 +820,42 @@ class MainActivity : ComponentActivity() {
                 episodeNumber = episodeNumber,
                 sources = filteredSources
             )
+            dismissModal()
             setLoading(false, state.error ?: "Found ${filteredSources.size} source(s) for $searchLabel.")
             renderCurrentScreen()
         }
+    }
+
+    private fun showSourceProgressModal(searchLabel: String) {
+        val lines = if (providerProgress.isEmpty()) {
+            listOf("Preparing providers…")
+        } else {
+            providerProgress.values.map { progress ->
+                when (progress.state) {
+                    SourceFetchProgress.State.STARTED -> "${progress.providerDisplayName}: querying…"
+                    SourceFetchProgress.State.COMPLETED -> "${progress.providerDisplayName}: ${progress.resultCount ?: 0} result(s)"
+                    SourceFetchProgress.State.FAILED -> "${progress.providerDisplayName}: failed${progress.message?.let { " (${it.take(60)})" } ?: ""}"
+                }
+            }
+        }
+        showInfoModal(
+            title = "Finding Sources",
+            message = buildString {
+                appendLine(searchLabel)
+                appendLine()
+                append(lines.joinToString("\n"))
+            },
+            primaryLabel = "Keep Waiting",
+            onPrimary = { showSourceProgressModal(searchLabel) },
+            secondaryLabel = "Cancel",
+            onSecondary = {
+                loadSourcesJob?.cancel()
+                dismissModal()
+                setLoading(false, "Source lookup cancelled.")
+            },
+            dismissOnBack = false,
+            defaultAction = ModalDefaultAction.SECONDARY
+        )
     }
 
     private fun resetRealDebridAuth() {
@@ -837,16 +883,45 @@ class MainActivity : ComponentActivity() {
                 startAutoPolling(flow)
             }.onFailure { error ->
                 authPollingJob?.cancel()
-                authState = RealDebridAuthState(isLinked = false, authInProgress = false, lastError = error.message)
+                val debugMessage = buildRealDebridStartFailureMessage(error)
+                authState = RealDebridAuthState(isLinked = false, authInProgress = false, lastError = debugMessage)
                 setLoading(false, "Failed to start Real-Debrid link flow.")
                 showInfoModal(
                     title = "Real-Debrid Link Failed",
-                    message = error.message ?: "Could not start the device code flow.",
-                    primaryLabel = "OK"
+                    message = debugMessage,
+                    primaryLabel = "OK",
+                    secondaryLabel = "Copy Debug Info",
+                    onSecondary = ::copyDebugInfoToClipboard
                 )
                 refreshAuthUiOnly()
             }
         }
+    }
+
+    private fun buildRealDebridStartFailureMessage(error: Throwable): String {
+        val errorType = error::class.java.simpleName
+        val errorMessage = error.message?.takeIf { it.isNotBlank() } ?: "No exception message"
+        val apiError = RealDebridDebugState.lastStartDeviceFlowError.takeIf { it.isNotBlank() }
+        val responsePreview = RealDebridDebugState.lastStartDeviceFlowResponse
+            .replace("\n", " ")
+            .replace("\r", " ")
+            .take(220)
+            .takeIf { it.isNotBlank() }
+
+        return buildString {
+            appendLine("Step: start device flow")
+            appendLine("Error: $errorType")
+            appendLine("Message: $errorMessage")
+            apiError?.let {
+                appendLine()
+                appendLine("API error: $it")
+            }
+            responsePreview?.let {
+                appendLine()
+                appendLine("Response preview:")
+                append(it)
+            }
+        }.trim()
     }
 
     private fun showRealDebridFlowModal(flow: DeviceCodeFlow) {
