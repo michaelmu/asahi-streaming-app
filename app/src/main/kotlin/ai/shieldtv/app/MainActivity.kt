@@ -866,7 +866,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun runSearch(mode: SearchMode, rawQuery: String) {
-        val query = rawQuery.trim().ifEmpty { "Dune" }
+        val query = rawQuery.trim()
         latestSourcesError = null
         latestSourceDiagnostics = null
         latestPlaybackMessage = null

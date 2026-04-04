@@ -23,7 +23,7 @@ enum class SearchMode(val mediaType: MediaType, val label: String) {
 data class AppState(
     val destination: AppDestination = AppDestination.HOME,
     val searchMode: SearchMode = SearchMode.MOVIES,
-    val query: String = "Dune",
+    val query: String = "",
     val searchResults: List<SearchResult> = emptyList(),
     val selectedMedia: MediaRef? = null,
     val selectedDetails: TitleDetails? = null,
@@ -64,7 +64,7 @@ fun appStateFromBundleMap(values: Map<String, String>): AppState {
     return AppState(
         destination = values["destination"]?.let { AppDestination.valueOf(it) } ?: AppDestination.HOME,
         searchMode = values["searchMode"]?.let { SearchMode.valueOf(it) } ?: SearchMode.MOVIES,
-        query = values["query"] ?: "Dune",
+        query = values["query"] ?: "",
         favoritesBrowseMode = values["favoritesBrowseMode"]?.let { SearchMode.valueOf(it) },
         historyBrowseMode = values["historyBrowseMode"]?.let { SearchMode.valueOf(it) },
         selectedSeasonNumber = values["selectedSeasonNumber"]?.toIntOrNull(),
