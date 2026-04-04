@@ -8,10 +8,13 @@ It exists so future sessions do not need to rediscover the same conclusions from
 
 The repo is in good shape overall.
 The strongest architecture is in the domain/integration/source pipeline layers.
-The primary remaining architectural risk is still workflow concentration inside `app/src/main/kotlin/ai/shieldtv/app/MainActivity.kt`.
+At the time this review was first written, the primary architectural risk was workflow concentration inside `app/src/main/kotlin/ai/shieldtv/app/MainActivity.kt`.
 
-This is **not** a rewrite case.
-It is a **continue-peeling-the-shell** case.
+That cleanup pass has now been executed.
+See `docs/APP_SHELL_STATUS_2026-04-04.md` for the post-refactor status.
+
+This was **not** a rewrite case.
+It was a **continue-peeling-the-shell** case, and that work materially reduced the original risk.
 
 ## What is working well
 
@@ -120,11 +123,8 @@ Revisit after the bigger workflow extractions, not before.
 
 ## Immediate recommendation
 
-Continue the current incremental refactor style.
+This document should now be treated as the pre-refactor review snapshot.
 
-Best next implementation order:
-1. playback launch extraction
-2. browse-flow extraction
-3. settings modal/action extraction
-
-That sequence should reduce `MainActivity` risk materially without forcing a broad architecture pivot.
+For the post-pass state and remaining rough edges, use:
+- `docs/APP_SHELL_STATUS_2026-04-04.md`
+- `docs/exec-plans/complete/2026-04-04-app-shell-flow-extraction.md`

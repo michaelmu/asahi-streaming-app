@@ -3,7 +3,7 @@
 Last updated: 2026-04-04 UTC
 Status: COMPLETE
 Owner: shield-tv-bot + Mike
-Location: `docs/exec-plans/in_progress/2026-04-04-app-shell-flow-extraction.md`
+Location: `docs/exec-plans/complete/2026-04-04-app-shell-flow-extraction.md`
 Supersedes: none
 
 ## Purpose
