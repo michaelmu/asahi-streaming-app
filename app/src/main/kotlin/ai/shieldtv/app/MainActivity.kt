@@ -1247,6 +1247,11 @@ class MainActivity : ComponentActivity() {
                         seasonNumber = seasonNumber,
                         episodeNumber = episodeNumber
                     )
+                    AppContainer.watchHistoryCoordinator.recordPlayback(
+                        item = currentItem,
+                        seasonNumber = seasonNumber,
+                        episodeNumber = episodeNumber
+                    )
                     persistedPlaybackSession = AppContainer.playbackSessionStore.loadActiveResume()
                 }
                 coordinator.showPlayer(source)

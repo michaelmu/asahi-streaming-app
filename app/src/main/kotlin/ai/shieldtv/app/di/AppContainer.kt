@@ -44,6 +44,8 @@ import ai.shieldtv.app.integration.scrapers.ranking.RealDebridSourceCacheMarker
 import ai.shieldtv.app.settings.SourcePreferencesStore
 import ai.shieldtv.app.favorites.FavoritesCoordinator
 import ai.shieldtv.app.favorites.FavoritesStore
+import ai.shieldtv.app.history.WatchHistoryCoordinator
+import ai.shieldtv.app.history.WatchHistoryStore
 import ai.shieldtv.app.integration.scrapers.repository.SourceRepositoryImpl
 import ai.shieldtv.app.playback.PlaybackSessionStore
 import java.io.File
@@ -155,6 +157,14 @@ object AppContainer {
 
     val favoritesCoordinator by lazy {
         FavoritesCoordinator(favoritesStore)
+    }
+
+    val watchHistoryStore by lazy {
+        WatchHistoryStore(requireContext())
+    }
+
+    val watchHistoryCoordinator by lazy {
+        WatchHistoryCoordinator(watchHistoryStore)
     }
 
     val searchTitlesUseCase by lazy {

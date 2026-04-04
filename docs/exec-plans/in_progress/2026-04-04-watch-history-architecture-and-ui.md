@@ -117,7 +117,7 @@ That suggests the right initial approach is:
 # Phase A — Watch history model and storage
 
 ## A1. Define watch history data model
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
@@ -128,8 +128,8 @@ If history only stores IDs, the history menus may depend on extra lookups.
 If it stores too much playback-specific data, it can become an accidental analytics/progress subsystem.
 
 ### Proposed sub-steps
-- [TODO] define a `WatchHistoryItem` model or equivalent
-- [TODO] include enough fields for local rendering and watched-indicator lookups, likely:
+- [DONE] define a `WatchHistoryItem` model or equivalent
+- [DONE] include enough fields for local rendering and watched-indicator lookups, likely:
   - media type
   - stable ids
   - title
@@ -139,8 +139,8 @@ If it stores too much playback-specific data, it can become an accidental analyt
   - last watched timestamp
   - season/episode context for TV entries
   - optional episode title if available
-- [TODO] define sort behavior as most-recent-watch first
-- [TODO] define duplicate behavior (same item watched again should refresh recency rather than duplicate)
+- [DONE] define sort behavior as most-recent-watch first
+- [DONE] define duplicate behavior (same item watched again should refresh recency rather than duplicate)
 
 ### Validation
 - model is sufficient to render history lists without immediate refetch
@@ -149,7 +149,7 @@ If it stores too much playback-specific data, it can become an accidental analyt
 ---
 
 ## A2. Add local watch history storage
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
@@ -160,11 +160,11 @@ History should survive app restarts and feel instant to browse.
 A file-based approach is probably sufficient unless scope expands.
 
 ### Proposed sub-steps
-- [TODO] choose storage approach
-- [TODO] support record/list/clear-or-trim operations as needed
-- [TODO] preserve descending watched-time order
-- [TODO] define safety behavior for invalid/corrupt storage
-- [TODO] add focused tests for order/deduplication/update behavior
+- [DONE] choose storage approach (JSON file)
+- [DONE] support record/list/clear-or-trim operations as needed
+- [DONE] preserve descending watched-time order
+- [DONE] define safety behavior for invalid/corrupt storage
+- [DONE] add focused tests for order/deduplication/update behavior
 
 ### Validation
 - history persists across restarts
@@ -176,7 +176,7 @@ A file-based approach is probably sufficient unless scope expands.
 # Phase B — History write rules
 
 ## B1. Decide what counts as “watched” for history
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
@@ -187,11 +187,11 @@ If history writes too early, it becomes cluttered and misleading.
 If it writes too late, users will think it is broken.
 
 ### Proposed sub-steps
-- [TODO] decide whether history writes on playback start, successful playback preparation, resume past threshold, or playback exit after progress
-- [TODO] decide whether source-resolution-only flows should count
-- [TODO] define rules separately for movies vs episodes
-- [TODO] choose a pragmatic first-pass rule that matches current app seams
-- [TODO] ensure the write rule produces stable data usable for future watched indicators
+- [DONE] decide whether history writes on playback start, successful playback preparation, resume past threshold, or playback exit after progress
+- [DONE] decide whether source-resolution-only flows should count
+- [DONE] define rules separately for movies vs episodes
+- [DONE] choose a pragmatic first-pass rule that matches current app seams
+- [DONE] ensure the write rule produces stable data usable for future watched indicators
 
 ### Validation
 - write rule is documented and implemented consistently
@@ -297,8 +297,11 @@ Current recommendation:
 Store enough metadata to render history rows/cards locally without an immediate network round-trip.
 
 ### Q2. What is the right rule for when an item becomes history?
-Current recommendation:
-Prefer a pragmatic playback-based rule tied to actual playback start/progress rather than merely opening details or resolving a source.
+Decision:
+Use successful playback preparation/start as the first-pass history write seam.
+
+Rationale:
+This app already has a clear success path in playback preparation where continue-watching and session persistence are updated. Reusing that seam keeps the implementation simple and avoids writing history from mere detail browsing or source resolution.
 
 ### Q3. Should movies and TV history be separate lists or one unified store filtered by entry point?
 Current recommendation:
@@ -328,8 +331,13 @@ This keeps TV history honest about what was actually watched and gives the store
 
 ### Plan setup
 - Validated by: reviewed current app direction and recent favorites implementation pattern
-- Not validated: actual history-write seam in playback flow is not implemented yet
-- Known uncertainty: exact write trigger still needs to be chosen against the real playback lifecycle
+- Not validated: actual history-write seam in playback flow was not implemented yet at plan creation time
+- Known uncertainty: exact write trigger needed to be chosen against the real playback lifecycle
+
+### Phase A / B1 foundation
+- Validated by: focused storage tests plus full Gradle unit/build validation for the app once current run completes
+- Not validated: end-to-end on emulator/device yet
+- Known uncertainty: first-pass write rule uses playback preparation success, which is pragmatic but may later want refinement if it proves too eager in real use
 
 ---
 
@@ -344,6 +352,12 @@ This keeps TV history honest about what was actually watched and gives the store
 - Refined product direction: movie history remains movie-level, but TV history should be episode-level.
 - Added a design requirement that watch-history storage should also support future watched indicators in movie search results and TV episode lists.
 - This pushes the data model toward stable per-movie and per-episode lookup keys instead of browse-only storage.
+
+### 2026-04-04 20:08 UTC
+- Completed A1/A2 by adding `WatchHistoryItem`, JSON encoding/decoding, `WatchHistoryStore`, and focused storage tests.
+- Completed B1 by choosing successful playback preparation/start as the first-pass history write seam.
+- Wired playback success in `MainActivity` to record watch history via `WatchHistoryCoordinator`, alongside existing continue-watching and playback-session persistence.
+- Validation pending current Gradle run.
 
 ---
 
