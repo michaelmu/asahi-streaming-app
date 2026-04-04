@@ -593,19 +593,19 @@ class MainActivity : ComponentActivity() {
                     authLinked = authState.isLinked,
                     statusMessage = statusText.text?.toString().orEmpty(),
                     onOpenMovies = {
-                        coordinator.showFavorites(
+                        coordinator.showHistory(
                             SearchMode.MOVIES,
-                            AppContainer.favoritesCoordinator.listByType(ai.shieldtv.app.core.model.media.MediaType.MOVIE)
+                            AppContainer.watchHistoryCoordinator.listResultsByType(ai.shieldtv.app.core.model.media.MediaType.MOVIE)
                         )
-                        statusText.text = "Movie favorites"
+                        statusText.text = "Movie watch history"
                         renderCurrentScreen()
                     },
                     onOpenShows = {
-                        coordinator.showFavorites(
+                        coordinator.showHistory(
                             SearchMode.SHOWS,
-                            AppContainer.favoritesCoordinator.listByType(ai.shieldtv.app.core.model.media.MediaType.SHOW)
+                            AppContainer.watchHistoryCoordinator.listResultsByType(ai.shieldtv.app.core.model.media.MediaType.SHOW)
                         )
-                        statusText.text = "TV favorites"
+                        statusText.text = "TV watch history"
                         renderCurrentScreen()
                     },
                     onOpenSettings = {

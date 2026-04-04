@@ -35,7 +35,8 @@ class AppCoordinator(
             selectedEpisodeNumber = null,
             selectedSource = null,
             selectedSources = emptyList(),
-            favoritesBrowseMode = null
+            favoritesBrowseMode = null,
+            historyBrowseMode = null
         )
         navigator.goTo(AppDestination.SEARCH)
     }
@@ -54,7 +55,8 @@ class AppCoordinator(
             selectedSource = null,
             selectedSources = emptyList(),
             recentQueries = updatedRecentQueries,
-            favoritesBrowseMode = null
+            favoritesBrowseMode = null,
+            historyBrowseMode = null
         )
         navigator.goTo(AppDestination.RESULTS)
     }
@@ -123,7 +125,26 @@ class AppCoordinator(
             selectedEpisodeNumber = null,
             selectedSource = null,
             selectedSources = emptyList(),
-            favoritesBrowseMode = mode
+            favoritesBrowseMode = mode,
+            historyBrowseMode = null
+        )
+        navigator.goTo(AppDestination.RESULTS)
+    }
+
+    fun showHistory(mode: SearchMode, results: List<SearchResult>) {
+        state = state.copy(
+            destination = AppDestination.RESULTS,
+            searchMode = mode,
+            query = "Watch History",
+            searchResults = results,
+            selectedMedia = null,
+            selectedDetails = null,
+            selectedSeasonNumber = null,
+            selectedEpisodeNumber = null,
+            selectedSource = null,
+            selectedSources = emptyList(),
+            favoritesBrowseMode = null,
+            historyBrowseMode = mode
         )
         navigator.goTo(AppDestination.RESULTS)
     }

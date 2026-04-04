@@ -222,16 +222,16 @@ Actually write history entries from the chosen playback seam.
 # Phase C — History browse integration
 
 ## C1. Add Watch History entry points to Movies and TV menus
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
 Expose watch history as a top-level browse option in Movies and TV flows.
 
 ### Proposed sub-steps
-- [TODO] add Watch History entry point in Movies flow
-- [TODO] add Watch History entry point in TV Shows flow
-- [TODO] keep the entry aligned with the current favorites/browse interaction pattern
+- [DONE] add Watch History entry point in Movies flow
+- [DONE] add Watch History entry point in TV Shows flow
+- [DONE] keep the entry aligned with the current favorites/browse interaction pattern for a first pass by reusing the existing menu entry seam
 
 ### Validation
 - history entry is easy to discover in both Movies and TV areas
@@ -240,17 +240,17 @@ Expose watch history as a top-level browse option in Movies and TV flows.
 ---
 
 ## C2. Render watch history lists sorted by most recent watch
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
 Show movie/show watch history lists newest first.
 
 ### Proposed sub-steps
-- [TODO] add history destination/view state for movie history
-- [TODO] add history destination/view state for TV history
-- [TODO] render local history items in descending watched-time order
-- [TODO] handle empty-state UI cleanly
+- [DONE] add history destination/view state for movie history
+- [DONE] add history destination/view state for TV history
+- [DONE] render local history items in descending watched-time order
+- [DONE] handle empty-state UI cleanly
 
 ### Validation
 - lists render correctly for movies and TV separately
@@ -335,9 +335,14 @@ This keeps TV history honest about what was actually watched and gives the store
 - Known uncertainty: exact write trigger needed to be chosen against the real playback lifecycle
 
 ### Phase A / B1 foundation
-- Validated by: focused storage tests plus full Gradle unit/build validation for the app once current run completes
+- Validated by: focused storage tests plus full Gradle unit/build validation for the app
 - Not validated: end-to-end on emulator/device yet
 - Known uncertainty: first-pass write rule uses playback preparation success, which is pragmatic but may later want refinement if it proves too eager in real use
+
+### Phase C browse integration
+- Validated by: full Gradle unit/build validation for the app once current run completes
+- Not validated: end-to-end on emulator/device yet
+- Known uncertainty: current Movies/TV home entry-point seam is reused for watch history directly, which means exposing both favorites and history simultaneously may need a later menu-layout expansion
 
 ---
 
@@ -357,6 +362,12 @@ This keeps TV history honest about what was actually watched and gives the store
 - Completed A1/A2 by adding `WatchHistoryItem`, JSON encoding/decoding, `WatchHistoryStore`, and focused storage tests.
 - Completed B1 by choosing successful playback preparation/start as the first-pass history write seam.
 - Wired playback success in `MainActivity` to record watch history via `WatchHistoryCoordinator`, alongside existing continue-watching and playback-session persistence.
+- Validation: `./gradlew testDebugUnitTest assembleDebug` passed.
+
+### 2026-04-04 20:13 UTC
+- Completed C1/C2 by adding movie and TV watch-history browse entry points and reusing the existing results renderer for history lists.
+- Added dedicated history browse state so results UI can distinguish watch history from favorites and normal search results.
+- Added history-to-results mapping with watched badges and episode-aware subtitles for TV entries.
 - Validation pending current Gradle run.
 
 ---
@@ -369,6 +380,7 @@ This keeps TV history honest about what was actually watched and gives the store
 - History write rules are treated as first-class scope because they determine whether the browse experience feels trustworthy.
 - Stored history data should be designed so it can later drive watched badges/indicators in search results and episode lists.
 - Future hooks to preserve: stable per-movie and per-episode lookup keys for watched-indicator rendering.
+- First browse pass reuses the current Movies/TV home entry seam for watch history directly; if both favorites and history need simultaneous top-level exposure, Home/menu layout should be expanded in a later pass.
 
 ---
 

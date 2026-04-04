@@ -452,24 +452,43 @@ class ResultsScreenRenderer(
         onFirstFocusTarget: (View) -> Unit = {}
     ) {
         val isFavoritesBrowse = state.favoritesBrowseMode != null
-        host.addView(viewFactory.title(if (isFavoritesBrowse) "${state.searchMode.label} Favorites" else "Results for \"${state.query}\""))
+        val isHistoryBrowse = state.historyBrowseMode != null
+        host.addView(viewFactory.title(
+            when {
+                isFavoritesBrowse -> "${state.searchMode.label} Favorites"
+                isHistoryBrowse -> "${state.searchMode.label} Watch History"
+                else -> "Results for \"${state.query}\""
+            }
+        ))
         host.addView(viewFactory.spacer(6))
         host.addView(viewFactory.caption(
-            if (isFavoritesBrowse) {
-                "${state.searchResults.size} favorite(s) in ${state.searchMode.label.lowercase()}, newest first."
-            } else {
-                "${state.searchResults.size} match(es) in ${state.searchMode.label.lowercase()}."
+            when {
+                isFavoritesBrowse -> "${state.searchResults.size} favorite(s) in ${state.searchMode.label.lowercase()}, newest first."
+                isHistoryBrowse -> "${state.searchResults.size} watched item(s) in ${state.searchMode.label.lowercase()}, newest first."
+                else -> "${state.searchResults.size} match(es) in ${state.searchMode.label.lowercase()}."
             }
         ))
         host.addView(viewFactory.spacer(16))
 
         if (state.searchResults.isEmpty()) {
             host.addView(viewFactory.panel(elevated = true).apply {
-                addView(viewFactory.title(if (isFavoritesBrowse) "No favorites yet" else "Nothing useful yet"))
+                addView(viewFactory.title(
+                    when {
+                        isFavoritesBrowse -> "No favorites yet"
+                        isHistoryBrowse -> "No watch history yet"
+                        else -> "Nothing useful yet"
+                    }
+                ))
                 addView(viewFactory.spacer(10))
-                addView(viewFactory.body(if (isFavoritesBrowse) "Favorite something from search results and it’ll show up here." else emptyMessage))
+                addView(viewFactory.body(
+                    when {
+                        isFavoritesBrowse -> "Favorite something from search results and it’ll show up here."
+                        isHistoryBrowse -> "Start playback on something and it’ll show up here."
+                        else -> emptyMessage
+                    }
+                ))
                 addView(viewFactory.spacer(16))
-                addView(viewFactory.button(if (isFavoritesBrowse) "Go to Search" else "Try another search", onNewSearch))
+                addView(viewFactory.button(if (isFavoritesBrowse || isHistoryBrowse) "Go to Search" else "Try another search", onNewSearch))
             })
             return
         }

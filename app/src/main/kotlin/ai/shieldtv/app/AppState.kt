@@ -33,7 +33,8 @@ data class AppState(
     val selectedSources: List<SourceResult> = emptyList(),
     val recentQueries: List<String> = emptyList(),
     val continueWatching: List<ContinueWatchingItem> = emptyList(),
-    val favoritesBrowseMode: SearchMode? = null
+    val favoritesBrowseMode: SearchMode? = null,
+    val historyBrowseMode: SearchMode? = null
 )
 
 fun AppState.toBundleMap(): Map<String, String> = buildMap {
@@ -42,6 +43,7 @@ fun AppState.toBundleMap(): Map<String, String> = buildMap {
     put("query", query)
     put("recentQueries", recentQueries.joinToString("|"))
     favoritesBrowseMode?.let { put("favoritesBrowseMode", it.name) }
+    historyBrowseMode?.let { put("historyBrowseMode", it.name) }
     put(
         "continueWatching",
         continueWatching.joinToString("||") {
@@ -64,6 +66,7 @@ fun appStateFromBundleMap(values: Map<String, String>): AppState {
         searchMode = values["searchMode"]?.let { SearchMode.valueOf(it) } ?: SearchMode.MOVIES,
         query = values["query"] ?: "Dune",
         favoritesBrowseMode = values["favoritesBrowseMode"]?.let { SearchMode.valueOf(it) },
+        historyBrowseMode = values["historyBrowseMode"]?.let { SearchMode.valueOf(it) },
         selectedSeasonNumber = values["selectedSeasonNumber"]?.toIntOrNull(),
         selectedEpisodeNumber = values["selectedEpisodeNumber"]?.toIntOrNull(),
         recentQueries = values["recentQueries"]
