@@ -1,6 +1,7 @@
 package ai.shieldtv.app.ui
 
 import android.content.Intent
+import android.graphics.Color
 import android.graphics.Typeface
 import android.net.Uri
 import android.text.InputType
@@ -1030,12 +1031,15 @@ class PlayerScreenRenderer(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.MATCH_PARENT
             )
+            setBackgroundColor(Color.BLACK)
         }
 
         playerView.layoutParams = FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
             FrameLayout.LayoutParams.MATCH_PARENT
         )
+        playerView.setBackgroundColor(Color.BLACK)
+        playerView.setShutterBackgroundColor(Color.BLACK)
         playerView.useController = true
         playerView.controllerShowTimeoutMs = 3500
         playerFrame.addView(playerView)
@@ -1066,11 +1070,7 @@ class PlayerScreenRenderer(
             }
             playerFrame.addView(errorOverlay)
         } else {
-            val shouldShowOverlay = playbackState.isBuffering ||
-                playbackState.errorMessage != null ||
-                playbackState.playerStateLabel.equals("paused", ignoreCase = true) ||
-                playbackState.playerStateLabel.equals("ended", ignoreCase = true) ||
-                (playbackState.playerStateLabel.equals("idle", ignoreCase = true) && !playbackState.isPlaying)
+            val shouldShowOverlay = playbackState.errorMessage != null
             if (shouldShowOverlay) {
                 val subtleOverlay = LinearLayout(host.context).apply {
                     orientation = LinearLayout.VERTICAL
@@ -1097,11 +1097,9 @@ class PlayerScreenRenderer(
                             append(" • S${season.toString().padStart(2, '0')}E${episode.toString().padStart(2, '0')}")
                         }
                     }))
-                    if (!playbackState.isPlaying) {
-                        playbackMessage?.lineSequence()?.firstOrNull()?.takeIf { it.isNotBlank() }?.let {
-                            addView(viewFactory.spacer(6))
-                            addView(viewFactory.caption(it))
-                        }
+                    playbackMessage?.lineSequence()?.firstOrNull()?.takeIf { it.isNotBlank() }?.let {
+                        addView(viewFactory.spacer(6))
+                        addView(viewFactory.caption(it))
                     }
                 }
                 playerFrame.addView(subtleOverlay)
@@ -1118,17 +1116,6 @@ class PlayerScreenRenderer(
         "ended" -> "Ended"
         "idle" -> "Idle"
         else -> label.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
-    }
-
-    private fun qualityLabel(quality: Quality): String = when (quality) {
-        Quality.UHD_4K -> "4K"
-        Quality.FHD_1080P -> "1080p"
-        Quality.HD_720P -> "720p"
-        Quality.SD -> "SD"
-        Quality.SCR -> "SCR"
-        Quality.CAM -> "CAM"
-        Quality.TELE -> "TELE"
-        Quality.UNKNOWN -> "Unknown"
     }
 
     private fun formatTime(valueMs: Long): String {
