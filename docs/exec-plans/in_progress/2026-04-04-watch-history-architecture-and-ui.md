@@ -14,6 +14,7 @@ The intended product behavior is:
 - the app records watched movie and TV entries locally
 - when users return to the Movies or TV Shows menus, they can open a Watch History view
 - watch history lists are shown in descending order by most recent watch activity
+- movie history is movie-level, while TV history is episode-level
 - movie history and TV history are browsed separately by entry point, while storage may remain unified underneath
 
 This plan covers both storage/architecture and user-facing behavior.
@@ -83,12 +84,14 @@ From the current app structure:
 - Movies and TV now have favorites entry points that establish a browse pattern worth reusing
 - the app already tracks some playback/resume state, which may provide a natural seam for history writes
 - the UI is card-based and TV-first, so history should likely reuse existing list patterns instead of inventing a separate heavy screen
+- the same stored watch-history data should later support watched indicators in search results and episode lists
 
 That suggests the right initial approach is:
 - add a **small dedicated watch history subsystem**
 - keep storage local and straightforward
-- store enough metadata to render history rows locally
+- store enough metadata to render history rows locally and support future watched-indicator lookups
 - separate movie vs TV browsing by entry point while keeping storage unified if that simplifies implementation
+- treat TV history as episode-level in the first pass
 
 ---
 
@@ -107,7 +110,7 @@ If it stores too much playback-specific data, it can become an accidental analyt
 
 ### Proposed sub-steps
 - [TODO] define a `WatchHistoryItem` model or equivalent
-- [TODO] include enough fields for local rendering, likely:
+- [TODO] include enough fields for local rendering and watched-indicator lookups, likely:
   - media type
   - stable ids
   - title
@@ -115,7 +118,8 @@ If it stores too much playback-specific data, it can become an accidental analyt
   - poster/backdrop/artwork URL if available
   - subtitle/secondary label if useful
   - last watched timestamp
-  - optional season/episode context for shows if needed for display
+  - season/episode context for TV entries
+  - optional episode title if available
 - [TODO] define sort behavior as most-recent-watch first
 - [TODO] define duplicate behavior (same item watched again should refresh recency rather than duplicate)
 
@@ -166,8 +170,9 @@ If it writes too late, users will think it is broken.
 ### Proposed sub-steps
 - [TODO] decide whether history writes on playback start, successful playback preparation, resume past threshold, or playback exit after progress
 - [TODO] decide whether source-resolution-only flows should count
-- [TODO] define rules separately for movies vs episodes if needed
+- [TODO] define rules separately for movies vs episodes
 - [TODO] choose a pragmatic first-pass rule that matches current app seams
+- [TODO] ensure the write rule produces stable data usable for future watched indicators
 
 ### Validation
 - write rule is documented and implemented consistently
@@ -281,9 +286,11 @@ Current recommendation:
 Use one unified local store with media type on each item, then filter by entry point.
 
 ### Q4. For TV shows, should history track show-level entries, episode-level entries, or both?
-Current recommendation:
-Likely show-level for the first browse pass unless episode-level context is easy to carry and materially improves usefulness.
-Keep scope tight unless testing says otherwise.
+Decision:
+Episode-level for the first pass.
+
+Rationale:
+This keeps TV history honest about what was actually watched and gives the stored data enough fidelity to support watched indicators on episode rows later.
 
 ---
 
@@ -294,6 +301,7 @@ Keep scope tight unless testing says otherwise.
 - storing too little metadata makes browse lists dependent on remote refetches
 - storing too much playback detail risks accidental complexity creep
 - if history and continue-watching overlap awkwardly, the product model may become confusing
+- if watched-indicator lookups are not considered in the model now, future UI integration may require awkward rework
 
 ---
 
@@ -304,6 +312,11 @@ Keep scope tight unless testing says otherwise.
 - Scoped the first pass around local persistence, playback-driven history recording, and movie/TV menu entry points with newest-first ordering.
 - No implementation work completed under this plan yet.
 
+### 2026-04-04 20:01 UTC
+- Refined product direction: movie history remains movie-level, but TV history should be episode-level.
+- Added a design requirement that watch-history storage should also support future watched indicators in movie search results and TV episode lists.
+- This pushes the data model toward stable per-movie and per-episode lookup keys instead of browse-only storage.
+
 ---
 
 ## Scope Changes
@@ -312,13 +325,14 @@ Keep scope tight unless testing says otherwise.
 - New plan created specifically for watch history architecture + UI.
 - Initial requested behavior is browse-focused: expose history under Movies and TV menus with descending recency.
 - History write rules are treated as first-class scope because they determine whether the browse experience feels trustworthy.
+- Stored history data should be designed so it can later drive watched badges/indicators in search results and episode lists.
 
 ---
 
 ## Session Start
 
-### 2026-04-04 19:53 UTC
-Intended task: create and scope the watch history plan before implementation.
+### 2026-04-04 20:01 UTC
+Intended task: update the plan with episode-level TV history and future watched-indicator support before implementation.
 
 ---
 
