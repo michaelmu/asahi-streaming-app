@@ -185,6 +185,12 @@ class MainActivity : ComponentActivity() {
             updateUiCoordinator = updateUiCoordinator
         )
     }
+    private val settingsModalCoordinator by lazy {
+        ai.shieldtv.app.settings.SettingsModalCoordinator(
+            sourcePreferencesCoordinator = sourcePreferencesCoordinator,
+            availableProviderLabels = { AppContainer.availableProviderLabels() }
+        )
+    }
 
     private val playerControllerVisibilityTimeoutMs = 3500
 
@@ -1470,28 +1476,46 @@ class MainActivity : ComponentActivity() {
     private fun buildProviderSelectionLabel(): String = sourcePreferencesCoordinator.buildProviderSelectionLabel()
 
     private fun showMovieMaxSizePicker() {
-        showSizePickerModal(
-            title = "Movie Max Size",
-            currentValue = currentSourcePreferences().movieMaxSizeGb,
-            values = listOf(null, 1, 2, 4, 8, 12, 16, 24, 32, 48),
-            valueLabel = { it?.let { gb -> "${gb}GB" } ?: "No limit" },
+        val spec = settingsModalCoordinator.movieMaxSizeSpec(
             onSelected = {
                 sourcePreferencesCoordinator.setMovieMaxSizeGb(it)
                 renderCurrentScreen()
             }
         )
+        showInfoModal(
+            title = spec.title,
+            message = spec.message,
+            primaryLabel = spec.primaryLabel,
+            onPrimary = spec.onPrimary,
+            secondaryLabel = spec.secondaryLabel,
+            onSecondary = spec.onSecondary,
+            tertiaryLabel = spec.tertiaryLabel,
+            onTertiary = spec.onTertiary,
+            dismissOnBack = spec.dismissOnBack,
+            defaultAction = spec.defaultAction,
+            customContent = spec.customContent
+        )
     }
 
     private fun showTvMaxSizePicker() {
-        showSizePickerModal(
-            title = "TV Max Size",
-            currentValue = currentSourcePreferences().episodeMaxSizeGb,
-            values = listOf(null, 1, 2, 4, 6, 8, 12, 16, 24),
-            valueLabel = { it?.let { gb -> "${gb}GB" } ?: "No limit" },
+        val spec = settingsModalCoordinator.tvMaxSizeSpec(
             onSelected = {
                 sourcePreferencesCoordinator.setEpisodeMaxSizeGb(it)
                 renderCurrentScreen()
             }
+        )
+        showInfoModal(
+            title = spec.title,
+            message = spec.message,
+            primaryLabel = spec.primaryLabel,
+            onPrimary = spec.onPrimary,
+            secondaryLabel = spec.secondaryLabel,
+            onSecondary = spec.onSecondary,
+            tertiaryLabel = spec.tertiaryLabel,
+            onTertiary = spec.onTertiary,
+            dismissOnBack = spec.dismissOnBack,
+            defaultAction = spec.defaultAction,
+            customContent = spec.customContent
         )
     }
 
@@ -1504,71 +1528,48 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun showProviderSelectionPage(startIndex: Int) {
-        val labels = AppContainer.availableProviderLabels()
-        val allProviders = labels.keys.toList()
-        val current = currentSourcePreferences().providerSelection
-        val effectiveEnabled = current.effectiveEnabledProviders(allProviders.toSet())
-        val page = allProviders.drop(startIndex).take(3)
-        val providerLines = allProviders.joinToString("\n") { id ->
-            val enabled = id in effectiveEnabled
-            val marker = if (enabled) "[x]" else "[ ]"
-            "$marker ${labels[id] ?: id}"
-        }
+        val spec = settingsModalCoordinator.providerSelectionSpec(
+            startIndex = startIndex,
+            onToggleProvider = ::toggleProvider,
+            onEnableAll = ::setAllProvidersEnabled,
+            onDisableAll = ::setNoProviderOverrides,
+            onNextPage = ::showProviderSelectionPage,
+            onOpenActions = ::showProviderSelectionActions
+        )
         showInfoModal(
-            title = "Choose Providers",
-            message = buildString {
-                appendLine("Enabled: ${effectiveEnabled.size} / ${allProviders.size}")
-                appendLine()
-                append(providerLines)
-            },
-            primaryLabel = page.getOrNull(0)?.let { id -> formatProviderChoiceLabel(labels[id] ?: id, id in effectiveEnabled) } ?: "Enable All",
-            onPrimary = {
-                val provider = page.getOrNull(0)
-                if (provider != null) toggleProvider(provider) else setAllProvidersEnabled()
-            },
-            secondaryLabel = page.getOrNull(1)?.let { id -> formatProviderChoiceLabel(labels[id] ?: id, id in effectiveEnabled) } ?: "Disable All",
-            onSecondary = {
-                val provider = page.getOrNull(1)
-                if (provider != null) toggleProvider(provider) else setNoProviderOverrides()
-            },
-            tertiaryLabel = when {
-                page.getOrNull(2) != null -> formatProviderChoiceLabel(labels[page[2]] ?: page[2], page[2] in effectiveEnabled)
-                startIndex + 3 < allProviders.size -> "More…"
-                else -> "Actions"
-            },
-            onTertiary = {
-                val provider = page.getOrNull(2)
-                when {
-                    provider != null -> toggleProvider(provider)
-                    startIndex + 3 < allProviders.size -> showProviderSelectionPage(startIndex + 3)
-                    else -> showProviderSelectionActions(allProviders)
-                }
-            },
-            dismissOnBack = true,
-            defaultAction = ModalDefaultAction.PRIMARY
+            title = spec.title,
+            message = spec.message,
+            primaryLabel = spec.primaryLabel,
+            onPrimary = spec.onPrimary,
+            secondaryLabel = spec.secondaryLabel,
+            onSecondary = spec.onSecondary,
+            tertiaryLabel = spec.tertiaryLabel,
+            onTertiary = spec.onTertiary,
+            dismissOnBack = spec.dismissOnBack,
+            defaultAction = spec.defaultAction,
+            customContent = spec.customContent
         )
     }
 
     private fun showProviderSelectionActions(allProviders: List<String>) {
-        val labels = AppContainer.availableProviderLabels()
-        val current = currentSourcePreferences().providerSelection
-        val effectiveEnabled = current.effectiveEnabledProviders(allProviders.toSet())
-        val providerLines = allProviders.joinToString("\n") { id ->
-            val enabled = id in effectiveEnabled
-            val marker = if (enabled) "[x]" else "[ ]"
-            "$marker ${labels[id] ?: id}"
-        }
+        val spec = settingsModalCoordinator.providerSelectionActionsSpec(
+            allProviders = allProviders,
+            onEnableAll = ::setAllProvidersEnabled,
+            onDisableAll = ::setNoProviderOverrides,
+            onDone = { renderCurrentScreen() }
+        )
         showInfoModal(
-            title = "Provider Selection",
-            message = providerLines,
-            primaryLabel = "Enable All",
-            onPrimary = { setAllProvidersEnabled() },
-            secondaryLabel = "Disable All",
-            onSecondary = { setNoProviderOverrides() },
-            tertiaryLabel = "Done",
-            onTertiary = { renderCurrentScreen() },
-            dismissOnBack = true,
-            defaultAction = ModalDefaultAction.TERTIARY
+            title = spec.title,
+            message = spec.message,
+            primaryLabel = spec.primaryLabel,
+            onPrimary = spec.onPrimary,
+            secondaryLabel = spec.secondaryLabel,
+            onSecondary = spec.onSecondary,
+            tertiaryLabel = spec.tertiaryLabel,
+            onTertiary = spec.onTertiary,
+            dismissOnBack = spec.dismissOnBack,
+            defaultAction = spec.defaultAction,
+            customContent = spec.customContent
         )
     }
 
@@ -1722,12 +1723,20 @@ class MainActivity : ComponentActivity() {
 
     private fun resetSourcePreferences() {
         sourcePreferencesCoordinator.reset()
+        val spec = settingsModalCoordinator.resetSourcePreferencesSpec(onConfirm = { renderCurrentScreen() })
         showInfoModal(
-            title = "Source Preferences Reset",
-            message = "Movie/TV size limits and provider overrides were reset.",
-            primaryLabel = "OK"
+            title = spec.title,
+            message = spec.message,
+            primaryLabel = spec.primaryLabel,
+            onPrimary = spec.onPrimary,
+            secondaryLabel = spec.secondaryLabel,
+            onSecondary = spec.onSecondary,
+            tertiaryLabel = spec.tertiaryLabel,
+            onTertiary = spec.onTertiary,
+            dismissOnBack = spec.dismissOnBack,
+            defaultAction = spec.defaultAction,
+            customContent = spec.customContent
         )
-        renderCurrentScreen()
     }
 
     private fun setLoading(isLoading: Boolean, message: String) {
