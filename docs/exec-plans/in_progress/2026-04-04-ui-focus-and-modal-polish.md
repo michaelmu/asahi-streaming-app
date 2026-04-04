@@ -363,10 +363,11 @@ Centralize common button/card focus behavior first, but keep renderer-specific d
 - Emulator/manual validation is still required to confirm the intended default-focus behavior on real D-pad navigation.
 
 ### 2026-04-04 17:08 UTC
-- Attempted emulator validation for the UI polish pass.
-- Environment has an Android TV AVD (`asahi-tv-test`) and `adb`, but emulator launch failed here due to Qt/xcb platform plugin/display initialization issues.
-- Created `docs/ui-validation/2026-04-04-focus-modal-polish/README.md` with the screenshot checklist, adb screenshot command, emulator commands, and manual validation steps.
-- Result: validation artifact path is prepared, but screenshots/live emulator verification remain blocked in this environment and must be completed where the emulator display backend works.
+- Created `docs/ui-validation/2026-04-04-focus-modal-polish/README.md` with screenshot checklist, adb screenshot command, emulator commands, and manual validation steps.
+- Found a working headless emulator launch path in this environment using `QT_QPA_PLATFORM=offscreen` and `-no-window` mode.
+- Booted Android TV AVD `asahi-tv-test`, installed the current debug APK, launched the app, and captured validation screenshots.
+- Verified focused-state captures on home/settings and verified modal default focus + left/right modal navigation behavior in the Real-Debrid link modal via D-pad input and UI hierarchy dumps.
+- Validation artifacts captured under `docs/ui-validation/2026-04-04-focus-modal-polish/`.
 
 ---
 

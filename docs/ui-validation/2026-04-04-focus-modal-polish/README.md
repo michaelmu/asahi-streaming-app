@@ -60,8 +60,19 @@ adb exec-out screencap -p > docs/ui-validation/2026-04-04-focus-modal-polish/<na
 - Update installer modal(s): focus should stay inside modal and default action should match intent
 - Provider selection modal(s): focus should remain trapped and default action should be sensible
 
-## Current blocker in this environment
+## Validation completed in this environment
 
-Attempted emulator launch from the current environment failed because the Android emulator could not initialize the Qt xcb platform plugin / display backend.
+A working headless launch path was found using an offscreen Qt platform and `-no-window` emulator mode.
 
-This means screenshots and live D-pad validation could not be completed here yet.
+Successful validation steps completed:
+- booted Android TV AVD `asahi-tv-test`
+- installed current debug APK
+- launched app
+- captured screenshots for home/settings/modal states
+- verified modal default focus and left/right navigation inside the Real-Debrid link modal via UI hierarchy dumps and D-pad input
+
+### Working launch command in this environment
+
+```bash
+QT_QPA_PLATFORM=offscreen emulator -avd asahi-tv-test -no-window -gpu swiftshader_indirect -no-snapshot -no-audio -no-boot-anim
+```
