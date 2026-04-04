@@ -1,8 +1,10 @@
-# Asahi Execution Plan
+# Asahi Execution Plan — Cleanup and Hardening Pass
 
 Last updated: 2026-04-04 UTC
-Status: Active living document
+Status: COMPLETE
 Owner: shield-tv-bot + Mike
+Location: `docs/exec-plans/complete/2026-04-04-cleanup-hardening-pass.md`
+Note: This plan predates the `docs/exec-plans/` folder structure and was migrated into it after completion.
 
 ## Purpose
 

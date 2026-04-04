@@ -1,9 +1,10 @@
 # Asahi Execution Plan — Next Pass
 
 Last updated: 2026-04-04 UTC
-Status: Active living document
+Status: IN_PROGRESS
 Owner: shield-tv-bot + Mike
-Supersedes: `docs/EXEC_PLAN.md` for future implementation work
+Location: `docs/exec-plans/in_progress/2026-04-04-next-pass-ranking-orchestration.md`
+Supersedes: `docs/exec-plans/complete/2026-04-04-cleanup-hardening-pass.md`
 
 ## Purpose
 
