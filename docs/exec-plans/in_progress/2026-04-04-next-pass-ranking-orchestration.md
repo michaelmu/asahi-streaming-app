@@ -60,7 +60,7 @@ A task is only `DONE` when:
 
 **Current phase:** Phase A — product-quality source pipeline and app orchestration
 
-**Immediate target:** A5 — implement incremental source loading UX so users can see and act on partial results before every provider finishes.
+**Immediate target:** B3 — add lightweight provider health diagnostics using the latency/failure/progress data already available in the source pipeline.
 
 **Why this now:**
 The repo is in a better structural state than before, but the current bottlenecks are obvious:
@@ -302,16 +302,16 @@ Decide whether playback persistence remains intentionally single-item or begins 
 ---
 
 ## B3. Add provider health diagnostics
-Status: TODO
+Status: DONE
 Priority: Low
 
 ### Goal
 Track useful provider health signals for debugging and future settings/debug UI.
 
 ### Proposed sub-steps
-- [TODO] collect per-provider latency/failure summary
-- [TODO] keep it lightweight and local first
-- [TODO] expose it in debug diagnostics before any polished UI
+- [DONE] collect per-provider latency/failure summary
+- [DONE] keep it lightweight and local first
+- [DONE] expose it in debug diagnostics before any polished UI
 
 ### Validation
 - can quickly tell which providers are healthy, slow, or error-prone
@@ -456,6 +456,12 @@ Keep ranking opinionated by default, but design A2/A3 so profile-based variation
 - Added coordinator test coverage for incremental updates plus existing auth-linked filtering behavior.
 - Validation: `./gradlew testDebugUnitTest` passed.
 
+### 2026-04-04 16:03 UTC
+- Completed B3 by adding a lightweight in-memory `ProviderHealthTracker` fed from `SourceFetchProgress` updates.
+- Provider health diagnostics now summarize success/failure counts, last latency, last result count, and last error type for the current lookup window.
+- Exposed provider health only through source diagnostics/debug text in this pass; no polished settings/debug UI yet.
+- Added focused tracker tests and validated with `./gradlew testDebugUnitTest`.
+
 ---
 
 ## Scope Changes
@@ -468,13 +474,14 @@ Keep ranking opinionated by default, but design A2/A3 so profile-based variation
 - During A3 execution, chose to expose explanations via `SourceRanker.explain(...)` and source diagnostics first instead of pushing explanation data through all UI state models immediately.
 - During A4 execution, chose to extend `SourceResult` with explicit `origins` rather than replacing existing provider label fields, which kept UI churn low while still preserving provenance for diagnostics and future work.
 - During A5 execution, chose to drive incremental updates from the repository layer where provider completion is known, instead of trying to fake partial results inside the loading coordinator.
+- During B3 execution, chose to keep provider health tracking in-memory and per-lookup-window rather than persist history yet, which keeps the feature cheap and useful without prematurely inventing a telemetry subsystem.
 
 ---
 
 ## Session Start
 
-### 2026-04-04 15:51 UTC
-Intended task: Continue the active next-pass plan by starting A5 and making source loading incrementally usable with minimal TV-focus disruption.
+### 2026-04-04 15:57 UTC
+Intended task: Continue the active next-pass plan by starting B3 and surfacing lightweight provider health diagnostics for debugging.
 
 ---
 

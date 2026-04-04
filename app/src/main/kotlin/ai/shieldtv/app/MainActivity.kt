@@ -49,6 +49,7 @@ import ai.shieldtv.app.playback.PlaybackSessionRecord
 import ai.shieldtv.app.navigation.AppDestination
 import ai.shieldtv.app.update.ApkDownloadManager
 import ai.shieldtv.app.update.ApkInstaller
+import ai.shieldtv.app.sources.ProviderHealthTracker
 import ai.shieldtv.app.sources.SourceLoadRequest
 import ai.shieldtv.app.sources.SourceLoadingCoordinator
 import ai.shieldtv.app.ui.DetailsScreenRenderer
@@ -156,6 +157,7 @@ class MainActivity : ComponentActivity() {
             sourcesViewModel = sourcesViewModel
         )
     }
+    private val providerHealthTracker = ProviderHealthTracker()
 
     private val playerControllerVisibilityTimeoutMs = 3500
 
@@ -838,6 +840,7 @@ class MainActivity : ComponentActivity() {
             mediaRef.title
         }
 
+        providerHealthTracker.reset()
         setLoading(true, "Finding sources for $searchLabel…")
         coordinator.showSources(
             mediaRef = mediaRef,
@@ -862,7 +865,8 @@ class MainActivity : ComponentActivity() {
             onStarted = {
                 showSourceProgressModal(searchLabel)
             },
-            onProgressUpdated = {
+            onProgressUpdated = { progressItems ->
+                progressItems.lastOrNull()?.let(providerHealthTracker::record)
                 runOnUiThread {
                     if (activeModalView != null) {
                         showSourceProgressModal(searchLabel)
@@ -878,13 +882,16 @@ class MainActivity : ComponentActivity() {
                         episodeNumber = episodeNumber,
                         sources = update.sources
                     )
-                    latestSourceDiagnostics = buildSourceDiagnostics(update.sources) + " | progress=${update.completedProviders}/${update.totalProviders}"
+                    latestSourceDiagnostics = buildSourceDiagnostics(update.sources) +
+                        " | progress=${update.completedProviders}/${update.totalProviders}" +
+                        " | ${providerHealthTracker.summary()}"
                     latestSourcesError = null
                     renderCurrentScreen()
                 }
             },
             onCompleted = { result ->
-                latestSourceDiagnostics = result.diagnostics ?: buildSourceDiagnostics(result.sources)
+                latestSourceDiagnostics = (result.diagnostics ?: buildSourceDiagnostics(result.sources)) +
+                    " | ${providerHealthTracker.summary()}"
                 latestSourcesError = result.error
                 coordinator.showSources(
                     mediaRef = mediaRef,
