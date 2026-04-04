@@ -60,10 +60,10 @@ A task is only `DONE` when:
 
 **Current phase:** Complete
 
-**Immediate target:** none — this source-preferences settings modal composition pass is complete.
+**Immediate target:** none — the auth/update modal branching cleanup for this plan is complete.
 
 **Why this now:**
-This plan now covers the major shell seams that were most obviously concentrated in `MainActivity`. The biggest remaining settings shell work is now auth/update-specific modal branching rather than the source-preferences modal pages.
+This plan now covers the major app-shell seams that were concentrated in `MainActivity`. What remains is mostly generic modal helper plumbing and optional source-loading UI lifecycle cleanup rather than large workflow-specific branching.
 
 > Update this section whenever the active phase or immediate target changes.
 
@@ -291,6 +291,16 @@ Yes for this pass, since the playback extraction stayed controlled and browse fl
 - Not validated: manual settings modal navigation on device in this session
 - Known uncertainty: auth/update modals and some generic modal helpers still remain in `MainActivity`
 
+### Auth/update modal branching follow-up
+- Validated by: repo inspection showing Real-Debrid flow success/failure/timeout modals and update check/install modals still built inline in `MainActivity`
+- Not validated: behavior after modal-spec extraction yet in this session
+- Known uncertainty: generic helper plumbing like `showInfoModal(...)`, QR-code view creation, and update side effects still remain activity-owned
+
+### After auth/update modal branching cleanup
+- Validated by: successful `./gradlew testDebugUnitTest assembleDebug` after extending `SettingsModalCoordinator` and routing Real-Debrid/update modal specs through it
+- Not validated: manual auth/update flow interaction on device in this session
+- Known uncertainty: final shell cleanup opportunities are now more about helper consolidation than large missing workflow coordinators
+
 ---
 
 ## Progress Log
@@ -387,6 +397,16 @@ Yes for this pass, since the playback extraction stayed controlled and browse fl
 - The long-standing non-blocking Kotlin warning in `MainActivity` remains unrelated to this work.
 - Remaining shell work is now mostly auth/update settings modal branching plus any later optional source-loading UI lifecycle cleanup.
 
+### 2026-04-04 23:17 UTC
+- Continued the same plan with the auth/update modal-branching pass.
+- Extended `SettingsModalCoordinator` to build modal specs for Real-Debrid link failures, link flow display, successful linking, timeout handling, update check failure, update availability, and update install result states.
+- Rewired `MainActivity` to consume those modal specs while keeping external side effects (launching intents, downloads, QR view creation) in the activity.
+
+### 2026-04-04 23:18 UTC
+- Fixed a build break caused by using the wrong `AppUpdateInfo` import path inside `SettingsModalCoordinator`.
+- Re-ran `./gradlew testDebugUnitTest assembleDebug` successfully after the fix.
+- The long-standing non-blocking Kotlin warning in `MainActivity` remains unrelated to this work.
+
 ---
 
 ## Scope Changes
@@ -400,7 +420,7 @@ Yes for this pass, since the playback extraction stayed controlled and browse fl
 - A details/episodes/sources transition pass was then pulled in to reduce inline navigation/auth decision logic in `MainActivity`.
 - A back-stack/navigation policy pass was then pulled in to reduce remaining inline shell policy.
 - A partial settings modal-composition pass was then pulled in for source-preferences modal pages.
-- Full auth/update settings modal extraction remains separate follow-up work.
+- An auth/update modal-branching pass was then pulled in to reduce the remaining settings-shell branching.
 - Actual source-loading lifecycle management was intentionally kept out of the details/episodes/sources transition extraction.
 - No richer navigation stack/history system was introduced in the back-navigation extraction.
 
@@ -428,6 +448,9 @@ Intended task: Continue the same plan with a back-navigation coordinator.
 
 ### 2026-04-04 23:13 UTC
 Intended task: Continue the same plan with a settings modal coordinator for source-preferences modal composition.
+
+### 2026-04-04 23:17 UTC
+Intended task: Continue the same plan with auth/update modal branching cleanup.
 
 ---
 

@@ -1,7 +1,11 @@
 package ai.shieldtv.app.settings
 
+import ai.shieldtv.app.auth.RealDebridLinkStartFailure
+import ai.shieldtv.app.core.model.auth.DeviceCodeFlow
+import ai.shieldtv.app.update.AppUpdateInfo
 import ai.shieldtv.app.ui.InfoModalSpec
 import ai.shieldtv.app.ui.ModalDefaultAction
+import ai.shieldtv.app.update.UpdateInstallUiResult
 
 class SettingsModalCoordinator(
     private val sourcePreferencesCoordinator: SourcePreferencesCoordinator,
@@ -117,6 +121,144 @@ class SettingsModalCoordinator(
             primaryLabel = "OK",
             onPrimary = onConfirm
         )
+    }
+
+    fun realDebridLinkFailedSpec(
+        failure: RealDebridLinkStartFailure,
+        onCopyDebugInfo: () -> Unit
+    ): InfoModalSpec {
+        return InfoModalSpec(
+            title = "Real-Debrid Link Failed",
+            message = "${failure.errorType}: ${failure.debugMessage}",
+            primaryLabel = "OK",
+            secondaryLabel = "Copy Debug Info",
+            onSecondary = onCopyDebugInfo,
+            defaultAction = ModalDefaultAction.PRIMARY
+        )
+    }
+
+    fun realDebridFlowSpec(
+        flow: DeviceCodeFlow,
+        authUrl: String,
+        qrContent: android.view.View,
+        onOpenLinkPage: () -> Unit,
+        onCopyDebugInfo: () -> Unit
+    ): InfoModalSpec {
+        return InfoModalSpec(
+            title = "Link Real-Debrid",
+            message = buildString {
+                appendLine("Open: $authUrl")
+                appendLine()
+                append("Code: ${flow.userCode}")
+            },
+            primaryLabel = "Open Link Page",
+            onPrimary = onOpenLinkPage,
+            secondaryLabel = "Copy Debug Info",
+            onSecondary = onCopyDebugInfo,
+            tertiaryLabel = "Close",
+            onTertiary = {},
+            defaultAction = ModalDefaultAction.PRIMARY,
+            customContent = qrContent
+        )
+    }
+
+    fun realDebridLinkedSpec(linkedMessage: String): InfoModalSpec {
+        return InfoModalSpec(
+            title = "Real-Debrid Linked",
+            message = linkedMessage,
+            primaryLabel = "Back to Settings",
+            defaultAction = ModalDefaultAction.PRIMARY
+        )
+    }
+
+    fun realDebridTimedOutSpec(
+        errorType: String,
+        timeoutMessage: String,
+        onTryAgain: () -> Unit
+    ): InfoModalSpec {
+        return InfoModalSpec(
+            title = "Real-Debrid Link Timed Out",
+            message = "$errorType: $timeoutMessage",
+            primaryLabel = "Try Again",
+            onPrimary = onTryAgain,
+            secondaryLabel = "Close",
+            onSecondary = {},
+            defaultAction = ModalDefaultAction.PRIMARY
+        )
+    }
+
+    fun updateCheckFailedSpec(errorMessage: String): InfoModalSpec {
+        return InfoModalSpec(
+            title = "Update Check Failed",
+            message = errorMessage,
+            primaryLabel = "OK"
+        )
+    }
+
+    fun updateAvailableSpec(
+        updateInfo: AppUpdateInfo,
+        onInstall: () -> Unit,
+        onViewReleaseNotes: () -> Unit
+    ): InfoModalSpec {
+        return InfoModalSpec(
+            title = "Update Available",
+            message = buildString {
+                append(updateInfo.versionName)
+                updateInfo.versionCodeHint?.let {
+                    append(" (versionCode ")
+                    append(it)
+                    append(")")
+                }
+                updateInfo.publishedAt?.takeIf { publishedAt -> publishedAt.isNotBlank() }?.let { publishedAt ->
+                    appendLine()
+                    appendLine()
+                    append("Published: ")
+                    append(publishedAt)
+                }
+            },
+            primaryLabel = "Install Update",
+            onPrimary = onInstall,
+            secondaryLabel = "View Release Notes",
+            onSecondary = onViewReleaseNotes,
+            tertiaryLabel = "Later",
+            onTertiary = {},
+            defaultAction = ModalDefaultAction.PRIMARY
+        )
+    }
+
+    fun updateInstallSpec(
+        result: UpdateInstallUiResult,
+        onOpenSettings: (() -> Unit)? = null
+    ): InfoModalSpec {
+        return when (result) {
+            is UpdateInstallUiResult.Ready -> InfoModalSpec(
+                title = "Installer Launched",
+                message = "If Android does not show the installer, check the unknown apps permission for Asahi.",
+                primaryLabel = "Done",
+                secondaryLabel = "Open Settings",
+                onSecondary = onOpenSettings,
+                defaultAction = ModalDefaultAction.PRIMARY
+            )
+            is UpdateInstallUiResult.RequiresSettings -> InfoModalSpec(
+                title = "Enable APK Installs",
+                message = result.readiness.message ?: "Android is blocking installs from Asahi right now. Allow installs from this app, then try again.",
+                primaryLabel = "Open Settings",
+                onPrimary = onOpenSettings,
+                secondaryLabel = "Not Now",
+                onSecondary = {},
+                defaultAction = ModalDefaultAction.PRIMARY
+            )
+            is UpdateInstallUiResult.Unavailable -> InfoModalSpec(
+                title = "Installer Unavailable",
+                message = result.readiness.message ?: "No app on this device can handle APK installation intents right now.",
+                primaryLabel = "OK"
+            )
+            is UpdateInstallUiResult.Failure -> InfoModalSpec(
+                title = "Update Failed",
+                message = result.errorMessage,
+                primaryLabel = "OK"
+            )
+        }
     }
 
     private fun sizePickerSpec(

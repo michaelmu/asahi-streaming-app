@@ -1194,13 +1194,22 @@ class MainActivity : ComponentActivity() {
                     authPollingJob?.cancel()
                     authState = result.value.authState
                     setLoading(false, result.value.statusMessage)
+                    val spec = settingsModalCoordinator.realDebridLinkFailedSpec(
+                        failure = result.value,
+                        onCopyDebugInfo = ::copyDebugInfoToClipboard
+                    )
                     showInfoModal(
-                        title = "Real-Debrid Link Failed",
-                        message = "${result.value.errorType}: ${result.value.debugMessage}",
-                        primaryLabel = "OK",
-                        secondaryLabel = "Copy Debug Info",
-                        onSecondary = ::copyDebugInfoToClipboard,
-                        defaultAction = ModalDefaultAction.PRIMARY
+                        title = spec.title,
+                        message = spec.message,
+                        primaryLabel = spec.primaryLabel,
+                        onPrimary = spec.onPrimary,
+                        secondaryLabel = spec.secondaryLabel,
+                        onSecondary = spec.onSecondary,
+                        tertiaryLabel = spec.tertiaryLabel,
+                        onTertiary = spec.onTertiary,
+                        dismissOnBack = spec.dismissOnBack,
+                        defaultAction = spec.defaultAction,
+                        customContent = spec.customContent
                     )
                     refreshAuthUiOnly()
                 }
@@ -1236,24 +1245,28 @@ class MainActivity : ComponentActivity() {
 
     private fun showRealDebridFlowModal(flow: DeviceCodeFlow) {
         val authUrl = buildRealDebridAuthUrl(flow)
-        showInfoModal(
-            title = "Link Real-Debrid",
-            message = buildString {
-                appendLine("Open: $authUrl")
-                appendLine()
-                append("Code: ${flow.userCode}")
-            },
-            primaryLabel = "Open Link Page",
-            onPrimary = {
+        val spec = settingsModalCoordinator.realDebridFlowSpec(
+            flow = flow,
+            authUrl = authUrl,
+            qrContent = buildQrCodeView(flow.qrCodeUrl ?: authUrl),
+            onOpenLinkPage = {
                 startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(authUrl)))
                 showRealDebridFlowModal(flow)
             },
-            secondaryLabel = "Copy Debug Info",
-            onSecondary = ::copyDebugInfoToClipboard,
-            tertiaryLabel = "Close",
-            onTertiary = {},
-            defaultAction = ModalDefaultAction.PRIMARY,
-            customContent = buildQrCodeView(flow.qrCodeUrl ?: authUrl)
+            onCopyDebugInfo = ::copyDebugInfoToClipboard
+        )
+        showInfoModal(
+            title = spec.title,
+            message = spec.message,
+            primaryLabel = spec.primaryLabel,
+            onPrimary = spec.onPrimary,
+            secondaryLabel = spec.secondaryLabel,
+            onSecondary = spec.onSecondary,
+            tertiaryLabel = spec.tertiaryLabel,
+            onTertiary = spec.onTertiary,
+            dismissOnBack = spec.dismissOnBack,
+            defaultAction = spec.defaultAction,
+            customContent = spec.customContent
         )
     }
 
@@ -1269,11 +1282,19 @@ class MainActivity : ComponentActivity() {
                 result.errorType?.let { latestPlaybackMessage = "Auth flow warning: $it" }
                 result.linkedMessage?.let { linkedMessage ->
                     dismissModal()
+                    val spec = settingsModalCoordinator.realDebridLinkedSpec(linkedMessage)
                     showInfoModal(
-                        title = "Real-Debrid Linked",
-                        message = linkedMessage,
-                        primaryLabel = "Back to Settings",
-                        defaultAction = ModalDefaultAction.PRIMARY
+                        title = spec.title,
+                        message = spec.message,
+                        primaryLabel = spec.primaryLabel,
+                        onPrimary = spec.onPrimary,
+                        secondaryLabel = spec.secondaryLabel,
+                        onSecondary = spec.onSecondary,
+                        tertiaryLabel = spec.tertiaryLabel,
+                        onTertiary = spec.onTertiary,
+                        dismissOnBack = spec.dismissOnBack,
+                        defaultAction = spec.defaultAction,
+                        customContent = spec.customContent
                     )
                 }
                 refreshAuthUiOnly()
@@ -1281,14 +1302,23 @@ class MainActivity : ComponentActivity() {
             onTimeout = { timeout ->
                 authState = timeout.authState
                 statusText.text = timeout.statusMessage
+                val spec = settingsModalCoordinator.realDebridTimedOutSpec(
+                    errorType = timeout.errorType,
+                    timeoutMessage = timeout.timeoutMessage,
+                    onTryAgain = ::startRealDebridLink
+                )
                 showInfoModal(
-                    title = "Real-Debrid Link Timed Out",
-                    message = "${timeout.errorType}: ${timeout.timeoutMessage}",
-                    primaryLabel = "Try Again",
-                    onPrimary = ::startRealDebridLink,
-                    secondaryLabel = "Close",
-                    onSecondary = {},
-                    defaultAction = ModalDefaultAction.PRIMARY
+                    title = spec.title,
+                    message = spec.message,
+                    primaryLabel = spec.primaryLabel,
+                    onPrimary = spec.onPrimary,
+                    secondaryLabel = spec.secondaryLabel,
+                    onSecondary = spec.onSecondary,
+                    tertiaryLabel = spec.tertiaryLabel,
+                    onTertiary = spec.onTertiary,
+                    dismissOnBack = spec.dismissOnBack,
+                    defaultAction = spec.defaultAction,
+                    customContent = spec.customContent
                 )
                 refreshAuthUiOnly()
             }
@@ -1790,10 +1820,19 @@ class MainActivity : ComponentActivity() {
             latestUpdateMessage = result.statusMessage
             setLoading(false, result.statusMessage)
             if (result.errorMessage != null) {
+                val spec = settingsModalCoordinator.updateCheckFailedSpec(result.errorMessage)
                 showInfoModal(
-                    title = "Update Check Failed",
-                    message = result.errorMessage,
-                    primaryLabel = "OK"
+                    title = spec.title,
+                    message = spec.message,
+                    primaryLabel = spec.primaryLabel,
+                    onPrimary = spec.onPrimary,
+                    secondaryLabel = spec.secondaryLabel,
+                    onSecondary = spec.onSecondary,
+                    tertiaryLabel = spec.tertiaryLabel,
+                    onTertiary = spec.onTertiary,
+                    dismissOnBack = spec.dismissOnBack,
+                    defaultAction = spec.defaultAction,
+                    customContent = spec.customContent
                 )
             } else if (result.updateInfo != null) {
                 showUpdateAvailableModal(result.updateInfo)
@@ -1803,31 +1842,25 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun showUpdateAvailableModal(updateInfo: AppUpdateInfo) {
-        showInfoModal(
-            title = "Update Available",
-            message = buildString {
-                append(updateInfo.versionName)
-                updateInfo.versionCodeHint?.let {
-                    append(" (versionCode ")
-                    append(it)
-                    append(")")
-                }
-                updateInfo.publishedAt?.takeIf { it.isNotBlank() }?.let {
-                    appendLine()
-                    appendLine()
-                    append("Published: ")
-                    append(it)
-                }
-            },
-            primaryLabel = "Install Update",
-            onPrimary = { openLatestUpdate(updateInfo) },
-            secondaryLabel = "View Release Notes",
-            onSecondary = {
+        val spec = settingsModalCoordinator.updateAvailableSpec(
+            updateInfo = updateInfo,
+            onInstall = { openLatestUpdate(updateInfo) },
+            onViewReleaseNotes = {
                 startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(updateInfo.pageUrl)))
-            },
-            tertiaryLabel = "Later",
-            onTertiary = {},
-            defaultAction = ModalDefaultAction.PRIMARY
+            }
+        )
+        showInfoModal(
+            title = spec.title,
+            message = spec.message,
+            primaryLabel = spec.primaryLabel,
+            onPrimary = spec.onPrimary,
+            secondaryLabel = spec.secondaryLabel,
+            onSecondary = spec.onSecondary,
+            tertiaryLabel = spec.tertiaryLabel,
+            onTertiary = spec.onTertiary,
+            dismissOnBack = spec.dismissOnBack,
+            defaultAction = spec.defaultAction,
+            customContent = spec.customContent
         )
     }
 
@@ -1839,46 +1872,81 @@ class MainActivity : ComponentActivity() {
                 is UpdateInstallUiResult.Ready -> {
                     setLoading(false, result.statusMessage)
                     startActivity(result.readiness.installIntent)
-                    showInfoModal(
-                        title = "Installer Launched",
-                        message = "If Android does not show the installer, check the unknown apps permission for Asahi.",
-                        primaryLabel = "Done",
-                        secondaryLabel = "Open Settings",
-                        onSecondary = {
+                    val spec = settingsModalCoordinator.updateInstallSpec(
+                        result = result,
+                        onOpenSettings = {
                             result.readiness.openSettingsIntent?.let(::startActivity)
                                 ?: startActivity(apkInstaller.buildManageUnknownAppsIntent())
-                        },
-                        defaultAction = ModalDefaultAction.PRIMARY
+                        }
+                    )
+                    showInfoModal(
+                        title = spec.title,
+                        message = spec.message,
+                        primaryLabel = spec.primaryLabel,
+                        onPrimary = spec.onPrimary,
+                        secondaryLabel = spec.secondaryLabel,
+                        onSecondary = spec.onSecondary,
+                        tertiaryLabel = spec.tertiaryLabel,
+                        onTertiary = spec.onTertiary,
+                        dismissOnBack = spec.dismissOnBack,
+                        defaultAction = spec.defaultAction,
+                        customContent = spec.customContent
                     )
                 }
                 is UpdateInstallUiResult.RequiresSettings -> {
                     setLoading(false, result.statusMessage)
-                    showInfoModal(
-                        title = "Enable APK Installs",
-                        message = result.readiness.message ?: "Android is blocking installs from Asahi right now. Allow installs from this app, then try again.",
-                        primaryLabel = "Open Settings",
-                        onPrimary = {
+                    val spec = settingsModalCoordinator.updateInstallSpec(
+                        result = result,
+                        onOpenSettings = {
                             result.readiness.openSettingsIntent?.let(::startActivity)
-                        },
-                        secondaryLabel = "Not Now",
-                        onSecondary = {},
-                        defaultAction = ModalDefaultAction.PRIMARY
+                        }
+                    )
+                    showInfoModal(
+                        title = spec.title,
+                        message = spec.message,
+                        primaryLabel = spec.primaryLabel,
+                        onPrimary = spec.onPrimary,
+                        secondaryLabel = spec.secondaryLabel,
+                        onSecondary = spec.onSecondary,
+                        tertiaryLabel = spec.tertiaryLabel,
+                        onTertiary = spec.onTertiary,
+                        dismissOnBack = spec.dismissOnBack,
+                        defaultAction = spec.defaultAction,
+                        customContent = spec.customContent
                     )
                 }
                 is UpdateInstallUiResult.Unavailable -> {
                     setLoading(false, result.statusMessage)
+                    val spec = settingsModalCoordinator.updateInstallSpec(result)
                     showInfoModal(
-                        title = "Installer Unavailable",
-                        message = result.readiness.message ?: "No app on this device can handle APK installation intents right now.",
-                        primaryLabel = "OK"
+                        title = spec.title,
+                        message = spec.message,
+                        primaryLabel = spec.primaryLabel,
+                        onPrimary = spec.onPrimary,
+                        secondaryLabel = spec.secondaryLabel,
+                        onSecondary = spec.onSecondary,
+                        tertiaryLabel = spec.tertiaryLabel,
+                        onTertiary = spec.onTertiary,
+                        dismissOnBack = spec.dismissOnBack,
+                        defaultAction = spec.defaultAction,
+                        customContent = spec.customContent
                     )
                 }
                 is UpdateInstallUiResult.Failure -> {
                     setLoading(false, result.statusMessage)
+                    val spec = settingsModalCoordinator.updateInstallSpec(result)
                     showInfoModal(
-                        title = "Update Failed",
-                        message = result.errorMessage,
-                        primaryLabel = "OK"
+                        title = spec.title,
+                        message = spec.message,
+                        primaryLabel = spec.primaryLabel,
+                        onPrimary = spec.onPrimary,
+                        secondaryLabel = spec.secondaryLabel,
+                        onSecondary = spec.onSecondary,
+                        tertiaryLabel = spec.tertiaryLabel,
+                        onTertiary = spec.onTertiary,
+                        dismissOnBack = spec.dismissOnBack,
+                        defaultAction = spec.defaultAction,
+                        customContent = spec.customContent
                     )
                 }
             }
