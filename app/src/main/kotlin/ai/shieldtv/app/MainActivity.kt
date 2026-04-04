@@ -26,8 +26,8 @@ import ai.shieldtv.app.core.model.source.CacheStatus
 import ai.shieldtv.app.core.model.source.SourceResult
 import ai.shieldtv.app.core.model.source.SourceSearchRequest
 import ai.shieldtv.app.di.AppContainer
-import ai.shieldtv.app.domain.repository.SourceFetchProgress
 import ai.shieldtv.app.settings.SourcePreferences
+import ai.shieldtv.app.domain.repository.SourceFetchProgress
 import ai.shieldtv.app.feature.details.presentation.DetailsPresenter
 import ai.shieldtv.app.feature.details.presentation.DetailsViewModel
 import ai.shieldtv.app.feature.player.presentation.PlayerPresenter
@@ -47,6 +47,8 @@ import ai.shieldtv.app.playback.PlaybackSessionRecord
 import ai.shieldtv.app.navigation.AppDestination
 import ai.shieldtv.app.update.ApkDownloadManager
 import ai.shieldtv.app.update.ApkInstaller
+import ai.shieldtv.app.sources.SourceLoadRequest
+import ai.shieldtv.app.sources.SourceLoadingCoordinator
 import ai.shieldtv.app.ui.DetailsScreenRenderer
 import ai.shieldtv.app.ui.EpisodePickerScreenRenderer
 import ai.shieldtv.app.ui.HomeScreenRenderer
@@ -116,6 +118,13 @@ class MainActivity : ComponentActivity() {
     private lateinit var modalHost: android.widget.FrameLayout
     private lateinit var playerView: PlayerView
 
+    private val sourceLoadingCoordinator by lazy {
+        SourceLoadingCoordinator(
+            lifecycleScope = lifecycleScope,
+            sourcesViewModel = sourcesViewModel
+        )
+    }
+
     private val playerControllerVisibilityTimeoutMs = 3500
 
     private var authState: RealDebridAuthState = RealDebridAuthState(isLinked = false)
@@ -135,8 +144,6 @@ class MainActivity : ComponentActivity() {
     private var latestUpdateMessage: String? = null
     private var persistedPlaybackSession: PlaybackSessionRecord? = null
     private var activeModalView: View? = null
-    private var loadSourcesJob: Job? = null
-    private val providerProgress = linkedMapOf<String, SourceFetchProgress>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -173,6 +180,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         authPollingJob?.cancel()
+        sourceLoadingCoordinator.cancel()
         AppContainer.playbackEngine.getCurrentItem()?.let { currentItem ->
             AppContainer.playbackSessionStore.save(
                 item = currentItem,
@@ -798,48 +806,48 @@ class MainActivity : ComponentActivity() {
         }
 
         setLoading(true, "Finding sources for $searchLabel…")
-        providerProgress.clear()
-        showSourceProgressModal(searchLabel)
-
-        loadSourcesJob?.cancel()
-        loadSourcesJob = lifecycleScope.launch {
-            val prefs = currentSourcePreferences()
-            val state = sourcesViewModel.load(
-                SourceSearchRequest(
-                    mediaRef = mediaRef,
-                    seasonNumber = seasonNumber,
-                    episodeNumber = episodeNumber,
-                    filters = currentSourceFilters()
-                ),
-                enabledProviderIds = prefs.enabledProviders,
-                onProgress = { progress ->
-                    providerProgress[progress.providerId] = progress
-                    runOnUiThread {
-                        showSourceProgressModal(searchLabel)
-                    }
-                }
-            )
-            val filteredSources = state.sources.filter { it.debridService != DebridService.NONE || authState.isLinked }
-            latestSourceDiagnostics = state.diagnostics ?: buildSourceDiagnostics(filteredSources)
-            latestSourcesError = state.error
-            coordinator.showSources(
+        val prefs = currentSourcePreferences()
+        sourceLoadingCoordinator.load(
+            request = SourceLoadRequest(
                 mediaRef = mediaRef,
-                details = coordinator.currentState().selectedDetails,
                 seasonNumber = seasonNumber,
                 episodeNumber = episodeNumber,
-                sources = filteredSources
-            )
-            dismissModal()
-            setLoading(false, state.error ?: "Found ${filteredSources.size} source(s) for $searchLabel.")
-            renderCurrentScreen()
-        }
+                authLinked = authState.isLinked,
+                preferences = prefs,
+                filters = currentSourceFilters(),
+                searchLabel = searchLabel
+            ),
+            onStarted = {
+                showSourceProgressModal(searchLabel)
+            },
+            onProgressUpdated = {
+                runOnUiThread {
+                    showSourceProgressModal(searchLabel)
+                }
+            },
+            onCompleted = { result ->
+                latestSourceDiagnostics = result.diagnostics ?: buildSourceDiagnostics(result.sources)
+                latestSourcesError = result.error
+                coordinator.showSources(
+                    mediaRef = mediaRef,
+                    details = coordinator.currentState().selectedDetails,
+                    seasonNumber = seasonNumber,
+                    episodeNumber = episodeNumber,
+                    sources = result.sources
+                )
+                dismissModal()
+                setLoading(false, result.error ?: "Found ${result.sources.size} source(s) for $searchLabel.")
+                renderCurrentScreen()
+            }
+        )
     }
 
     private fun showSourceProgressModal(searchLabel: String) {
-        val lines = if (providerProgress.isEmpty()) {
+        val progressItems = sourceLoadingCoordinator.currentProgress()
+        val lines = if (progressItems.isEmpty()) {
             listOf("Preparing providers…")
         } else {
-            providerProgress.values.map { progress ->
+            progressItems.map { progress ->
                 when (progress.state) {
                     SourceFetchProgress.State.STARTED -> "${progress.providerDisplayName}: querying…"
                     SourceFetchProgress.State.COMPLETED -> "${progress.providerDisplayName}: ${progress.resultCount ?: 0} result(s)"
@@ -858,7 +866,7 @@ class MainActivity : ComponentActivity() {
             onPrimary = { showSourceProgressModal(searchLabel) },
             secondaryLabel = "Cancel",
             onSecondary = {
-                loadSourcesJob?.cancel()
+                sourceLoadingCoordinator.cancel()
                 dismissModal()
                 setLoading(false, "Source lookup cancelled.")
             },

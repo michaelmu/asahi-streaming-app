@@ -82,7 +82,7 @@ A task is only `DONE` when:
 
 **Current phase:** Phase 1 — Runtime architecture cleanup and source pipeline reliability
 
-**Immediate target:** Create safer, clearer implementation structure before scaling features further.
+**Immediate target:** P1.1 first extraction pass — move source loading coordination out of `MainActivity` into a dedicated component without changing user-facing behavior.
 
 **Why this first:**
 The codebase already has good module-level direction, but app-level orchestration and source-loading flow are the biggest near-term maintainability risks.
@@ -128,7 +128,7 @@ Goal: Only after the earlier phases are stable.
 # Phase 1 — Runtime architecture cleanup and source pipeline reliability
 
 ## P1.1 Break up `MainActivity` coordination responsibilities
-Status: TODO
+Status: IN_PROGRESS
 Priority: High
 
 ### Objectives
@@ -139,7 +139,7 @@ Priority: High
 ### Proposed sub-steps
 - [TODO] Identify major workflow clusters in `MainActivity`
 - [TODO] Extract auth flow coordination into a dedicated component
-- [TODO] Extract source loading flow into a dedicated component
+- [DONE] Extract source loading flow into a dedicated component
 - [TODO] Extract update/install flow into a dedicated component
 - [TODO] Extract modal presentation helper/state manager if useful
 - [TODO] Leave `MainActivity` primarily responsible for rendering/binding/navigation dispatch
@@ -469,20 +469,28 @@ Support lightweight migration where easy, but do not overcomplicate early cleanu
 - Established phases, priorities, validation expectations, and update discipline.
 - No code changes implemented yet under this plan.
 
+### 2026-04-04 07:59 UTC
+- Completed the first P1.1 extraction pass by moving source loading/progress coordination out of `MainActivity` into `SourceLoadingCoordinator`.
+- Updated `MainActivity` to delegate source loading, cancellation, and progress snapshot access to the coordinator.
+- Added targeted coordinator tests covering progress propagation and current auth-linked filtering behavior.
+- Validation: `./gradlew testDebugUnitTest` passed.
+- Follow-up noted: source auth/provider eligibility semantics still need dedicated cleanup under P1.4 because current behavior is not yet intuitive.
+
 ---
 
 ## Scope Changes
 
 ### 2026-04-04
 - Initial scope established.
-- No deviations yet.
+- During the source-loading extraction, preserved existing auth-linked source filtering behavior instead of changing product policy mid-refactor.
+- Policy cleanup remains explicitly scheduled under P1.4.
 
 ---
 
 ## Session Start
 
-### 2026-04-04 07:52 UTC
-Intended task: Create the initial living execution plan and store it in the repo for ongoing updates during implementation.
+### 2026-04-04 07:54 UTC
+Intended task: Begin P1.1 with the first safe extraction pass by moving source loading coordination and progress handling out of `MainActivity` into a dedicated component.
 
 ---
 

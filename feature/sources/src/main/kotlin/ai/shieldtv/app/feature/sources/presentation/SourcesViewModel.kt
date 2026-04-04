@@ -4,10 +4,10 @@ import ai.shieldtv.app.core.model.source.SourceSearchRequest
 import ai.shieldtv.app.domain.repository.SourceFetchProgress
 import ai.shieldtv.app.feature.sources.ui.SourcesUiState
 
-class SourcesViewModel(
+open class SourcesViewModel(
     private val sourcesPresenter: SourcesPresenter
 ) {
-    suspend fun load(
+    open suspend fun load(
         request: SourceSearchRequest,
         enabledProviderIds: Set<String> = emptySet(),
         onProgress: ((SourceFetchProgress) -> Unit)? = null
