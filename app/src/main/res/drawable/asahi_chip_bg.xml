@@ -2,11 +2,11 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_selected="true">
         <shape>
-            <solid android:color="@color/asahi_panel_soft" />
+            <solid android:color="@color/asahi_accent" />
             <corners android:radius="999dp" />
             <stroke
                 android:width="1dp"
-                android:color="@color/asahi_accent" />
+                android:color="@color/asahi_focus" />
         </shape>
     </item>
     <item android:state_focused="true">

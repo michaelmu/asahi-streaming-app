@@ -161,12 +161,14 @@ class ScreenViewFactory(
             stateListAnimator = null
             isFocusable = true
             isFocusableInTouchMode = true
-            alpha = 0.96f
+            alpha = 0.98f
+            clipToOutline = true
             setOnClickListener { onClick() }
             setOnFocusChangeListener { view, hasFocus ->
-                view.scaleX = if (hasFocus) 1.03f else 1f
-                view.scaleY = if (hasFocus) 1.03f else 1f
-                view.alpha = if (hasFocus) 1f else 0.96f
+                view.scaleX = if (hasFocus) 1.015f else 1f
+                view.scaleY = if (hasFocus) 1.015f else 1f
+                view.alpha = if (hasFocus) 1f else 0.98f
+                setTextColor(if (hasFocus) textPrimaryColor else textPrimaryColor)
             }
             setOnKeyListener { _, keyCode, event ->
                 if (event.action == KeyEvent.ACTION_DOWN && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)) {
@@ -195,7 +197,20 @@ class ScreenViewFactory(
             stateListAnimator = null
             isFocusable = true
             isFocusableInTouchMode = true
+            alpha = if (selected) 1f else 0.96f
             setOnClickListener { onClick() }
+            setOnFocusChangeListener { view, hasFocus ->
+                view.scaleX = if (hasFocus) 1.02f else 1f
+                view.scaleY = if (hasFocus) 1.02f else 1f
+                view.alpha = if (hasFocus || isSelected) 1f else 0.96f
+                setTextColor(
+                    when {
+                        hasFocus -> textPrimaryColor
+                        isSelected -> textPrimaryColor
+                        else -> textSecondaryColor
+                    }
+                )
+            }
             setOnKeyListener { _, keyCode, event ->
                 if (event.action == KeyEvent.ACTION_DOWN && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)) {
                     performClick()

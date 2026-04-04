@@ -64,7 +64,7 @@ A task is only `DONE` when:
 
 **Current phase:** Phase A — focus-state polish and modal behavior cleanup
 
-**Immediate target:** audit and improve focus styling plus modal focus trapping/default selection behavior.
+**Immediate target:** A1 — reduce clipping risk and improve shared button/card focus affordances before moving to deeper modal work.
 
 **Why this now:**
 The current UI is functional, but TV polish issues are visible:
@@ -126,7 +126,7 @@ But the actual runtime behavior still needs tightening so:
 # Phase A — Focus-state visual polish
 
 ## A1. Reduce clipping risk and improve button/card focus affordances
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
@@ -137,11 +137,11 @@ TV UIs live or die on focus clarity.
 If focus only slightly scales and clips against rounded surfaces, it feels cheap immediately.
 
 ### Proposed sub-steps
-- [TODO] inspect `ScreenViewFactory.button()` and panel/card focus behavior for clipping causes
-- [TODO] reduce corner roundness where needed to avoid visible clipping during focus scale
-- [TODO] reduce or rebalance focus scale if the current scale is too aggressive for the shape treatment
-- [TODO] add stronger focused-state color change for primary selectable elements
-- [TODO] keep focused state readable across dark backgrounds and elevated panels
+- [DONE] inspect `ScreenViewFactory.button()` and panel/card focus behavior for clipping causes
+- [DONE] reduce corner roundness where needed to avoid visible clipping during focus scale
+- [DONE] reduce or rebalance focus scale if the current scale is too aggressive for the shape treatment
+- [DONE] add stronger focused-state color change for primary selectable elements
+- [DONE] keep focused state readable across dark backgrounds and elevated panels
 
 ### Validation
 - emulator manual check on navigation rail, search buttons, settings buttons, and modal buttons
@@ -333,6 +333,13 @@ Centralize common button/card focus behavior first, but keep renderer-specific d
 - Added emulator and screenshot validation requirements to this plan.
 - No implementation work completed under this plan yet.
 
+### 2026-04-04 16:52 UTC
+- Completed the first A1 implementation slice by reducing clipping-prone corner radii in shared button/panel drawables and rebalancing shared focus styling in `ScreenViewFactory`.
+- Reduced focus dependence on aggressive scale and shifted more visual weight onto background/state treatment.
+- Updated chip selected/focused styling so focused state is more visible even before deeper renderer-specific color work.
+- Validation: `./gradlew testDebugUnitTest` and `./gradlew assembleDebug` passed.
+- Emulator/screenshot validation is still pending for the broader UI pass and remains required before closing this plan.
+
 ---
 
 ## Scope Changes
@@ -340,13 +347,14 @@ Centralize common button/card focus behavior first, but keep renderer-specific d
 ### 2026-04-04
 - New plan created specifically for UI polish instead of overloading the device-hardening/shell-cleanup plan.
 - Emulator + screenshot validation was made part of the required validation, not an optional extra.
+- During A1 implementation, started with shared drawable/factory-level focus treatment changes first because they offer the highest leverage and lowest regression risk before deeper renderer/modal work.
 
 ---
 
 ## Session Start
 
-### 2026-04-04 16:46 UTC
-Intended task: create a dedicated UI polish execution plan grounded in the actual TV UI/focus/modal implementation seams.
+### 2026-04-04 16:50 UTC
+Intended task: begin A1 by tightening shared focus styling in `ScreenViewFactory` and reducing clipping-prone focus treatment.
 
 ---
 
