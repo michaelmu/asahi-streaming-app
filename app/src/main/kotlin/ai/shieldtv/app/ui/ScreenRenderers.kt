@@ -7,13 +7,16 @@ import android.text.InputType
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
+import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.core.view.setPadding
 import androidx.media3.ui.PlayerView
+import ai.shieldtv.app.R
 import ai.shieldtv.app.AppState
 import ai.shieldtv.app.ContinueWatchingItem
 import ai.shieldtv.app.SearchMode
@@ -29,6 +32,19 @@ import ai.shieldtv.app.core.model.source.CacheStatus
 import ai.shieldtv.app.core.model.source.Quality
 import ai.shieldtv.app.core.model.source.SourceResult
 import coil.load
+
+private fun updateDescendantTextColors(root: View, primary: Int, secondary: Int) {
+    if (root is ViewGroup) {
+        for (index in 0 until root.childCount) {
+            updateDescendantTextColors(root.getChildAt(index), primary, secondary)
+        }
+        return
+    }
+    if (root is TextView) {
+        val isEmphasis = root.textSize >= 17f || root.typeface?.isBold == true
+        root.setTextColor(if (isEmphasis) primary else secondary)
+    }
+}
 
 class NavigationRailRenderer(
     private val host: LinearLayout,
@@ -511,9 +527,18 @@ class ResultsScreenRenderer(
             alpha = 0.97f
             setOnClickListener { onClick() }
             setOnFocusChangeListener { view, hasFocus ->
-                view.scaleX = if (hasFocus) 1.04f else 1f
-                view.scaleY = if (hasFocus) 1.04f else 1f
+                view.scaleX = if (hasFocus) 1.02f else 1f
+                view.scaleY = if (hasFocus) 1.02f else 1f
                 view.alpha = if (hasFocus) 1f else 0.97f
+                background = ContextCompat.getDrawable(
+                    context,
+                    if (hasFocus) R.drawable.asahi_button_bg else if (elevated) R.drawable.asahi_panel_elevated_bg else R.drawable.asahi_panel_bg
+                )
+                updateDescendantTextColors(
+                    root = view,
+                    primary = if (hasFocus) viewFactory.textPrimaryColor else viewFactory.textPrimaryColor,
+                    secondary = if (hasFocus) viewFactory.textPrimaryColor else viewFactory.textSecondaryColor
+                )
             }
             setOnKeyListener { _, keyCode, event ->
                 if (event.action == KeyEvent.ACTION_DOWN && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)) {
@@ -702,14 +727,28 @@ class EpisodePickerScreenRenderer(
                 isFocusable = true
                 isFocusableInTouchMode = true
                 isClickable = true
+                alpha = if (isSelected) 1f else 0.97f
                 setOnClickListener {
                     onEpisodeSelected(episode.episodeNumber)
                     onEpisodePlay(episode.episodeNumber)
                 }
                 setOnFocusChangeListener { view, hasFocus ->
-                    view.scaleX = if (hasFocus) 1.03f else 1f
-                    view.scaleY = if (hasFocus) 1.03f else 1f
-                    view.alpha = if (hasFocus) 1f else 0.97f
+                    view.scaleX = if (hasFocus) 1.02f else 1f
+                    view.scaleY = if (hasFocus) 1.02f else 1f
+                    view.alpha = if (hasFocus || isSelected) 1f else 0.97f
+                    background = ContextCompat.getDrawable(
+                        context,
+                        when {
+                            hasFocus -> R.drawable.asahi_button_bg
+                            isSelected -> R.drawable.asahi_panel_elevated_bg
+                            else -> R.drawable.asahi_panel_bg
+                        }
+                    )
+                    updateDescendantTextColors(
+                        root = view,
+                        primary = viewFactory.textPrimaryColor,
+                        secondary = if (hasFocus || isSelected) viewFactory.textPrimaryColor else viewFactory.textSecondaryColor
+                    )
                 }
             }
             card.addView(TextView(activity).apply {
@@ -852,9 +891,18 @@ class SourcesScreenRenderer(
             alpha = 0.97f
             setOnClickListener { onClick() }
             setOnFocusChangeListener { view, hasFocus ->
-                view.scaleX = if (hasFocus) 1.05f else 1f
-                view.scaleY = if (hasFocus) 1.05f else 1f
+                view.scaleX = if (hasFocus) 1.02f else 1f
+                view.scaleY = if (hasFocus) 1.02f else 1f
                 view.alpha = if (hasFocus) 1f else 0.97f
+                background = ContextCompat.getDrawable(
+                    context,
+                    if (hasFocus) R.drawable.asahi_button_bg else if (elevated) R.drawable.asahi_panel_elevated_bg else R.drawable.asahi_panel_bg
+                )
+                updateDescendantTextColors(
+                    root = view,
+                    primary = viewFactory.textPrimaryColor,
+                    secondary = if (hasFocus) viewFactory.textPrimaryColor else viewFactory.textSecondaryColor
+                )
             }
             setOnKeyListener { _, keyCode, event ->
                 if (event.action == KeyEvent.ACTION_DOWN && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)) {

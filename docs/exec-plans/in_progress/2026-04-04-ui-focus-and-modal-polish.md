@@ -64,7 +64,7 @@ A task is only `DONE` when:
 
 **Current phase:** Phase A — focus-state polish and modal behavior cleanup
 
-**Immediate target:** A1 — reduce clipping risk and improve shared button/card focus affordances before moving to deeper modal work.
+**Immediate target:** A2 — make selected/focused list and card items visually distinct beyond scale by strengthening color/state treatment in renderer-specific views.
 
 **Why this now:**
 The current UI is functional, but TV polish issues are visible:
@@ -151,7 +151,7 @@ If focus only slightly scales and clips against rounded surfaces, it feels cheap
 ---
 
 ## A2. Make selected items visually distinct beyond scale
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
@@ -162,10 +162,10 @@ In lists like movies/results/sources/episodes, scale alone is weak TV feedback.
 Users should be able to tell selection state instantly from across the room.
 
 ### Proposed sub-steps
-- [TODO] review focus handlers in `ScreenRenderers.kt`
-- [TODO] add focused-state color changes for result/source/episode cards where appropriate
-- [TODO] ensure selected chips/season controls/readouts also communicate selection more strongly
-- [TODO] keep cache-status and quality colors readable after focus styling updates
+- [DONE] review focus handlers in `ScreenRenderers.kt`
+- [DONE] add focused-state color changes for result/source/episode cards where appropriate
+- [DONE] ensure selected chips/season controls/readouts also communicate selection more strongly
+- [DONE] keep cache-status and quality colors readable after focus styling updates
 
 ### Validation
 - emulator manual check on:
@@ -340,6 +340,13 @@ Centralize common button/card focus behavior first, but keep renderer-specific d
 - Validation: `./gradlew testDebugUnitTest` and `./gradlew assembleDebug` passed.
 - Emulator/screenshot validation is still pending for the broader UI pass and remains required before closing this plan.
 
+### 2026-04-04 16:56 UTC
+- Completed A2 by strengthening renderer-specific focus treatment for media cards, episode rows, and source cards in `ScreenRenderers.kt`.
+- Reduced reliance on scale-only selection cues and added stronger background/text-state differentiation while preserving cache/quality readability.
+- Introduced a small shared text-color propagation helper at file scope to keep focus-state updates consistent inside composite cards.
+- Validation: `./gradlew testDebugUnitTest` and `./gradlew assembleDebug` passed.
+- Emulator/screenshot validation remains pending and is still required before the overall UI plan is considered complete.
+
 ---
 
 ## Scope Changes
@@ -348,13 +355,14 @@ Centralize common button/card focus behavior first, but keep renderer-specific d
 - New plan created specifically for UI polish instead of overloading the device-hardening/shell-cleanup plan.
 - Emulator + screenshot validation was made part of the required validation, not an optional extra.
 - During A1 implementation, started with shared drawable/factory-level focus treatment changes first because they offer the highest leverage and lowest regression risk before deeper renderer/modal work.
+- During A2 implementation, focused on the highest-traffic renderer-specific cards first (media, episode, source) rather than trying to restyle every focusable widget in one pass.
 
 ---
 
 ## Session Start
 
-### 2026-04-04 16:50 UTC
-Intended task: begin A1 by tightening shared focus styling in `ScreenViewFactory` and reducing clipping-prone focus treatment.
+### 2026-04-04 16:54 UTC
+Intended task: begin A2 by strengthening focused-state color treatment in renderer-specific list and card views.
 
 ---
 
