@@ -1,9 +1,9 @@
 # Android Toolchain Upgrade
 
 Last updated: 2026-04-05 UTC
-Status: TODO
+Status: DONE
 Owner: OpenClaw / shield-tv-bot
-Location: `docs/exec-plans/in_progress/2026-04-05-android-toolchain-upgrade.md`
+Location: `docs/exec-plans/complete/2026-04-05-android-toolchain-upgrade.md`
 Supersedes: none
 Superseded by: none
 
@@ -61,11 +61,11 @@ A task is only `DONE` when:
 
 ## Current Focus
 
-**Current phase:** Phase C — validation and wrap-up
+**Current phase:** Complete — landed and documented
 
-**Immediate target:** record the successful AGP/Kotlin/SDK/Media3 landing, note the one scope interaction uncovered during compilation, and prepare the pass to move out of `in_progress/`
+**Immediate target:** none; this pass is complete for its intended scope and ready to live in `complete/`
 
-**Why this now:** the conservative upgrade path has now been applied and validated locally; the remaining work is accurate documentation, commit hygiene, and any follow-up notes for device-launch validation
+**Why this now:** the conservative upgrade path landed successfully, local validation is green, and the remaining honest follow-up is simply to preserve the scope caveat and note that runtime launch verification is still worth doing separately
 
 > Update this section whenever the active phase or immediate target changes.
 
@@ -414,6 +414,12 @@ No for the first pass. That path likely implies a larger AGP/tooling jump and br
 - Observed only existing/deprecation-level warnings during app compile (`setDecorFitsSystemWindows`, `View.generateViewId`) and one existing manifest warning about `FileProvider` replacement tagging.
 - Device/emulator launch validation is still not recorded in this plan; local build/test validation is green.
 
+### 2026-04-05 05:34 UTC
+- Final plan cleanup pass.
+- Marked this plan `DONE` and prepared it to move from `in_progress/` to `complete/`.
+- Recorded the most important honesty note: the final landing commit was not perfectly scoped because compile success depended on restoring already-local continue-watching and source-focus changes.
+- Chose to treat on-device launch verification as a follow-up validation item rather than keeping this infrastructure pass artificially open after the build/test goals were met.
+
 ---
 
 ## Scope Changes
@@ -421,6 +427,7 @@ No for the first pass. That path likely implies a larger AGP/tooling jump and br
 ### 2026-04-05
 - Initial scope established.
 - Future hooks to preserve: keep Media3 upgrade as an explicit downstream objective of the stack move, but keep playback bug debugging logically separate so regressions remain attributable.
+- Actual landed scope was slightly broader than intended: the final commit also included existing continue-watching/source-focus changes that the current branch had come to depend on during compile. That boundary issue is documented here rather than pretending the landing was toolchain-only.
 
 ---
 
@@ -438,6 +445,9 @@ Intended task: isolate unrelated local changes and begin the conservative AGP/Ko
 ### 2026-04-05 04:28 UTC
 Intended task: record validation results, clean up the plan, and prepare a commit for the completed local upgrade pass
 
+### 2026-04-05 05:34 UTC
+Intended task: finalize documentation, move the completed plan out of `in_progress/`, and preserve the scope caveat honestly
+
 ---
 
 ## Definition of Done
@@ -450,3 +460,8 @@ This plan is complete for its intended pass when:
 - relevant builds/tests have been run and recorded
 - app launch has been smoke tested and recorded, or explicit follow-up is captured if local environment access is not available in-session
 - the plan is ready to move out of `in_progress/` without implying unfinished required work
+
+### Completion outcome
+- Completed with local build/test validation recorded.
+- Not completed with in-session device/emulator launch validation.
+- That remaining runtime check is explicitly preserved as follow-up validation, not as a reason to leave the plan falsely active.
