@@ -1,9 +1,9 @@
 # Asahi TV UX Borrowed Patterns Pass
 
 Last updated: 2026-04-05 UTC
-Status: IN_PROGRESS
+Status: COMPLETE
 Owner: OpenClaw main session
-Location: `docs/exec-plans/in_progress/2026-04-05-tv-ux-borrowed-patterns-pass.md`
+Location: `docs/exec-plans/complete/2026-04-05-tv-ux-borrowed-patterns-pass.md`
 Supersedes: none
 Superseded by: 
 
@@ -787,4 +787,4 @@ This plan is complete for its intended pass when:
 
 Current assessment:
 - This definition is now met for the intended scope of this pass.
-- The remaining decision is procedural, not architectural: archive this plan as complete now, or leave it in `in_progress/` briefly if Mike wants one more explicit review pass before moving it.
+- The plan has now been moved to `complete/`.
