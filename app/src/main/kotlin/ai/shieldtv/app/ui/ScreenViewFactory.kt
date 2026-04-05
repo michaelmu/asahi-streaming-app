@@ -149,6 +149,32 @@ class ScreenViewFactory(
         }
     }
 
+    fun emptyStatePanel(
+        title: String,
+        body: String,
+        nextStep: String? = null,
+        actionLabel: String? = null,
+        actionIconResId: Int? = null,
+        onAction: (() -> Unit)? = null
+    ): LinearLayout {
+        return panel(vertical = true, elevated = true).apply {
+            setPadding(dp(22), dp(22), dp(22), dp(22))
+            addView(sectionTitle("Nothing here yet"))
+            addView(spacer(8))
+            addView(title(title))
+            addView(spacer(10))
+            addView(body(body))
+            nextStep?.takeIf { it.isNotBlank() }?.let {
+                addView(spacer(12))
+                addView(caption(it))
+            }
+            if (!actionLabel.isNullOrBlank() && onAction != null) {
+                addView(spacer(16))
+                addView(button(actionLabel, onAction, iconResId = actionIconResId))
+            }
+        }
+    }
+
     fun button(
         text: String,
         onClick: () -> Unit,

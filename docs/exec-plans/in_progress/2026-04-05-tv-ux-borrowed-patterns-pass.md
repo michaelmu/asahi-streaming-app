@@ -359,7 +359,8 @@ Keep this deliberately small and tied to already-existing component seams:
 
 ### First implemented slice
 - A first-wave poster-card visual treatment has now landed for the results grid: a dedicated poster-card background state plus slightly stronger focus scaling/elevation to improve depth and focus readability at TV distance.
-- This intentionally stays within the current renderer/drawable system instead of introducing decorative assets or new layout architecture.
+- A second small slice has also landed: a reusable empty-state panel surface/composition now backs the main results empty state and the home favorites/history shelf fallbacks.
+- These changes intentionally stay within the current renderer/drawable system instead of introducing decorative assets or new layout architecture.
 
 ### Validation
 - The plan records a concrete borrow/recreate/avoid list before implementation starts.
@@ -696,7 +697,14 @@ Yes. This pass is already half historical and half forward-looking, so meaningfu
 - Added a dedicated poster-card drawable state so focused results cards read more clearly as elevated/focused browse targets.
 - Strengthened poster-card focus behavior slightly via scale/translation depth while keeping the current renderer structure intact.
 - Kept the slice intentionally small: no asset dump, no badge redesign, no playback HUD work yet.
+- Commit: `64e169e` (`Polish poster grid focus treatment`)
 - Validation: `./gradlew testDebugUnitTest assembleDebug` passed after the renderer/drawable change.
+
+### 2026-04-05 19:4x UTC
+- Implemented the next visual-kit slice by introducing a reusable empty-state panel composition in `ScreenViewFactory` and applying it to the results empty state plus the home favorites/history shelf fallbacks.
+- This tightened the visual language of “nothing here yet” surfaces without changing navigation behavior or adding more one-off panels.
+- Kept the slice scoped to shared empty-state presentation rather than turning it into a broader copy/layout rewrite.
+- Validation: `./gradlew testDebugUnitTest assembleDebug` passed after the empty-state refactor.
 
 ---
 
@@ -722,6 +730,9 @@ Intended task: execute C0.1 by turning the visual inspiration into a concrete As
 
 ### 2026-04-05 19:45 UTC
 Intended task: implement the smallest worthwhile first-wave visual-kit slice by improving poster-card focus/depth treatment on the shipped results grid.
+
+### 2026-04-05 19:47 UTC
+Intended task: implement the next small visual-kit slice by unifying empty-state panel treatment across results and home shelf fallbacks.
 
 ---
 

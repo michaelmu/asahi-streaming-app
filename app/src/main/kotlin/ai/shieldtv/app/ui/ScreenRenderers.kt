@@ -187,11 +187,13 @@ class HomeScreenRenderer(
         if (favoritesShelfItems.isNotEmpty()) {
             host.addView(buildQuickPickRow(favoritesShelfItems, onFavoriteSelected, onFirstFocusTarget))
         } else {
-            host.addView(viewFactory.panel(elevated = false).apply {
-                addView(viewFactory.body("No favorites yet. Save a movie or show from search results and it’ll appear here."))
-                addView(viewFactory.spacer(10))
-                addView(viewFactory.caption("Use the menu on a search result to add it quickly."))
-            })
+            host.addView(
+                viewFactory.emptyStatePanel(
+                    title = "No favorites yet",
+                    body = "Save a movie or show from search results and it’ll appear here.",
+                    nextStep = "Use the menu on a search result to add it quickly."
+                )
+            )
         }
         host.addView(viewFactory.spacer(10))
         host.addView(buildHomeActionRow(
@@ -210,11 +212,13 @@ class HomeScreenRenderer(
         if (historyShelfItems.isNotEmpty()) {
             host.addView(buildQuickPickRow(historyShelfItems, onHistorySelected, onFirstFocusTarget))
         } else {
-            host.addView(viewFactory.panel(elevated = true).apply {
-                addView(viewFactory.body("No watch history yet. Start a movie or episode and it’ll show up here for quick return."))
-                addView(viewFactory.spacer(10))
-                addView(viewFactory.caption("Playback automatically turns this into a resume shelf."))
-            })
+            host.addView(
+                viewFactory.emptyStatePanel(
+                    title = "No watch history yet",
+                    body = "Start a movie or episode and it’ll show up here for quick return.",
+                    nextStep = "Playback automatically turns this into a resume shelf."
+                )
+            )
         }
         host.addView(viewFactory.spacer(10))
         host.addView(buildHomeActionRow(
@@ -565,33 +569,28 @@ class ResultsScreenRenderer(
         host.addView(viewFactory.spacer(16))
 
         if (state.searchResults.isEmpty()) {
-            host.addView(viewFactory.panel(elevated = true).apply {
-                addView(viewFactory.title(
-                    when {
+            host.addView(
+                viewFactory.emptyStatePanel(
+                    title = when {
                         isFavoritesBrowse -> "No favorites yet"
                         isHistoryBrowse -> "No watch history yet"
                         else -> "Nothing useful yet"
-                    }
-                ))
-                addView(viewFactory.spacer(10))
-                addView(viewFactory.body(
-                    when {
+                    },
+                    body = when {
                         isFavoritesBrowse -> "Favorite something from search results and it’ll show up here. Use Search to find a title, then open the menu to save it."
                         isHistoryBrowse -> "Start playback on something and it’ll show up here. Once you play a title, this view becomes your quick return path."
                         else -> emptyMessage.ifBlank { "Try a broader title, a simpler query, or switch between Movies and TV Shows." }
-                    }
-                ))
-                addView(viewFactory.spacer(12))
-                addView(viewFactory.caption(
-                    when {
+                    },
+                    nextStep = when {
                         isFavoritesBrowse -> "Next step: go to Search, open a result, then add it to favorites."
                         isHistoryBrowse -> "Next step: search for something, start playback, then come back here."
                         else -> "Next step: try another search with fewer words or a cleaner title."
-                    }
-                ))
-                addView(viewFactory.spacer(16))
-                addView(viewFactory.button(if (isFavoritesBrowse || isHistoryBrowse) "Go to Search" else "Try another search", onNewSearch, iconResId = R.drawable.ic_nav_search))
-            })
+                    },
+                    actionLabel = if (isFavoritesBrowse || isHistoryBrowse) "Go to Search" else "Try another search",
+                    actionIconResId = R.drawable.ic_nav_search,
+                    onAction = onNewSearch
+                )
+            )
             return
         }
 
