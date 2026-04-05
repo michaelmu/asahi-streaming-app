@@ -989,6 +989,9 @@ class SourcesScreenRenderer(
         }
 
         val grouped = state.selectedSources.groupBy { SourcePresentation.groupTitle(it) }
+        val selectedSourceId = state.selectedSource?.id
+        val selectedSourceUrl = state.selectedSource?.url
+        var restoredFocused = false
 
         grouped.forEach { (groupTitle, items) ->
             host.addView(viewFactory.sectionTitle(groupTitle))
@@ -1029,7 +1032,13 @@ class SourcesScreenRenderer(
                 }
                 host.addView(card)
                 host.addView(viewFactory.spacer(8))
-                if (groupTitle == "Cached Picks" && index == 0) card.post { onFirstFocusTarget(card) }
+                if (!restoredFocused && ((selectedSourceId != null && source.id == selectedSourceId) || (selectedSourceUrl != null && source.url == selectedSourceUrl))) {
+                    restoredFocused = true
+                    card.post { onFirstFocusTarget(card) }
+                } else if (!restoredFocused && selectedSourceId == null && selectedSourceUrl == null && groupTitle == "Cached Picks" && index == 0) {
+                    restoredFocused = true
+                    card.post { onFirstFocusTarget(card) }
+                }
             }
             host.addView(viewFactory.spacer(8))
         }

@@ -2,6 +2,9 @@ package ai.shieldtv.app.continuewatching
 
 import android.content.Context
 import ai.shieldtv.app.ContinueWatchingItem
+import ai.shieldtv.app.core.model.media.MediaIds
+import ai.shieldtv.app.core.model.media.MediaRef
+import ai.shieldtv.app.core.model.media.MediaType
 import java.io.File
 
 data class PersistedContinueWatchingItem(
@@ -10,6 +13,11 @@ data class PersistedContinueWatchingItem(
     val artworkUrl: String? = null,
     val queryHint: String,
     val progressPercent: Int = 0,
+    val mediaType: MediaType? = null,
+    val tmdbId: String? = null,
+    val imdbId: String? = null,
+    val tvdbId: String? = null,
+    val year: Int? = null,
     val updatedAtEpochMs: Long = System.currentTimeMillis()
 ) {
     fun stableKey(): String = listOf(mediaTitle, subtitle, queryHint).joinToString("|")
@@ -19,7 +27,19 @@ data class PersistedContinueWatchingItem(
         subtitle = subtitle,
         artworkUrl = artworkUrl,
         queryHint = queryHint,
-        progressPercent = progressPercent
+        progressPercent = progressPercent,
+        mediaRef = mediaType?.let {
+            MediaRef(
+                mediaType = it,
+                ids = MediaIds(
+                    tmdbId = tmdbId,
+                    imdbId = imdbId,
+                    tvdbId = tvdbId
+                ),
+                title = mediaTitle,
+                year = year
+            )
+        }
     )
 }
 
@@ -54,6 +74,11 @@ open class ContinueWatchingStoreBase(
                 item.artworkUrl.orEmpty(),
                 item.queryHint,
                 item.progressPercent.toString(),
+                item.mediaType?.name.orEmpty(),
+                item.tmdbId.orEmpty(),
+                item.imdbId.orEmpty(),
+                item.tvdbId.orEmpty(),
+                item.year?.toString().orEmpty(),
                 item.updatedAtEpochMs.toString()
             ).joinToString("\t") { field -> field.replace("\n", " ").replace("\t", " ") }
         }
@@ -64,13 +89,19 @@ open class ContinueWatchingStoreBase(
             .mapNotNull { line ->
                 val parts = line.split('\t')
                 if (parts.size < 6) return@mapNotNull null
+                val isExtendedFormat = parts.size >= 11
                 PersistedContinueWatchingItem(
                     mediaTitle = parts[0],
                     subtitle = parts[1],
                     artworkUrl = parts[2].ifBlank { null },
                     queryHint = parts[3],
                     progressPercent = parts[4].toIntOrNull() ?: 0,
-                    updatedAtEpochMs = parts[5].toLongOrNull() ?: 0L
+                    mediaType = if (isExtendedFormat) parts[5].takeIf { it.isNotBlank() }?.let { MediaType.valueOf(it) } else null,
+                    tmdbId = if (isExtendedFormat) parts[6].ifBlank { null } else null,
+                    imdbId = if (isExtendedFormat) parts[7].ifBlank { null } else null,
+                    tvdbId = if (isExtendedFormat) parts[8].ifBlank { null } else null,
+                    year = if (isExtendedFormat) parts[9].toIntOrNull() else null,
+                    updatedAtEpochMs = parts[if (isExtendedFormat) 10 else 5].toLongOrNull() ?: 0L
                 )
             }
             .toList()

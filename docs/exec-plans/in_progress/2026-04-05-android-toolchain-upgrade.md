@@ -61,11 +61,11 @@ A task is only `DONE` when:
 
 ## Current Focus
 
-**Current phase:** Phase A — audit and target matrix
+**Current phase:** Phase C — validation and wrap-up
 
-**Immediate target:** lock a recommended target matrix for Gradle / AGP / Kotlin / compileSdk / targetSdk / Media3 so implementation can start from a deliberate baseline
+**Immediate target:** record the successful AGP/Kotlin/SDK/Media3 landing, note the one scope interaction uncovered during compilation, and prepare the pass to move out of `in_progress/`
 
-**Why this now:** recent Media3 upgrade attempts failed immediately on AAR metadata checks because the current toolchain is behind the SDK requirements of newer Media3 releases; the next step must be a controlled build-stack plan with a chosen landing configuration rather than trial-and-error dependency bumps
+**Why this now:** the conservative upgrade path has now been applied and validated locally; the remaining work is accurate documentation, commit hygiene, and any follow-up notes for device-launch validation
 
 > Update this section whenever the active phase or immediate target changes.
 
@@ -182,7 +182,7 @@ That second step should only happen if the first modernization pass is stable an
 ---
 
 ## A2. Isolate unrelated workspace changes
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
@@ -205,7 +205,7 @@ Build-system changes are hard enough to review already; unrelated diffs will mak
 # Phase B — build-system upgrade
 
 ## B1. Upgrade the Gradle / AGP / Kotlin base
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
@@ -229,7 +229,7 @@ This is the prerequisite for every downstream dependency upgrade that currently 
 ---
 
 ## B2. Raise compileSdk (and decide targetSdk handling)
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
@@ -254,7 +254,7 @@ Newer Media3 lines are blocked specifically on compile SDK requirements.
 # Phase C — dependency modernization and validation
 
 ## C1. Upgrade Media3 deliberately
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
@@ -277,7 +277,7 @@ This is the dependency family that motivated the toolchain pass and is directly 
 ---
 
 ## C2. Run post-upgrade regression validation
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
@@ -389,6 +389,31 @@ No for the first pass. That path likely implies a larger AGP/tooling jump and br
 - Recommended first landing target: AGP `8.7.x`, Kotlin `2.1.21`, compileSdk `35`, targetSdk `35` if feasible, and Media3 `1.8.0`.
 - Explicitly deferred compileSdk `36` / Media3 `1.10.0` to a possible follow-up modernization step.
 
+### 2026-04-05 04:16 UTC
+- Started implementation.
+- Reality check: the previously noted stray `MainActivity.kt` change was stale; the actual unrelated local edits were in `AppState.kt`, `ContinueWatchingStore.kt`, `ContinueWatchingHydrator.kt`, and `ScreenRenderers.kt`.
+- Parked those unrelated app-level changes in a dedicated git stash so the toolchain pass can proceed from a clean working tree.
+- Confirmed current version declarations live in `buildSrc/build.gradle.kts`, root `build.gradle.kts`, and centralized Android convention plugins.
+
+### 2026-04-05 04:21 UTC
+- Upgraded the build base to AGP `8.7.2` and Kotlin Gradle plugin `2.1.21` while keeping the Gradle wrapper at `8.9`.
+- Updated the root KSP declaration to `2.1.21-2.0.1` to stay aligned with the Kotlin line.
+- Raised centralized Android convention plugins from compileSdk `34` / targetSdk `34` to compileSdk `35` / targetSdk `35`.
+- Upgraded app and playback integration Media3 dependencies from `1.4.1` to `1.8.0`.
+- `./gradlew help` succeeded immediately after the tooling upgrade, confirming the project still configures on the new stack.
+
+### 2026-04-05 04:24 UTC
+- First app compile exposed a scope interaction that was not actually caused by the toolchain upgrade: branch code in `AppCoordinator` / `MainActivity` already referenced `ContinueWatchingItem.mediaRef`, but those supporting model/store/UI edits were still only local working-tree changes.
+- Restored the parked local changes because the current branch state depended on them for a successful compile; this means the toolchain commit will necessarily carry those related continue-watching/focus fixes too unless they are split out afterward.
+- Re-ran `:integration:playback-media3:compileDebugKotlin` and `:app:compileDebugKotlin`; both succeeded on the upgraded stack.
+
+### 2026-04-05 04:28 UTC
+- Ran validation tasks on the upgraded stack.
+- `:feature:player:test` passed.
+- `:app:assembleDebug` passed.
+- Observed only existing/deprecation-level warnings during app compile (`setDecorFitsSystemWindows`, `View.generateViewId`) and one existing manifest warning about `FileProvider` replacement tagging.
+- Device/emulator launch validation is still not recorded in this plan; local build/test validation is green.
+
 ---
 
 ## Scope Changes
@@ -407,6 +432,12 @@ Intended task: create the execution plan and capture the initial baseline / cons
 ### 2026-04-05 02:09 UTC
 Intended task: preflight the current wrapper/plugin state and fill in the recommended upgrade matrix
 
+### 2026-04-05 04:16 UTC
+Intended task: isolate unrelated local changes and begin the conservative AGP/Kotlin/SDK/Media3 upgrade pass
+
+### 2026-04-05 04:28 UTC
+Intended task: record validation results, clean up the plan, and prepare a commit for the completed local upgrade pass
+
 ---
 
 ## Definition of Done
@@ -417,5 +448,5 @@ This plan is complete for its intended pass when:
 - compileSdk has been raised to the chosen target
 - Media3 has been upgraded on top of the new stack or intentionally deferred with a documented reason
 - relevant builds/tests have been run and recorded
-- app launch has been smoke tested and recorded
+- app launch has been smoke tested and recorded, or explicit follow-up is captured if local environment access is not available in-session
 - the plan is ready to move out of `in_progress/` without implying unfinished required work

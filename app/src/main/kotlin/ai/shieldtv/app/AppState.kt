@@ -12,7 +12,8 @@ data class ContinueWatchingItem(
     val subtitle: String,
     val artworkUrl: String? = null,
     val queryHint: String,
-    val progressPercent: Int = 0
+    val progressPercent: Int = 0,
+    val mediaRef: MediaRef? = null
 )
 
 enum class SearchMode(val mediaType: MediaType, val label: String) {
@@ -52,7 +53,12 @@ fun AppState.toBundleMap(): Map<String, String> = buildMap {
                 it.subtitle,
                 it.artworkUrl.orEmpty(),
                 it.queryHint,
-                it.progressPercent.toString()
+                it.progressPercent.toString(),
+                it.mediaRef?.mediaType?.name.orEmpty(),
+                it.mediaRef?.ids?.tmdbId.orEmpty(),
+                it.mediaRef?.ids?.imdbId.orEmpty(),
+                it.mediaRef?.ids?.tvdbId.orEmpty(),
+                it.mediaRef?.year?.toString().orEmpty()
             ).joinToString("::")
         }
     )
@@ -84,7 +90,19 @@ fun appStateFromBundleMap(values: Map<String, String>): AppState {
                     subtitle = parts[1],
                     artworkUrl = parts[2].ifBlank { null },
                     queryHint = parts[3],
-                    progressPercent = parts[4].toIntOrNull() ?: 0
+                    progressPercent = parts[4].toIntOrNull() ?: 0,
+                    mediaRef = parts.getOrNull(5)?.takeIf { it.isNotBlank() }?.let { mediaTypeName ->
+                        MediaRef(
+                            mediaType = MediaType.valueOf(mediaTypeName),
+                            ids = ai.shieldtv.app.core.model.media.MediaIds(
+                                tmdbId = parts.getOrNull(6).takeIf { !it.isNullOrBlank() },
+                                imdbId = parts.getOrNull(7).takeIf { !it.isNullOrBlank() },
+                                tvdbId = parts.getOrNull(8).takeIf { !it.isNullOrBlank() }
+                            ),
+                            title = parts[0],
+                            year = parts.getOrNull(9)?.toIntOrNull()
+                        )
+                    }
                 )
             }
             ?: emptyList()

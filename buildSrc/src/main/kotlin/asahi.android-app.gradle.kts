@@ -24,11 +24,11 @@ val computedVersionCode = run {
 }
 
 android {
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 35
         versionCode = computedVersionCode
         versionName = "0.1.0"
 

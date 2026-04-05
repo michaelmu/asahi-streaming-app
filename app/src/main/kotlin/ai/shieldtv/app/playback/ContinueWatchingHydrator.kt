@@ -17,7 +17,8 @@ object ContinueWatchingHydrator {
             },
             artworkUrl = record.artworkUrl,
             queryHint = record.queryHint,
-            progressPercent = record.progressPercent
+            progressPercent = record.progressPercent,
+            mediaRef = null
         )
     }
 
