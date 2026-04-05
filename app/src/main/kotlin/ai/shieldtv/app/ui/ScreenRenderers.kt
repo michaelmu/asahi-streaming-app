@@ -186,13 +186,13 @@ class HomeScreenRenderer(
             addView(viewFactory.spacer(10))
             addView(viewFactory.caption("Movies"))
             addView(viewFactory.spacer(8))
-            addView(buildDashboardList(movieFavorites, emptyMessage = "No movie favorites yet.", onItemSelected = onFavoriteSelected))
+            addView(buildDashboardList(movieFavorites, emptyMessage = "No movie favorites yet. Add one from search results and it’ll show up here for quick access.", onItemSelected = onFavoriteSelected))
             addView(viewFactory.spacer(10))
             addView(actionButton("Open Movie Favorites", onMovieFavorites, R.drawable.ic_nav_favorite))
             addView(viewFactory.spacer(12))
             addView(viewFactory.caption("TV Shows"))
             addView(viewFactory.spacer(8))
-            addView(buildDashboardList(showFavorites, emptyMessage = "No TV favorites yet.", onItemSelected = onFavoriteSelected))
+            addView(buildDashboardList(showFavorites, emptyMessage = "No TV favorites yet. Save a show from search results and it’ll land here.", onItemSelected = onFavoriteSelected))
             addView(viewFactory.spacer(10))
             addView(actionButton("Open TV Favorites", onShowFavorites, R.drawable.ic_nav_favorite))
         })
@@ -206,7 +206,7 @@ class HomeScreenRenderer(
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             addView(viewFactory.sectionTitle("Recently Watched Movies"))
             addView(viewFactory.spacer(10))
-            addView(buildDashboardList(movieHistory, emptyMessage = "No movie watch history yet.", onItemSelected = onHistorySelected))
+            addView(buildDashboardList(movieHistory, emptyMessage = "No movie watch history yet. Start a movie and it’ll appear here to reopen fast.", onItemSelected = onHistorySelected))
             addView(viewFactory.spacer(10))
             addView(actionButton("Open Movie Watch History", onMovieHistory, R.drawable.ic_nav_history))
         }
@@ -216,7 +216,7 @@ class HomeScreenRenderer(
             }
             addView(viewFactory.sectionTitle("Recently Watched TV"))
             addView(viewFactory.spacer(10))
-            addView(buildDashboardList(showHistory, emptyMessage = "No TV watch history yet.", onItemSelected = onHistorySelected))
+            addView(buildDashboardList(showHistory, emptyMessage = "No TV watch history yet. Watch an episode and it’ll show up here for easy return.", onItemSelected = onHistorySelected))
             addView(viewFactory.spacer(10))
             addView(actionButton("Open TV Watch History", onShowHistory, R.drawable.ic_nav_history))
         }
@@ -244,7 +244,9 @@ class HomeScreenRenderer(
             addView(viewFactory.sectionTitle("Recent Searches"))
             addView(viewFactory.spacer(12))
             if (state.recentQueries.isEmpty()) {
-                addView(viewFactory.body("Nothing recent yet. Search for a title and it’ll show up here."))
+                addView(viewFactory.body("Nothing recent yet. Search for a movie or show and your last queries will show up here."))
+                addView(viewFactory.spacer(10))
+                addView(viewFactory.caption("Tip: use Movies or TV Shows on the left rail to start a new search fast."))
             } else {
                 state.recentQueries.take(6).forEachIndexed { index, query ->
                     val button = actionButton(query, onClick = { onRecentQuery(query) }, iconResId = R.drawable.ic_nav_search)
@@ -555,9 +557,17 @@ class ResultsScreenRenderer(
                 addView(viewFactory.spacer(10))
                 addView(viewFactory.body(
                     when {
-                        isFavoritesBrowse -> "Favorite something from search results and it’ll show up here."
-                        isHistoryBrowse -> "Start playback on something and it’ll show up here."
-                        else -> emptyMessage
+                        isFavoritesBrowse -> "Favorite something from search results and it’ll show up here. Use Search to find a title, then open the menu to save it."
+                        isHistoryBrowse -> "Start playback on something and it’ll show up here. Once you play a title, this view becomes your quick return path."
+                        else -> emptyMessage.ifBlank { "Try a broader title, a simpler query, or switch between Movies and TV Shows." }
+                    }
+                ))
+                addView(viewFactory.spacer(12))
+                addView(viewFactory.caption(
+                    when {
+                        isFavoritesBrowse -> "Next step: go to Search, open a result, then add it to favorites."
+                        isHistoryBrowse -> "Next step: search for something, start playback, then come back here."
+                        else -> "Next step: try another search with fewer words or a cleaner title."
                     }
                 ))
                 addView(viewFactory.spacer(16))
