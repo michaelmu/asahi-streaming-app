@@ -659,7 +659,10 @@ class ResultsScreenRenderer(
             isFocusableInTouchMode = true
             isClickable = true
             isLongClickable = true
-            alpha = 0.97f
+            alpha = 0.975f
+            background = ContextCompat.getDrawable(context, R.drawable.asahi_poster_card_bg)
+            foreground = ContextCompat.getDrawable(context, android.R.drawable.list_selector_background)
+            elevation = viewFactory.dp(if (elevated) 8 else 4).toFloat()
 
             val posterFrame = FrameLayout(context).apply {
                 layoutParams = LinearLayout.LayoutParams(
@@ -732,13 +735,10 @@ class ResultsScreenRenderer(
                 true
             }
             setOnFocusChangeListener { view, hasFocus ->
-                view.scaleX = if (hasFocus) 1.03f else 1f
-                view.scaleY = if (hasFocus) 1.03f else 1f
-                view.alpha = if (hasFocus) 1f else 0.97f
-                background = ContextCompat.getDrawable(
-                    context,
-                    if (hasFocus) R.drawable.asahi_button_bg else if (elevated) R.drawable.asahi_panel_elevated_bg else R.drawable.asahi_panel_bg
-                )
+                view.scaleX = if (hasFocus) 1.04f else 1f
+                view.scaleY = if (hasFocus) 1.04f else 1f
+                view.alpha = if (hasFocus) 1f else 0.975f
+                view.translationZ = if (hasFocus) viewFactory.dp(18).toFloat() else 0f
                 metadataView.text = buildMetadataLine(result, isFavorite, focused = hasFocus)
                 summaryView.text = if (hasFocus) focusedSummary(result, isFavorite) else collapsedSummary(result, isFavorite)
                 summaryView.maxLines = if (hasFocus) 4 else 2

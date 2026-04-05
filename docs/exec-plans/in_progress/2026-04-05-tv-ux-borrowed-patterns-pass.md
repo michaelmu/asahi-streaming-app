@@ -63,12 +63,12 @@ A task is only `DONE` when:
 
 ## Current Focus
 
-**Current phase:** Phase B/C transition — shipped browse/home UX, deciding remaining polish
+**Current phase:** Phase C — first-wave visual-kit implementation
 
-**Immediate target:** keep the plan honest about what has already landed locally, what is still being validated on-device, and whether any playback/status or visual-kit work still belongs in this pass
+**Immediate target:** land the smallest worthwhile visual-kit slice against the shipped poster grid so the browse surface gains stronger TV-distance focus and depth without spawning a full theme pass
 
 **Why this now:**
-The pass is no longer at the “translate inspiration into work” stage. The main browse/home slices have already landed locally, and the useful planning work now is to track those changes precisely, keep the remaining scope tight, and avoid letting optional polish work drift into an open-ended redesign.
+The browse/home structure is already in place. If this pass is going to keep going, the safest high-leverage move is a tiny visual refinement attached directly to the shipped results grid rather than jumping straight into playback overlay work.
 
 > Update this section whenever the active phase or immediate target changes.
 
@@ -356,6 +356,10 @@ Keep this deliberately small and tied to already-existing component seams:
 - Prefer code-rendered styling or XML drawables for surfaces, focus plates, and chips before introducing bitmap assets.
 - Only introduce drawable/vector assets where the shape cannot be expressed cleanly by the existing panel/button backgrounds.
 - Treat the visual kit as support for the shipped browse/home changes, not as a parallel theme system.
+
+### First implemented slice
+- A first-wave poster-card visual treatment has now landed for the results grid: a dedicated poster-card background state plus slightly stronger focus scaling/elevation to improve depth and focus readability at TV distance.
+- This intentionally stays within the current renderer/drawable system instead of introducing decorative assets or new layout architecture.
 
 ### Validation
 - The plan records a concrete borrow/recreate/avoid list before implementation starts.
@@ -684,7 +688,15 @@ Yes. This pass is already half historical and half forward-looking, so meaningfu
 - Mapped the first-wave visual targets to current repo seams instead of abstract design language: `ResultsScreenRenderer.focusablePosterCard(...)`, home card primitives, empty-state panels, `OverlayPopup`, `PlayerScreenRenderer`, and `ScreenViewFactory.chip(...)`.
 - Narrowed the recommended first-wave kit to focus treatment, card depth, badge vocabulary, empty-state surfaces, and an optional playback status strip.
 - Explicitly deferred decorative asset sprawl, branded reuse, and a full playback HUD redesign.
+- Commit: `514dce2` (`Document TV UX asset inventory`)
 - Validation: cross-checked current renderer/component ownership in the app source before locking the inventory.
+
+### 2026-04-05 19:4x UTC
+- Implemented the first visual-kit slice directly on the poster grid rather than spreading styling changes across the whole app.
+- Added a dedicated poster-card drawable state so focused results cards read more clearly as elevated/focused browse targets.
+- Strengthened poster-card focus behavior slightly via scale/translation depth while keeping the current renderer structure intact.
+- Kept the slice intentionally small: no asset dump, no badge redesign, no playback HUD work yet.
+- Validation: `./gradlew testDebugUnitTest assembleDebug` passed after the renderer/drawable change.
 
 ---
 
@@ -707,6 +719,9 @@ Intended task: update the plan so it cleanly tracks the already-landed local UX 
 
 ### 2026-04-05 19:43 UTC
 Intended task: execute C0.1 by turning the visual inspiration into a concrete Asahi-side asset/component inventory tied to the current renderer structure.
+
+### 2026-04-05 19:45 UTC
+Intended task: implement the smallest worthwhile first-wave visual-kit slice by improving poster-card focus/depth treatment on the shipped results grid.
 
 ---
 
