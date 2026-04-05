@@ -328,7 +328,7 @@ Empty states are a major part of perceived polish, especially on TV surfaces whe
 # Phase C — Playback and Status Polish
 
 ## C0. Define an Asahi visual asset kit inspired by the APK review
-Status: TODO
+Status: IN_PROGRESS
 Priority: Medium
 
 ### Goal
@@ -338,10 +338,24 @@ Turn the extracted visual inspiration into a small, app-native asset kit that su
 The UX changes in Phases B and C will land better if they share a coherent visual language. The APK contains useful categories of presentation assets, but they should mostly be recreated rather than copied as-is.
 
 ### Proposed sub-steps
-- [TODO] Inventory the visual patterns to keep: soft background texture(s), focus ring/plate, card shadow, dialog surface, watched/in-progress/favorite badges, and quality/codec chips.
-- [TODO] Mark exact asset categories to avoid using directly: Red Wizard logos, splash art, banners, QR/promotional assets, and any obviously branded repository art.
-- [TODO] Decide which assets should be image-based, vector-drawn, or implemented via Compose/View styling instead of raw files.
-- [TODO] Define a minimal first-wave asset pack that supports home shelves, focused cards, and playback overlays.
+- [DONE] Inventory the visual patterns to keep: soft background texture(s), focus ring/plate, card shadow, dialog surface, watched/in-progress/favorite badges, and quality/codec chips.
+- [DONE] Mark exact asset categories to avoid using directly: Red Wizard logos, splash art, banners, QR/promotional assets, and any obviously branded repository art.
+- [DONE] Decide which assets should be image-based, vector-drawn, or implemented via Compose/View styling instead of raw files.
+- [DONE] Define a minimal first-wave asset pack that supports home shelves, focused cards, and playback overlays.
+
+### First-wave asset-kit recommendation
+Keep this deliberately small and tied to already-existing component seams:
+- poster focus treatment for `ResultsScreenRenderer.focusablePosterCard(...)`
+- poster/base card shadow/elevation treatment shared by focused and unfocused browse cards
+- compact state-badge treatment for watched / favorite / media-type / light quality cues on results and home cards
+- reusable empty-state panel surface for empty home/results/favorites/history compositions
+- lightweight playback status strip/background only if `PlayerScreenRenderer` work stays local and low-risk
+- optional subtle app background texture/gradient layer only if it can be applied globally without per-screen asset churn
+
+### Implementation posture
+- Prefer code-rendered styling or XML drawables for surfaces, focus plates, and chips before introducing bitmap assets.
+- Only introduce drawable/vector assets where the shape cannot be expressed cleanly by the existing panel/button backgrounds.
+- Treat the visual kit as support for the shipped browse/home changes, not as a parallel theme system.
 
 ### Validation
 - The plan records a concrete borrow/recreate/avoid list before implementation starts.
@@ -350,7 +364,7 @@ The UX changes in Phases B and C will land better if they share a coherent visua
 ---
 
 ## C0.1. Turn the asset review into a borrow / recreate / avoid inventory with exact Asahi targets
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
@@ -360,11 +374,100 @@ Convert the broad visual asset guidance into a concrete inventory of exact targe
 Right now the asset guidance is directionally useful but still abstract. This task makes it implementation-ready by naming the exact Asahi-side assets/components that should exist.
 
 ### Proposed sub-steps
-- [TODO] Create a borrow / recreate / avoid table or bullet inventory inside this plan or a linked asset note.
-- [TODO] Name the exact first-wave Asahi targets, such as: poster focus ring, poster shadow plate, search-result card background, empty-state panel surface, playback top-strip background, watched/in-progress/favorite badge set, and quality/codec chip set.
-- [TODO] For each target, note whether it should be drawable asset, vector asset, or code-rendered styling.
-- [TODO] Map each target asset to the screens/components expected to use it first.
-- [TODO] Record any assets that are intentionally deferred to avoid overbuilding the design kit.
+- [DONE] Create a borrow / recreate / avoid table or bullet inventory inside this plan or a linked asset note.
+- [DONE] Name the exact first-wave Asahi targets, such as: poster focus ring, poster shadow plate, search-result card background, empty-state panel surface, playback top-strip background, watched/in-progress/favorite badge set, and quality/codec chip set.
+- [DONE] For each target, note whether it should be drawable asset, vector asset, or code-rendered styling.
+- [DONE] Map each target asset to the screens/components expected to use it first.
+- [DONE] Record any assets that are intentionally deferred to avoid overbuilding the design kit.
+
+### Borrow / recreate / avoid inventory
+
+#### Borrow conceptually
+- **Poster/card focus plate behavior**
+  - Asahi target: focused-state treatment for `ResultsScreenRenderer.focusablePosterCard(...)` and the home-row `focusableCard(...)` primitives.
+  - Use first in: search results grid, favorites/history browse, shelf cards on home.
+  - Preferred implementation: code-rendered styling plus XML drawable background state.
+  - Why: the app already has focus scaling/alpha and background swaps; this should refine those affordances, not replace them with a skin system.
+
+- **Soft panel/dialog depth**
+  - Asahi target: visual consistency between `OverlayPopup`, empty-state compositions, and elevated cards using the existing `asahi_panel_bg` / `asahi_panel_elevated_bg` style family.
+  - Use first in: overlay popups, empty home/results/history/favorites panels, selected source cards.
+  - Preferred implementation: drawable/XML refinement before any bitmap asset work.
+  - Why: the repo already has panel backgrounds and elevation concepts, so the useful borrow is “clear layered depth,” not imported art.
+
+- **State-overlay vocabulary**
+  - Asahi target: watched / favorite / resume / media-type / light quality cues shown on cards and metadata lines.
+  - Use first in: `ResultsScreenRenderer`, `HomeScreenRenderer`, later maybe source cards.
+  - Preferred implementation: text chips/badges and small shape drawables, not image overlays pasted onto posters.
+  - Why: the app already decorates `SearchResult.badges`; a lightweight badge vocabulary fits the real model better than Kodi-style overlay bitmaps.
+
+- **Lightweight playback reassurance strip**
+  - Asahi target: a minimal playback title/progress/status surface inside `PlayerScreenRenderer` only if it stays localized.
+  - Use first in: pause/seek/error-adjacent player states.
+  - Preferred implementation: code-rendered panel/gradient surface with existing typography, not bespoke art.
+  - Why: the useful pattern is “show status without dumping full controls,” not “add a big player skin.”
+
+#### Recreate directly in Asahi style
+- **Poster focus ring / focus glow**
+  - Asahi target: focused poster-card boundary/background state in `ResultsScreenRenderer.focusablePosterCard(...)`.
+  - Type: start with drawable/XML background state; only move to vector asset if the shape needs more control.
+  - Use first in: search/favorites/history poster grid.
+
+- **Poster shadow plate / card elevation base**
+  - Asahi target: unfocused/focused poster card backing so posters feel less flat at TV distance.
+  - Type: drawable/XML.
+  - Use first in: results grid; optionally later home quick-pick cards.
+
+- **Reusable empty-state panel surface**
+  - Asahi target: a consistent panel treatment for empty results, empty favorites/history, and sparse home sections.
+  - Type: drawable/XML reusing the panel family.
+  - Use first in: `ResultsScreenRenderer` empty state and home fallback/utility areas.
+
+- **Badge/chip set for watched / favorite / media-type / quality**
+  - Asahi target: compact badge rendering around the existing badge metadata and `ScreenViewFactory.chip(...)` idiom.
+  - Type: mostly code-rendered styling; optional small shape drawables.
+  - Use first in: focused results cards, home shelf cards, later sources if useful.
+
+- **Playback top-strip background**
+  - Asahi target: minimal status surface in `PlayerScreenRenderer` if C1 is accepted.
+  - Type: code-rendered gradient/panel or simple drawable.
+  - Use first in: pause/seek/status moments, not full-time overlay chrome.
+
+- **Optional global background texture/gradient**
+  - Asahi target: subtle app-shell backdrop behind home/search/results so shelves and posters sit on a more intentional surface.
+  - Type: prefer gradient/code styling first; use a texture asset only if the app still feels too flat.
+  - Use first in: app shell container, not per-screen one-off decorations.
+
+#### Avoid directly
+- Red Wizard / Kodi logos, banners, vendor marks, splash assets, and promotional art.
+- Direct reuse of extracted QR/promotional or first-run assets.
+- Bitmap overlays baked with branded style assumptions when the same effect can be done with text chips or drawable states.
+- A large asset dump for every screen/state combination.
+- Heavy list-focus or skin-condition asset systems that assume Kodi-like view-mode complexity.
+
+### Explicit first-wave targets by component
+- `ResultsScreenRenderer.focusablePosterCard(...)`
+  - poster focus ring / focus glow
+  - poster shadow plate / elevated base
+  - compact badge styling refresh
+- `HomeScreenRenderer.focusableCard(...)` and home quick-pick/continue-watching rows
+  - lighter version of the poster/card elevation language
+  - shared badge vocabulary where useful
+- empty-state branches in `ResultsScreenRenderer` and home utility sections
+  - reusable empty-state panel surface
+- `OverlayPopup`
+  - align panel depth and button focus treatment with the same kit; do not redesign interaction model here
+- `PlayerScreenRenderer`
+  - only if C1 is chosen: minimal playback top-strip/status background
+- `ScreenViewFactory.chip(...)`
+  - base chip styling for metadata and state tokens where button semantics make sense; do not force every badge through clickable chip UI
+
+### Deferred on purpose
+- Full poster-image corner treatments or decorative overlay PNG systems.
+- Detailed codec/resolution art taxonomy beyond simple text chips unless source metadata quality proves it worthwhile.
+- Screen-specific textured backdrops for home vs search vs player.
+- A full playback HUD redesign.
+- Any per-provider or per-content-type icon library.
 
 ### Validation
 - The inventory names exact target assets/components for Asahi rather than only describing inspiration categories.
@@ -448,7 +551,7 @@ Once home shelves exist, they can become smarter. But this should wait until the
 5. B4. Add actionable empty states across key media surfaces
 6. B1. Add or improve home shelves that answer “what should I do now?”
 7. Validate fresh-search entry/focus behavior and clean up any state bugs exposed by the browse changes
-8. Decide whether C0/C0.1 visual-kit work is still worth doing in this pass
+8. Use the completed C0.1 inventory to decide whether to implement a tiny first-wave visual kit now or stop at planning
 9. Only then consider C1 playback/status overlays or C2 loading-state polish if they remain localized and low-risk
 
 ---
@@ -485,7 +588,7 @@ Probably yes at the primitive level because all three flows already share `RESUL
 
 ### Q8. Where should the exact borrow / recreate / avoid inventory live?
 Current recommendation:
-Start inside this exec plan unless it becomes too bulky; split into a linked design/asset note only if the inventory grows enough to hurt plan readability.
+For now it lives inside this plan and is concrete enough to drive implementation. Split it out only if actual asset work starts making the plan unreadably bulky.
 
 ### Q9. Should the progress log track exact commits for completed milestones in this pass?
 Current recommendation:
@@ -515,8 +618,8 @@ Yes. This pass is already half historical and half forward-looking, so meaningfu
 - Known uncertainty at creation time: the initial draft intentionally stopped short of naming exact implementation files until the repo mapping pass was done, and it assumed recreate-over-copy for most visual assets.
 
 ### Mid-pass implementation state
-- Validated by: local renderer/code inspection, repeated `testDebugUnitTest` and `assembleDebug` runs during shipped slices, and emulator/manual checks for home/search/results behavior.
-- Not fully validated yet: whether any playback/status overlay follow-up is worth the risk in this same pass; full real-device validation of every poster-grid edge case; a completed asset-kit inventory.
+- Validated by: local renderer/code inspection, repeated `testDebugUnitTest` and `assembleDebug` runs during shipped slices, emulator/manual checks for home/search/results behavior, and a follow-up repo scan tying the visual-kit inventory to current renderer/component seams.
+- Not fully validated yet: whether any playback/status overlay follow-up is worth the risk in this same pass; full real-device validation of every poster-grid edge case; whether the first-wave visual kit should actually be implemented now versus left as scoped guidance.
 - Known uncertainty: emulator Android TV IME behavior still makes automated results-entry capture a little misleading unless the keyboard is explicitly dismissed/submitted, so screenshot evidence should be interpreted with that caveat.
 
 ---
@@ -576,6 +679,13 @@ Yes. This pass is already half historical and half forward-looking, so meaningfu
 - Commit: `73845de` (`Clear browse labels from fresh search state`)
 - Validation: emulator/manual checks reached a correct empty Movies search surface with the input focused and no bogus inherited query text.
 
+### 2026-04-05 19:4x UTC
+- Completed C0.1 by turning the APK-derived visual guidance into an exact Asahi-side borrow / recreate / avoid inventory inside this plan.
+- Mapped the first-wave visual targets to current repo seams instead of abstract design language: `ResultsScreenRenderer.focusablePosterCard(...)`, home card primitives, empty-state panels, `OverlayPopup`, `PlayerScreenRenderer`, and `ScreenViewFactory.chip(...)`.
+- Narrowed the recommended first-wave kit to focus treatment, card depth, badge vocabulary, empty-state surfaces, and an optional playback status strip.
+- Explicitly deferred decorative asset sprawl, branded reuse, and a full playback HUD redesign.
+- Validation: cross-checked current renderer/component ownership in the app source before locking the inventory.
+
 ---
 
 ## Scope Changes
@@ -594,6 +704,9 @@ Intended task: execute A1 by mapping the real repo structure for home, results/f
 
 ### 2026-04-05 18:40 UTC
 Intended task: update the plan so it cleanly tracks the already-landed local UX work by milestone commit, while keeping the remaining future scope explicit and narrow.
+
+### 2026-04-05 19:43 UTC
+Intended task: execute C0.1 by turning the visual inspiration into a concrete Asahi-side asset/component inventory tied to the current renderer structure.
 
 ---
 
