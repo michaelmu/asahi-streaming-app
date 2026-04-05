@@ -121,6 +121,7 @@ Notes from implementation:
 - The heaviest immediate UX issue really was card treatment: artwork fallback policy, selector layering, and overbearing focus all mattered.
 - The sources copy pass required updating `SourcePresentationTest` because the old group/label names were encoded in tests.
 - Validation completed through repeated `assembleDebug` + `testDebugUnitTest` runs during each slice.
+- Final emulator sanity pass confirmed launch/install/focus/artwork rendering on the TV emulator, but also surfaced one follow-up issue: the focused results card still shows a redundant lowercase media-type token (`movie`) in runtime UI output despite the renderer-side cleanup change. Treat that as a small follow-up bug rather than silently calling the emulator round perfect.
 
 ## Practical execution checklist
 
@@ -692,6 +693,18 @@ For each slice:
    - favorites/history entry points
    - sources → player flow
    - back behavior
+
+## Final validation notes
+
+Completed at end of pass:
+- `./gradlew assembleDebug testDebugUnitTest`
+- installed fresh debug APK to running `emulator-5554`
+- launched app and captured fresh screenshots/UI dump from the TV emulator
+- verified basic launch success, visible artwork rendering, and correct focus landing on a results card
+
+Open follow-up from final emulator round:
+- focused results card runtime output still shows duplicated lowercase media-type copy (`2023 • Movie • movie` and `... playback. movie.`) even after renderer-side cleanup
+- this does not block the broader polish pass landing, but it should be treated as a small next bug rather than assumed fixed
 
 ---
 

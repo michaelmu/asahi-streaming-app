@@ -901,8 +901,11 @@ class ResultsScreenRenderer(
             tokens += "Watched"
         }
         if (focused) {
+            val mediaTypeLabel = result.mediaRef.mediaType.name.lowercase()
             tokens += result.badges.filterNot {
-                it.equals("Favorite", ignoreCase = true) || it.equals("Watched", ignoreCase = true)
+                it.equals("Favorite", ignoreCase = true) ||
+                    it.equals("Watched", ignoreCase = true) ||
+                    it.equals(mediaTypeLabel, ignoreCase = true)
             }.take(2)
         }
         return tokens.distinct().joinToString(" • ")
@@ -926,8 +929,11 @@ class ResultsScreenRenderer(
         }
         return buildString {
             append(stateLine)
+            val mediaTypeLabel = result.mediaRef.mediaType.name.lowercase()
             val browseTags = result.badges.filterNot {
-                it.equals("Favorite", ignoreCase = true) || it.equals("Watched", ignoreCase = true)
+                it.equals("Favorite", ignoreCase = true) ||
+                    it.equals("Watched", ignoreCase = true) ||
+                    it.equals(mediaTypeLabel, ignoreCase = true)
             }.take(2)
             if (browseTags.isNotEmpty()) {
                 append(' ')
