@@ -16,6 +16,7 @@ import android.widget.ProgressBar
 import android.widget.ScrollView
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import ai.shieldtv.app.auth.RealDebridAuthCoordinator
 import ai.shieldtv.app.auth.RealDebridLinkStartResult
@@ -388,6 +389,8 @@ class MainActivity : ComponentActivity() {
             controllerHideOnTouch = false
             controllerShowTimeoutMs = playerControllerVisibilityTimeoutMs
             setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+            setKeepContentOnPlayerReset(true)
             visibility = View.GONE
             setPadding(0, 0, 0, 0)
             layoutParams = LinearLayout.LayoutParams(
