@@ -7,7 +7,7 @@ class SourcePreferencesStore(context: Context) {
 
     fun load(): SourcePreferences {
         val movieMax = prefs.takeIf { it.contains(KEY_MOVIE_MAX_GB) }?.getInt(KEY_MOVIE_MAX_GB, 0)?.takeIf { it > 0 } ?: DEFAULT_MOVIE_MAX_GB
-        val episodeMax = prefs.takeIf { it.contains(KEY_EPISODE_MAX_GB) }?.getInt(KEY_EPISODE_MAX_GB, 0)?.takeIf { it > 0 }
+        val episodeMax = prefs.takeIf { it.contains(KEY_EPISODE_MAX_GB) }?.getInt(KEY_EPISODE_MAX_GB, 0)?.takeIf { it > 0 } ?: DEFAULT_EPISODE_MAX_GB
 
         val explicitMode = prefs.getString(KEY_PROVIDER_SELECTION_MODE, null)
         val storedEnabled = prefs.getStringSet(KEY_ENABLED_PROVIDERS, emptySet())?.toSet().orEmpty()
@@ -77,6 +77,7 @@ class SourcePreferencesStore(context: Context) {
 
     companion object {
         private const val DEFAULT_MOVIE_MAX_GB = 2
+        private const val DEFAULT_EPISODE_MAX_GB = 1
         private const val KEY_MOVIE_MAX_GB = "movie_max_size_gb"
         private const val KEY_EPISODE_MAX_GB = "episode_max_size_gb"
         private const val KEY_ENABLED_PROVIDERS = "enabled_providers"
