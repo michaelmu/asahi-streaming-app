@@ -120,6 +120,13 @@ This phase is priority zero because the app’s browse surfaces now depend on po
   - quick-pick cards
   - continue-watching cards
   - any related shelf cards using `ImageView.load(...)`
+- explicitly verify root cause rather than assuming a styling problem:
+  - malformed/empty/unexpected image URL shape
+  - missing artwork in source data
+  - fallback logic triggering too aggressively
+  - card sizing/clipping issues
+  - overlay alpha/tint obscuring loaded images
+  - focused/selected drawable layering masking image content
 - verify fallback behavior separately from genuine image-load failure
 - ensure card dimensions, clipping, alpha, overlays, and drawable fallbacks are not masking successfully loaded images
 - validate with real emulator screenshots after the fix
@@ -133,6 +140,20 @@ This phase is priority zero because the app’s browse surfaces now depend on po
 ### Done when
 - poster/shelf cards reliably display their image art when URLs exist
 - fallback icon/label behavior only appears when artwork is actually unavailable
+
+## Browse-card policy for this pass
+
+Across results, home shelves, and any reused poster-led card surfaces:
+- primary cards should communicate content, not internals
+- primary cards may show only couch-legible, browse-relevant metadata such as:
+  - title
+  - year
+  - movie/show type
+  - lightweight state cues such as favorite / watched when helpful
+- provider, torrent, or pipeline-detail text belongs on the sources screen, not on primary browse cards
+- focus treatment must preserve artwork readability rather than painting over it
+
+This policy should be treated as a guardrail for later slices so home/details polish does not reintroduce noisy metadata or heavy-handed focus styling.
 
 ## 0.2. Remove torrent/provider-ish metadata from primary cards
 
@@ -157,7 +178,6 @@ This phase is priority zero because the app’s browse surfaces now depend on po
 ### Current state
 - selected/focused card treatment can flood the card with orange and obscure the artwork
 - this hurts readability and undermines the visual value of poster art
-- Mike has previously preferred toning down loud selection styling in similar UI passes (Source: memory/2026-04-04-sidebar-simplify.md#L88-L126)
 
 ### Changes
 - rework selected/focused card visuals so focus is obvious without covering the image
@@ -211,6 +231,10 @@ Make Home feel less like a control panel and more like a streaming app landing s
 ### Notes
 - Likely implementation surface: `HomeScreenRenderer.buildContinueWatchingRow`, `buildQuickPickRow`, and use of `viewFactory.artworkHero(...)`
 - Avoid building a carousel system in this pass
+- Explicitly avoid:
+  - autoplay behavior
+  - timed rotation / auto-advancing hero behavior
+  - oversized banner treatment that pushes real content too far below the fold
 
 ### Done when
 - Home’s top third immediately reads as “browse/watch” rather than “manage/search”
@@ -277,10 +301,11 @@ Upgrade details from functional metadata page to confident selection surface.
 ### Changes
 - keep key metadata highly scannable:
   - type
-n  - year
+  - year
   - runtime / seasons
 - reduce visual weight of secondary explanatory text
 - ensure overview remains readable at TV distance without becoming a wall of text
+- define a clearer initial text limit for long overviews, such as a capped line count in the default composition, so the hero does not collapse into a paragraph wall on TV
 - evaluate whether genres and metadata pills need tighter spacing and stronger grouping
 
 ### Done when
@@ -327,6 +352,7 @@ Keep source transparency, but make the default experience feel lighter and more 
 - review copy like “Choose the clearest cached stream first” and related labels
 - make recommendation language more confident and simpler
 - ensure cached/direct/uncached labels are instantly legible from the couch
+- ensure any “Recommended” / “Best Pick” language maps to actual ranking behavior already present in the app, rather than optimistic presentation copy
 
 ### Done when
 - source choice feels like selecting a good option, not interpreting system output
@@ -342,6 +368,7 @@ Keep source transparency, but make the default experience feel lighter and more 
 
 ### Done when
 - casual users can move faster without reducing transparency for power users
+- the recommendation affordance is explainable by the real ranking/output state, not just UI emphasis
 
 ---
 
@@ -391,6 +418,8 @@ Keep the settings power, but reduce the “developer utility panel” feeling.
 ---
 
 # Phase E — Global focus, motion, spacing, and component consistency
+
+This phase should be treated as a consistency sweep for leftovers after the main screen passes, not as a giant restyling event. Some normalization work will naturally happen during Phases 0/A/B/C; Phase E is for whatever still feels visibly inconsistent afterward.
 
 ## Goal
 
@@ -466,6 +495,14 @@ Make the app feel more intentionally polished across screens, not just individua
 - E1
 - E2
 - E3
+
+If scope or momentum tightens, the preferred ship line is:
+- Slice 0
+- Slice 1
+- Slice 2
+- Slice 3
+
+with Slice 4 and Slice 5 treated as opportunistic follow-on polish rather than blocking work.
 
 Each slice should be small enough to test visually on emulator before moving on.
 
