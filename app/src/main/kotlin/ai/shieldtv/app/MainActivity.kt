@@ -214,6 +214,7 @@ class MainActivity : ComponentActivity() {
     private var latestPlaybackError: String? = null
     private var latestUpdateInfo: AppUpdateInfo? = null
     private var latestUpdateMessage: String? = null
+    private var hasStartedInitialUpdateCheck = false
     private var persistedPlaybackSession: PlaybackSessionRecord? = null
     private var activeModalView: View? = null
     private val playbackCrashLogStore by lazy { PlaybackCrashLogStore(applicationContext) }
@@ -244,6 +245,7 @@ class MainActivity : ComponentActivity() {
         hydrateContinueWatchingFromPersistedSession()
         reconcileRestoredState()
         renderCurrentScreen()
+        runStartupUpdateCheckIfNeeded()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -1811,11 +1813,41 @@ class MainActivity : ComponentActivity() {
         dismissModal()
         setLoading(true, "Checking for updates…")
         lifecycleScope.launch {
-            val result = settingsCoordinator.checkForUpdates()
-            latestUpdateInfo = result.updateInfo
-            latestUpdateMessage = result.statusMessage
-            setLoading(false, result.statusMessage)
-            if (result.errorMessage != null) {
+            handleUpdateCheckResult(
+                result = settingsCoordinator.checkForUpdates(),
+                showFailureModal = true,
+                showNoUpdateStatus = true
+            )
+        }
+    }
+
+    private fun runStartupUpdateCheckIfNeeded() {
+        if (hasStartedInitialUpdateCheck) return
+        hasStartedInitialUpdateCheck = true
+        lifecycleScope.launch {
+            handleUpdateCheckResult(
+                result = settingsCoordinator.checkForUpdates(),
+                showFailureModal = false,
+                showNoUpdateStatus = false
+            )
+        }
+    }
+
+    private fun handleUpdateCheckResult(
+        result: ai.shieldtv.app.update.UpdateCheckUiResult,
+        showFailureModal: Boolean,
+        showNoUpdateStatus: Boolean
+    ) {
+        latestUpdateInfo = result.updateInfo
+        latestUpdateMessage = result.statusMessage
+        val statusMessage = when {
+            result.updateInfo != null -> result.statusMessage
+            showNoUpdateStatus -> result.statusMessage
+            else -> ""
+        }
+        setLoading(false, statusMessage)
+        if (result.errorMessage != null) {
+            if (showFailureModal) {
                 val spec = settingsModalCoordinator.updateCheckFailedSpec(result.errorMessage)
                 showInfoModal(
                     title = spec.title,
@@ -1830,11 +1862,11 @@ class MainActivity : ComponentActivity() {
                     defaultAction = spec.defaultAction,
                     customContent = spec.customContent
                 )
-            } else if (result.updateInfo != null) {
-                showUpdateAvailableModal(result.updateInfo)
             }
-            renderCurrentScreen()
+        } else if (result.updateInfo != null) {
+            showUpdateAvailableModal(result.updateInfo)
         }
+        renderCurrentScreen()
     }
 
     private fun showUpdateAvailableModal(updateInfo: AppUpdateInfo) {
