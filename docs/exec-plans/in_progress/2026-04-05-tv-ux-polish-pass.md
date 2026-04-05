@@ -128,6 +128,7 @@ This phase is priority zero because the app’s browse surfaces now depend on po
   - overlay alpha/tint obscuring loaded images
   - focused/selected drawable layering masking image content
 - verify fallback behavior separately from genuine image-load failure
+- explicitly account for inconsistent image/fallback policy across current surfaces (for example: results using poster-first behavior, quick picks preferring backdrop-or-poster, and continue-watching using its own artwork field) rather than assuming one shared failure mode
 - ensure card dimensions, clipping, alpha, overlays, and drawable fallbacks are not masking successfully loaded images
 - validate with real emulator screenshots after the fix
 
@@ -136,6 +137,10 @@ This phase is priority zero because the app’s browse surfaces now depend on po
 - `HomeScreenRenderer.buildQuickPickRow(...)`
 - `HomeScreenRenderer.buildContinueWatchingRow(...)`
 - shared styling/drawable behavior in `ScreenViewFactory` and `app/src/main/res/drawable/*`
+
+### Implementation note
+- Start with `ResultsScreenRenderer.focusablePosterCard(...)` as the baseline poster-card path, then align home shelf cards afterward.
+- This is the most concentrated implementation of the poster-led browse pattern and the fastest place to validate artwork, metadata, and focus behavior before widening the pass.
 
 ### Done when
 - poster/shelf cards reliably display their image art when URLs exist
@@ -181,6 +186,7 @@ This policy should be treated as a guardrail for later slices so home/details po
 
 ### Changes
 - rework selected/focused card visuals so focus is obvious without covering the image
+- inspect shared selector / foreground / drawable behavior before over-tuning per-card Kotlin focus handlers, since heavy focus treatment may be partially caused by shared background or selector assets rather than just scale/alpha choices
 - prefer a lighter-touch combination such as:
   - subtle scale/elevation
   - controlled border/glow/outline
@@ -272,6 +278,8 @@ Make Home feel less like a control panel and more like a streaming app landing s
 ---
 
 # Phase B — Details screen richness pass
+
+Details work should begin only after the poster-card baseline is stable on Results and Home, so this phase inherits a settled visual language rather than inventing a second one too early.
 
 ## Goal
 
