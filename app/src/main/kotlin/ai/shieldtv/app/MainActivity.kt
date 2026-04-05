@@ -198,6 +198,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private val playerControllerVisibilityTimeoutMs = 3500
+    private val startupUpdateCheckCooldownMs = 24L * 60L * 60L * 1000L
 
     private var authState: RealDebridAuthState = RealDebridAuthState(isLinked = false)
     private var activeDeviceFlow: DeviceCodeFlow? = null
@@ -215,6 +216,7 @@ class MainActivity : ComponentActivity() {
     private var latestUpdateInfo: AppUpdateInfo? = null
     private var latestUpdateMessage: String? = null
     private var hasStartedInitialUpdateCheck = false
+    private val updatePrefs by lazy { getSharedPreferences("app_updates", MODE_PRIVATE) }
     private var persistedPlaybackSession: PlaybackSessionRecord? = null
     private var activeModalView: View? = null
     private val playbackCrashLogStore by lazy { PlaybackCrashLogStore(applicationContext) }
@@ -1822,15 +1824,26 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun runStartupUpdateCheckIfNeeded() {
-        if (hasStartedInitialUpdateCheck) return
+        if (hasStartedInitialUpdateCheck || !shouldRunStartupUpdateCheck()) return
         hasStartedInitialUpdateCheck = true
         lifecycleScope.launch {
+            val result = settingsCoordinator.checkForUpdates()
+            recordStartupUpdateCheckAttempt()
             handleUpdateCheckResult(
-                result = settingsCoordinator.checkForUpdates(),
+                result = result,
                 showFailureModal = false,
                 showNoUpdateStatus = false
             )
         }
+    }
+
+    private fun shouldRunStartupUpdateCheck(nowEpochMs: Long = System.currentTimeMillis()): Boolean {
+        val lastCheckedAt = updatePrefs.getLong(KEY_LAST_STARTUP_UPDATE_CHECK_AT, 0L)
+        return lastCheckedAt <= 0L || nowEpochMs - lastCheckedAt >= startupUpdateCheckCooldownMs
+    }
+
+    private fun recordStartupUpdateCheckAttempt(nowEpochMs: Long = System.currentTimeMillis()) {
+        updatePrefs.edit().putLong(KEY_LAST_STARTUP_UPDATE_CHECK_AT, nowEpochMs).apply()
     }
 
     private fun handleUpdateCheckResult(
@@ -2062,5 +2075,9 @@ class MainActivity : ComponentActivity() {
         view.isFocusable = true
         view.isFocusableInTouchMode = true
         view.requestFocus()
+    }
+
+    companion object {
+        private const val KEY_LAST_STARTUP_UPDATE_CHECK_AT = "last_startup_update_check_at"
     }
 }
