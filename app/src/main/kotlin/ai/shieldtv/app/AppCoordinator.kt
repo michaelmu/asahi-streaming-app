@@ -27,9 +27,13 @@ class AppCoordinator(
     }
 
     fun openSearch(mode: SearchMode) {
+        val preserveQuery = state.destination == AppDestination.RESULTS &&
+            state.favoritesBrowseMode == null &&
+            state.historyBrowseMode == null
         state = state.copy(
             destination = AppDestination.SEARCH,
             searchMode = mode,
+            query = if (preserveQuery) state.query else "",
             selectedMedia = null,
             selectedDetails = null,
             selectedSeasonNumber = null,
