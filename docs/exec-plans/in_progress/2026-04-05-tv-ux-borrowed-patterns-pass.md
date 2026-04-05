@@ -1,0 +1,524 @@
+# Asahi TV UX Borrowed Patterns Pass
+
+Last updated: 2026-04-05 UTC
+Status: TODO
+Owner: OpenClaw main session
+Location: `docs/exec-plans/in_progress/2026-04-05-tv-ux-borrowed-patterns-pass.md`
+Supersedes: none
+Superseded by: 
+
+## Purpose
+
+This plan turns the Red Wizard / Kodi Estuary APK review into a scoped implementation pass for `asahi-streaming-app`.
+
+It is a UX/product-to-implementation plan focused on borrowing the *useful TV patterns* without copying Kodi’s heavy complexity or plugin-driven behavior.
+
+The core problem it is solving:
+- the app already has strong search/results/source selection foundations, but it still risks feeling like a tool rather than a polished TV destination
+- the APK review showed a few proven remote-first interaction patterns worth adopting: dynamic home shelves, richer focus states, better empty states, and lighter-weight playback/status overlays
+- these patterns need to be translated into Asahi’s actual codebase and priorities rather than copied literally
+
+This pass is intentionally incremental. It should improve first-screen usefulness and browse/playback confidence without forcing a full information architecture rewrite.
+
+It also includes a visual-language sub-pass: not to copy Red Wizard or Kodi branding, but to identify which *classes of assets* are worth recreating in Asahi’s own style (focus treatments, panel shadows, background textures, state badges, and lightweight overlay chrome).
+
+---
+
+## How to Use This Plan
+
+### Before starting a session
+1. Read this file top-to-bottom.
+2. Check `Current Focus`.
+3. Check `Open Questions / Decisions Needed`.
+4. Check the latest `Progress Log` entry.
+5. Update `Session Start` before coding.
+
+### While implementing
+Update this file during the work, not only after the work.
+
+Minimum required updates:
+- task status changes
+- progress log entries after meaningful milestones
+- scope-change notes when direction shifts
+- validation notes after completed steps
+
+### Completion rule
+A task is only `DONE` when:
+- the code landed
+- relevant tests/build/manual validation happened
+- follow-up work is captured here if needed
+
+---
+
+## Status Legend
+
+- `TODO` = not started
+- `IN_PROGRESS` = actively being worked
+- `BLOCKED` = waiting on a prerequisite or decision
+- `DONE` = implemented and validated
+- `DEFERRED` = intentionally postponed
+- `OPTIONAL` = not required unless chosen
+
+---
+
+## Current Focus
+
+**Current phase:** Phase A — UX translation and repo mapping
+
+**Immediate target:** translate the APK review into app-native work slices and confirm where each slice should land in the current repo
+
+**Why this now:**
+The UX direction is fresh from review, and the next useful step is turning vague inspiration into honest, sequenced work that fits the real app rather than accumulating as hand-wavy design debt.
+
+> Update this section whenever the active phase or immediate target changes.
+
+---
+
+## Repository Reality Check
+
+Before implementation begins, confirm:
+- the repo already contains prior execution-plan work for favorites, watch history, activity extraction, ranking, and UI polish
+- the current canonical plan set lives under `docs/exec-plans/`
+- `2026-04-04-next-pass-ranking-orchestration.md` is already in `complete/`, so this UX plan is a fresh pass rather than a continuation of that document
+- actual browse, search, favorites, and playback entry points must be re-read in the current branch before coding against any assumed screen structure
+- current search results are rendered in `app/src/main/kotlin/ai/shieldtv/app/ui/ScreenRenderers.kt` by `ResultsScreenRenderer.render(...)`, which today builds a vertical list of horizontal media cards rather than a poster wall/grid
+- the APK review source was a Kodi-derived app package, so the borrowable material is interaction design, screen behavior, and generic visual pattern categories rather than Android-native implementation details or app branding
+- likely useful visual source categories were confirmed in the extracted APK: background patterns (`skin.estuary/extras/backgrounds/*`), panel/dialog chrome (`themes/*/dialogs/*`, `themes/*/overlays/shadow.png`), state overlays (`OverlayWatched.png`, `OverlayUnwatched.png`, `OverlayWatching.png`), focus/list treatments (`list_focus.png`, panel/shadow assets), and media-tech badge systems (`media/flagging/*`)
+- direct-branded assets also exist (`assets/media/banner.png`, `vendor_logo.png`, splash assets), and those should be treated as explicit non-borrow targets
+
+---
+
+## Locked Decisions
+
+- Borrow interaction patterns and generic visual patterns, not branding, bundled content, addon behavior, or permission strategy.
+- Keep the app TV-first and remote-first; every accepted idea must work well with D-pad navigation.
+- Prefer a small number of high-leverage UX upgrades over a skin-system explosion.
+- Home should become more action-oriented and recommendation-oriented, but not at the cost of making search harder to reach.
+- Search remains a first-class entry point, and search results should evolve toward a poster-wall/grid presentation if the remote focus behavior can stay strong.
+- Rich focus states should reveal useful metadata already available locally; do not create fragile mandatory fetches on focus.
+- Empty states must be actionable, not decorative.
+- Playback/status overlays should become more lightweight and progressive, but this pass should not destabilize core playback.
+- Avoid importing Kodi-style “every view for every situation” complexity unless real app usage justifies it.
+- Recreate visual assets in Asahi’s own style rather than shipping Red Wizard-branded or Kodi-derived art blindly.
+- Favor a small reusable design kit over a large dump of one-off image assets.
+
+---
+
+## Background / Review Summary
+
+The APK inspection showed that most of Red Wizard’s useful UX comes from Kodi Estuary conventions:
+- home shelves that answer “what now?” quickly
+- multiple browse view types optimized for different tasks
+- cards that reveal richer context on focus instead of requiring full drill-in
+- persistent progress/watched state directly on cards
+- purposeful empty states with clear next actions
+- lightweight loading and playback overlays that preserve context
+
+The parts *not* worth borrowing are equally important:
+- installer-style first-run automation
+- heavy permission-first startup
+- plugin complexity and sprawling skin condition trees
+- broad customization surface area before the core UX is stable
+
+For Asahi, the opportunity is to adapt these ideas into a simpler product shape:
+- stronger home rows/shelves fed by existing favorites/history/search data
+- improved browse/result cards with better focus detail and state chips
+- search results that feel like a TV browse surface instead of a plain stacked list, ideally through a poster-wall/grid treatment with clear focus behavior
+- better empty-state copy and action buttons
+- a cleaner playback overlay/status model
+- a cleaner visual kit built around background textures, focus rings/plates, card shadows, watched/progress badges, and simple quality/codec chips
+
+The asset review showed a useful distinction:
+- **worth borrowing conceptually or recreating:** soft background patterns, translucent dialog/panel surfaces, shadow/elevation assets, watched/in-progress/favorite state overlays, list/card focus treatments, and codec/resolution badge taxonomy
+- **not worth borrowing directly:** Red Wizard splash/logo/banner/vendor art, QR assets, or wholesale Kodi skin dumps used unchanged
+
+This plan assumes the app should keep its current product identity: fast, opinionated streaming-focused, not a general-purpose media center.
+
+---
+
+# Phase A — UX Translation and App Mapping
+
+## A1. Audit current screen structure against the borrowed patterns
+Status: TODO
+Priority: High
+
+### Goal
+Identify the real app screens, coordinators, adapters, and models that would own home shelves, result focus states, browse views, and playback overlays.
+
+### Why this matters
+The repo has already proven that assuming the wrong file shapes wastes time. This pass should begin by mapping the real UI structure before proposing implementation details.
+
+### Proposed sub-steps
+- [TODO] Re-read the current Android TV entry flow and main navigation structure.
+- [TODO] Identify the real browse/results/favorites/history surfaces and their adapters/view holders/composables.
+- [TODO] Identify the real playback controls or overlay entry points.
+- [TODO] Record mismatches between the ideal UX slices and the current app architecture.
+
+### Validation
+- Notes added to this plan’s `Repository Reality Check` and/or `Progress Log`.
+- File/class targets are named concretely before any implementation task is marked `IN_PROGRESS`.
+
+---
+
+## A2. Define the minimum viable “borrowed patterns” set for this pass
+Status: TODO
+Priority: High
+
+### Goal
+Reduce the inspiration set into a small, shippable batch of UX improvements.
+
+### Why this matters
+Without an explicit cut line, this will sprawl into a full home/browse/player redesign.
+
+### Proposed sub-steps
+- [TODO] Choose the top 3-5 UX upgrades with the best leverage.
+- [TODO] Mark which ideas are explicitly deferred.
+- [TODO] Translate each chosen idea into concrete user-visible outcomes.
+
+### Validation
+- A final accepted scope is written into this plan.
+- Deferred/non-goals are explicit and honest.
+
+---
+
+# Phase B — Home and Browse Improvements
+
+## B1. Add or improve home shelves that answer “what should I do now?”
+Status: TODO
+Priority: High
+
+### Goal
+Create a more useful landing experience with dynamic, high-intent rows such as continue watching, favorites, recent discoveries, or best available picks.
+
+### Why this matters
+The APK’s strongest UX pattern is a home screen that gives immediate choices. Asahi currently benefits from stronger first-screen usefulness if users can reach content without always starting at search.
+
+### Proposed sub-steps
+- [TODO] Define an MVP shelf set capped at 2-4 rows for this pass.
+- [TODO] Restrict first-pass shelves to rows powered by existing local/stateful data now.
+- [TODO] Add shelf models and UI wiring for the chosen rows.
+- [TODO] Ensure rows are ordered by user usefulness, not implementation convenience.
+- [TODO] Handle empty shelf cases cleanly.
+- [TODO] Explicitly defer recommendation-engine behavior or shelves that require speculative network fetches just to look populated.
+
+### Validation
+- Manual navigation confirms shelves are reachable and sensible with the remote.
+- Tests cover any new state/model mapping logic where practical.
+- No shelf depends on brittle network fetches merely to render a placeholder state.
+- The shipped home surface remains intentionally small rather than pretending to be a full recommendation system.
+
+---
+
+## B2. Convert search results into a poster wall / TV grid
+Status: TODO
+Priority: High
+
+### Goal
+Change search results from a stacked vertical list into a poster-wall/grid presentation that feels native to Android TV browsing.
+
+### Why this matters
+The current results renderer uses horizontally arranged list cards. That works functionally, but it undersells browsing and makes the results screen feel more like a utility screen than a destination. A poster wall better matches the product direction and the APK-inspired TV browsing patterns.
+
+### Proposed sub-steps
+- [TODO] Re-read `ResultsScreenRenderer` and the surrounding screen composition to confirm the cheapest path to a grid/panel layout.
+- [TODO] Decide whether favorites/history should share the same poster-wall renderer or keep a distinct presentation.
+- [TODO] Implement a poster-first card layout with remote-friendly spacing, aspect ratio, and conservative row/column density suitable for TV distance.
+- [TODO] Preserve click and long-press actions while making D-pad traversal predictable.
+- [TODO] Ensure the grid still supports empty-state and footer actions like "New Search" without awkward focus traps.
+- [TODO] Define poster fallback behavior for missing artwork so sparse metadata does not collapse the layout.
+
+### Validation
+- Manual navigation verifies smooth left/right/up/down traversal across the full result set.
+- Posters remain legible and do not clip awkwardly at common TV resolutions.
+- Title and secondary metadata remain readable at TV distance.
+- Selection/long-press behavior still works correctly from the new grid.
+- Focus is retained sensibly when results update, repopulate, or paginate.
+- Favorites/history rendering is validated if they share the same renderer.
+
+---
+
+## B3. Enrich focus states on browse/result cards
+Status: TODO
+Priority: High
+
+### Goal
+Make focused cards reveal more value immediately: synopsis, year/runtime, source count, best quality, watch progress, favorite state, or similar metadata already available in-app.
+
+### Why this matters
+TV UIs benefit when focus acts like preview. This reduces unnecessary click depth and makes browsing feel more alive.
+
+### Proposed sub-steps
+- [TODO] Identify which metadata is already available for focused items without expensive extra fetches.
+- [TODO] Lock a preferred metadata priority order for the first pass (for example: title, year/runtime, source count, best quality, watch progress, favorite state) so the focused UI does not grow ad hoc.
+- [TODO] Design a focus treatment that stays legible at TV distance.
+- [TODO] Implement richer focused/unfocused states in the relevant result/browse views.
+- [TODO] Avoid layout jumps that make D-pad browsing feel unstable.
+- [TODO] Make the focus treatment work well specifically in the new poster-wall search results layout.
+
+### Validation
+- Manual browse testing verifies focus movement remains smooth and predictable.
+- New focus treatment does not cause clipping/overlap in common content cases.
+- Focused metadata remains readable without overwhelming the card.
+- Existing tests are updated or expanded where state mapping changes.
+
+---
+
+## B4. Add actionable empty states across key media surfaces
+Status: TODO
+Priority: Medium
+
+### Goal
+Replace dead-end empty screens with context-aware prompts and actions.
+
+### Why this matters
+Empty states are a major part of perceived polish, especially on TV surfaces where users can feel “stuck” quickly.
+
+### Proposed sub-steps
+- [TODO] Inventory current empty states for favorites, history, search results, and home shelves.
+- [TODO] Replace generic/no-content copy with explicit next actions.
+- [TODO] Ensure actions are remote-accessible and lead somewhere useful.
+
+### Validation
+- Manual checks cover each targeted empty state.
+- Copy and actions are consistent with actual navigation destinations.
+
+---
+
+# Phase C — Playback and Status Polish
+
+## C0. Define an Asahi visual asset kit inspired by the APK review
+Status: TODO
+Priority: Medium
+
+### Goal
+Turn the extracted visual inspiration into a small, app-native asset kit that supports the rest of this pass.
+
+### Why this matters
+The UX changes in Phases B and C will land better if they share a coherent visual language. The APK contains useful categories of presentation assets, but they should mostly be recreated rather than copied as-is.
+
+### Proposed sub-steps
+- [TODO] Inventory the visual patterns to keep: soft background texture(s), focus ring/plate, card shadow, dialog surface, watched/in-progress/favorite badges, and quality/codec chips.
+- [TODO] Mark exact asset categories to avoid using directly: Red Wizard logos, splash art, banners, QR/promotional assets, and any obviously branded repository art.
+- [TODO] Decide which assets should be image-based, vector-drawn, or implemented via Compose/View styling instead of raw files.
+- [TODO] Define a minimal first-wave asset pack that supports home shelves, focused cards, and playback overlays.
+
+### Validation
+- The plan records a concrete borrow/recreate/avoid list before implementation starts.
+- The first-wave asset kit is small enough to stay maintainable and broad enough to support the accepted UI changes.
+
+---
+
+## C0.1. Turn the asset review into a borrow / recreate / avoid inventory with exact Asahi targets
+Status: TODO
+Priority: High
+
+### Goal
+Convert the broad visual asset guidance into a concrete inventory of exact target assets for Asahi, grouped by what to borrow conceptually, what to recreate directly, and what to avoid.
+
+### Why this matters
+Right now the asset guidance is directionally useful but still abstract. This task makes it implementation-ready by naming the exact Asahi-side assets/components that should exist.
+
+### Proposed sub-steps
+- [TODO] Create a borrow / recreate / avoid table or bullet inventory inside this plan or a linked asset note.
+- [TODO] Name the exact first-wave Asahi targets, such as: poster focus ring, poster shadow plate, search-result card background, empty-state panel surface, playback top-strip background, watched/in-progress/favorite badge set, and quality/codec chip set.
+- [TODO] For each target, note whether it should be drawable asset, vector asset, or code-rendered styling.
+- [TODO] Map each target asset to the screens/components expected to use it first.
+- [TODO] Record any assets that are intentionally deferred to avoid overbuilding the design kit.
+
+### Validation
+- The inventory names exact target assets/components for Asahi rather than only describing inspiration categories.
+- The inventory is specific enough that implementation can start without redoing the visual-analysis pass.
+- Deferred assets are documented explicitly.
+
+---
+
+## C1. Introduce lighter-weight playback/status overlays
+Status: TODO
+Priority: Medium
+
+### Goal
+Improve playback feedback with a layered, less disruptive status overlay before full controls are shown.
+
+### Why this matters
+The APK review highlighted a good pattern: users often need quick reassurance (progress, title, pause/seek state) before they need a full control surface.
+
+### Proposed sub-steps
+- [TODO] Identify current playback overlay/control architecture in the real repo.
+- [TODO] Separate lightweight playback status from heavier control/detail surfaces if feasible.
+- [TODO] Surface minimal progress/time/metadata cleanly during pause/seek transitions.
+- [TODO] Keep this pass scoped away from risky playback-engine rewrites.
+- [TODO] If the work begins to require deeper player-engine or timing-sensitive state changes, stop and split the overlay work into a follow-up plan instead of forcing it into this pass.
+
+### Validation
+- Manual playback testing covers play, pause, seek, and resume transitions.
+- Overlay timing/focus behavior is stable under remote input.
+- Known limitations are documented if full validation is not possible.
+- Any split/follow-up decision is logged explicitly rather than implied.
+
+---
+
+## C2. Improve loading/busy states without losing context
+Status: TODO
+Priority: Medium
+
+### Goal
+Make loading feel intentional and less jarring by preserving the surrounding context when possible.
+
+### Why this matters
+Abrupt blocking states make TV apps feel clunky. Small loading indicators, dim overlays, or inline busy states can preserve flow.
+
+### Proposed sub-steps
+- [TODO] Audit current loading patterns in search, source loading, browse, and playback preparation.
+- [TODO] Replace the most disruptive full-screen/blocking states where low-risk.
+- [TODO] Keep loading affordances visible enough to communicate progress.
+
+### Validation
+- Manual flow checks confirm users can still understand that work is happening.
+- Regressions like double-spinners or trapped focus do not appear.
+
+---
+
+# Optional Work
+
+## O1. Add a browse view toggle for list vs poster/detail-heavy layouts
+Status: OPTIONAL
+Priority: Low
+
+### Notes
+This is attractive in theory because Kodi benefits from multiple views, but it may be overkill for the current app unless the existing browse surface is already structurally close. Only pull this in if Phase B reveals a cheap, honest implementation path.
+
+---
+
+## O2. Add shelf personalization/ranking rules
+Status: OPTIONAL
+Priority: Low
+
+### Notes
+Once home shelves exist, they can become smarter. But this should wait until the baseline rows are useful and predictable.
+
+---
+
+## Recommended Order
+
+1. A1. Audit current screen structure against the borrowed patterns
+2. A2. Define the minimum viable “borrowed patterns” set for this pass
+3. C0.1. Turn the asset review into a borrow / recreate / avoid inventory with exact Asahi targets
+4. C0. Define an Asahi visual asset kit inspired by the APK review
+5. B2. Convert search results into a poster wall / TV grid
+6. B3. Enrich focus states on browse/result cards
+7. B4. Add actionable empty states across key media surfaces
+8. B1. Add or improve home shelves that answer “what should I do now?”
+9. C1. Introduce lighter-weight playback/status overlays
+10. C2. Improve loading/busy states without losing context
+
+---
+
+## Open Questions / Decisions Needed
+
+### Q1. Should this pass introduce a true new home screen, or improve the existing entry surface incrementally?
+Current recommendation:
+Prefer incremental improvement unless the current entry surface is structurally incapable of supporting dynamic shelves.
+
+### Q2. Which metadata is safe to reveal on focus without causing fetch churn?
+Current recommendation:
+Only use locally available or already-fetched metadata in this pass. If extra data is desirable, cache/populate it through existing flows rather than focus-triggered requests.
+
+### Q3. Should playback overlay work be included in the same pass as home/browse work?
+Current recommendation:
+Only if the overlay architecture is localized and low-risk. If not, complete the home/browse work first and split playback into a separate follow-up plan.
+
+### Q4. Are favorites/history mature enough to drive home recommendations now?
+Current recommendation:
+Likely yes for a first pass, but only for a deliberately small home MVP. Confirm the current state and edge cases before locking shelf definitions, and avoid pretending this is a full recommendation system.
+
+### Q5. Which visual assets should be recreated as original Asahi assets versus implemented through code/styling?
+Current recommendation:
+Recreate only the pieces that materially improve TV readability and polish: focus treatments, shadows, simple textured backgrounds, state badges, and quality chips. Prefer code/styling for plain surfaces and progress treatments when possible.
+
+### Q6. Is it worth directly reusing any extracted non-branded asset files?
+Current recommendation:
+Treat direct reuse as a licensing/design review item rather than the default path. For now, assume “recreate, don’t copy” unless a specific asset is confirmed safe, generic, and worth the dependency.
+
+### Q7. Should favorites and watch history use the same poster-wall renderer as normal search results?
+Current recommendation:
+Probably yes if the renderer can gracefully handle browse-specific labels and actions. If the UX becomes muddy, keep a shared card primitive but allow separate screen composition.
+
+### Q8. Where should the exact borrow / recreate / avoid inventory live?
+Current recommendation:
+Start inside this exec plan unless it becomes too bulky; split into a linked design/asset note only if the inventory grows enough to hurt plan readability.
+
+---
+
+## Risks / Watchouts
+
+- Planning against outdated UI structure again instead of the real branch.
+- Taking on a full IA redesign under the banner of “borrowed ideas.”
+- Adding focus richness that causes visual instability or sluggishness during D-pad navigation.
+- Converting search results to a grid in a way that breaks expected focus order, footer actions, or long-press affordances.
+- Creating shelves that look smart but are empty/noisy because the underlying data is too thin.
+- Letting playback polish creep into risky player-state rewrites.
+- Copying Kodi patterns that feel heavy or over-configured in a simpler streaming app.
+- Accidentally letting visual inspiration turn into asset theft, brand confusion, or a mismatched Kodi-like identity.
+- Creating too many image assets when code-drawn or theme-driven UI would be cleaner.
+
+---
+
+## Validation Notes / Honesty Check
+
+### Plan creation
+- Validated by: APK structure review, current exec-plan directory check, canonical plan inventory, and visual asset category inventory from the extracted package.
+- Not validated: actual current app UI file/class targets for home, browse, and playback; licensing suitability of any direct asset reuse.
+- Known uncertainty: this plan intentionally stops short of naming exact implementation files until the repo mapping pass is done, and it assumes recreate-over-copy for most visual assets.
+
+---
+
+## Progress Log
+
+### 2026-04-05 17:34 UTC
+- Created the plan from the Red Wizard / Kodi APK UX review.
+- Captured the main borrowable patterns: home shelves, rich focus states, actionable empty states, lighter overlays, and less disruptive loading states.
+- Explicitly marked non-goals: branding/theme cloning, plugin behavior, first-run installer behavior, and Kodi-level view complexity.
+- No implementation work completed yet.
+
+### 2026-04-05 17:37 UTC
+- Expanded the plan to include a visual asset strategy derived from the APK inspection.
+- Recorded the main asset categories worth recreating: background textures, panel/dialog chrome, focus treatments, watched/in-progress state overlays, and quality/codec badge systems.
+- Explicitly excluded direct reuse of Red Wizard-branded splash, banner, vendor, and promotional assets.
+- Added a dedicated asset-kit task so the visual layer is planned alongside UX behavior rather than bolted on later.
+
+### 2026-04-05 17:39 UTC
+- Re-checked the current app search-results implementation before changing the plan.
+- Confirmed `ResultsScreenRenderer` currently renders search results as a vertical stack of horizontal cards, not a poster wall.
+- Added a dedicated high-priority task to convert search results into a TV-friendly poster wall/grid and wired follow-up focus-state work to that new layout.
+
+### 2026-04-05 17:40 UTC
+- Added a dedicated planning task to turn the asset guidance into a concrete borrow / recreate / avoid inventory with exact Asahi targets.
+- Explicitly called out first-wave asset targets like poster focus treatment, shadow plate, result-card surface, empty-state panel, playback strip surface, state badges, and quality/codec chips.
+- Kept the recommendation lightweight: start the inventory inside this plan unless it grows too large.
+
+---
+
+## Scope Changes
+
+### 2026-04-05
+- Initial scope established.
+- Future hooks to preserve: shelf model flexibility, locally available metadata for focus enrichment, a small reusable asset kit, a reusable poster-card primitive for search/favorites/history, and a possible later split of playback overlay polish into its own plan if Phase C proves riskier than expected.
+
+---
+
+## Session Start
+
+### 2026-04-05 17:40 UTC
+Intended task: add an explicit plan item for producing a borrow / recreate / avoid inventory with exact visual target assets for Asahi.
+
+---
+
+## Definition of Done
+
+This plan is complete for its intended pass when:
+- the accepted borrowed-pattern items are implemented, validated, and logged
+- deferred ideas are marked honestly rather than left implied
+- home/browse/playback changes (if included) are mapped to real app structure and landed cleanly
+- validation notes explain what was actually exercised manually or by tests
+- `Current Focus` no longer implies unfinished required work
+- the file is ready to move out of `in_progress/` without misleading anyone
