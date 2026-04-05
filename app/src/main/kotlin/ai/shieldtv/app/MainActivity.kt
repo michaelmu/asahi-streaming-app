@@ -412,6 +412,25 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun teardownPlaybackSession() {
+        playerView.player = null
+        detachPlayerFromParent()
+        AppContainer.playbackEngine.release()
+        attachPlayerView()
+        latestPlaybackState = ai.shieldtv.app.core.model.playback.PlaybackState(
+            isBuffering = false,
+            isPlaying = false,
+            positionMs = 0,
+            durationMs = 0,
+            playerStateLabel = "idle",
+            videoFormat = null,
+            videoSizeLabel = null,
+            errorMessage = null
+        )
+        latestPlaybackError = null
+        latestPlaybackMessage = null
+    }
+
     private fun handleBackPress(): Boolean {
         return when (
             val result = backNavigationCoordinator.handleBack(
@@ -422,7 +441,7 @@ class MainActivity : ComponentActivity() {
             BackNavigationResult.Unhandled -> false
             is BackNavigationResult.Handled -> {
                 if (result.stopPlayback) {
-                    AppContainer.playbackEngine.stop()
+                    teardownPlaybackSession()
                 }
                 if (result.renderRequired) {
                     renderCurrentScreen()
