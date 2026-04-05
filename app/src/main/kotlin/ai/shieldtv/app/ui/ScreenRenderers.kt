@@ -791,9 +791,18 @@ class EpisodePickerScreenRenderer(
             return
         }
 
-        val selectedSeason = state.selectedSeasonNumber ?: 1
+        val availableSeasonNumbers = buildList {
+            val reportedSeasonCount = details.seasonCount ?: 0
+            if (reportedSeasonCount > 0) {
+                addAll(1..reportedSeasonCount)
+            }
+            addAll(details.episodesBySeason.keys)
+        }.distinct().sorted()
+        val fallbackSeasonCount = details.seasonCount ?: 3
+        val knownSeasonCount = availableSeasonNumbers.maxOrNull() ?: fallbackSeasonCount
+        val defaultSeason = availableSeasonNumbers.lastOrNull() ?: knownSeasonCount.coerceAtLeast(1)
+        val selectedSeason = state.selectedSeasonNumber ?: defaultSeason
         val selectedEpisode = state.selectedEpisodeNumber ?: 1
-        val knownSeasonCount = (details.seasonCount ?: 3).coerceAtMost(12)
 
         host.addView(viewFactory.artworkHero(
             title = details.mediaRef.title,
@@ -819,8 +828,19 @@ class EpisodePickerScreenRenderer(
                     layoutParams = LinearLayout.LayoutParams(viewFactory.dp(10), 1)
                 })
             }
+            if (season == selectedSeason) {
+                chip.post { onFirstFocusTarget(chip) }
+            }
         }
-        host.addView(HorizontalScrollView(activity).apply { addView(seasonStrip) })
+        host.addView(HorizontalScrollView(activity).apply {
+            addView(seasonStrip)
+            post {
+                val selectedSeasonView = seasonStrip.getChildAt((selectedSeason - 1).coerceAtLeast(0) * 2)
+                if (selectedSeasonView != null) {
+                    smoothScrollTo((selectedSeasonView.left - viewFactory.dp(24)).coerceAtLeast(0), 0)
+                }
+            }
+        })
         host.addView(viewFactory.spacer())
 
         host.addView(viewFactory.sectionTitle("Episodes"))
@@ -911,7 +931,7 @@ class EpisodePickerScreenRenderer(
             })
             host.addView(card)
             host.addView(viewFactory.spacer(8))
-            if (isSelected || (selectedEpisode !in episodeNumbers && index == 0)) {
+            if (selectedSeason !in availableSeasonNumbers && (isSelected || (selectedEpisode !in episodeNumbers && index == 0))) {
                 card.post { onFirstFocusTarget(card) }
             }
         }

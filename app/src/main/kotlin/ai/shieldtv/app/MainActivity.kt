@@ -306,7 +306,6 @@ class MainActivity : ComponentActivity() {
         }
 
         val title = viewFactory.railTitle("Asahi")
-        val subtitle = viewFactory.caption("TV-first streaming shell")
         val buildInfo = viewFactory.caption("v${BuildConfig.VERSION_NAME} • #${BuildConfig.VERSION_CODE} • ${BuildConfig.GIT_SHA}")
 
         railHost = LinearLayout(this).apply {
@@ -339,8 +338,6 @@ class MainActivity : ComponentActivity() {
         }
 
         sidebar.addView(title)
-        sidebar.addView(viewFactory.spacer(6))
-        sidebar.addView(subtitle)
         sidebar.addView(viewFactory.spacer(6))
         sidebar.addView(realDebridStatusText)
         sidebar.addView(viewFactory.spacer(4))
@@ -808,10 +805,18 @@ class MainActivity : ComponentActivity() {
                 },
                 onBrowseEpisodes = {
                     coordinator.currentState().selectedDetails?.let { details ->
+                        val availableSeasonNumbers = buildList {
+                            val reportedSeasonCount = details.seasonCount ?: 0
+                            if (reportedSeasonCount > 0) {
+                                addAll(1..reportedSeasonCount)
+                            }
+                            addAll(details.episodesBySeason.keys)
+                        }.distinct().sorted()
+                        val defaultSeason = availableSeasonNumbers.lastOrNull() ?: (details.seasonCount ?: 1).coerceAtLeast(1)
                         detailsNavigationCoordinator.openEpisodes(
                             coordinator = coordinator,
                             details = details,
-                            seasonNumber = coordinator.currentState().selectedSeasonNumber ?: 1,
+                            seasonNumber = coordinator.currentState().selectedSeasonNumber ?: defaultSeason,
                             episodeNumber = coordinator.currentState().selectedEpisodeNumber ?: 1
                         )
                         renderCurrentScreen()
@@ -1707,8 +1712,16 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun updateSidebarStatus(authLinked: Boolean = authState.isLinked) {
+        val visibleUsername = authState.username
+            ?.trim()
+            ?.takeIf { it.isNotBlank() }
+            ?.takeUnless {
+                val normalized = it.lowercase()
+                normalized == "linked" || normalized == "true" || normalized == "yes"
+            }
+
         realDebridStatusText.text = if (authLinked) {
-            authState.username?.takeIf { it.isNotBlank() }?.let { "Real-Debrid: Linked as $it" } ?: "Real-Debrid: Linked"
+            visibleUsername?.let { "Real-Debrid: Linked as $it" } ?: "Real-Debrid: Linked"
         } else {
             "Real-Debrid: Not linked"
         }
