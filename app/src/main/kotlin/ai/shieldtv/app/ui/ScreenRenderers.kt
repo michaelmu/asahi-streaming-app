@@ -14,6 +14,7 @@ import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.view.inputmethod.EditorInfo
 import androidx.core.content.ContextCompat
 import androidx.core.view.setPadding
 import androidx.media3.ui.PlayerView
@@ -466,8 +467,22 @@ class SearchScreenRenderer(
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 inputType = InputType.TYPE_CLASS_TEXT
             }
-            val searchButton = viewFactory.button("Search", onClick = {
+            val submitSearch = {
                 onSearch(state.searchMode, queryInput.text.toString())
+            }
+            queryInput.setOnEditorActionListener { _, actionId, event ->
+                val isSubmitAction = actionId == EditorInfo.IME_ACTION_SEARCH || actionId == EditorInfo.IME_ACTION_DONE
+                val isEnterKey = event?.action == KeyEvent.ACTION_DOWN &&
+                    (event.keyCode == KeyEvent.KEYCODE_ENTER || event.keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER)
+                if (isSubmitAction || isEnterKey) {
+                    submitSearch()
+                    true
+                } else {
+                    false
+                }
+            }
+            val searchButton = viewFactory.button("Search", onClick = {
+                submitSearch()
             }, iconResId = R.drawable.ic_nav_search).apply {
                 layoutParams = LinearLayout.LayoutParams(
                     viewFactory.dp(180),

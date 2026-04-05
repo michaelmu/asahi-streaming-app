@@ -6,6 +6,7 @@ import android.util.TypedValue
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
+import android.view.inputmethod.EditorInfo
 import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
@@ -253,6 +254,7 @@ class ScreenViewFactory(
             background = ContextCompat.getDrawable(context, R.drawable.asahi_input_bg)
             setPadding(dp(20), dp(18), dp(20), dp(18))
             isSingleLine = true
+            imeOptions = EditorInfo.IME_ACTION_SEARCH
         }
     }
 
