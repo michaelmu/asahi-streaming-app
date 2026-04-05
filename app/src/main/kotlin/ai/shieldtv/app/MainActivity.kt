@@ -32,6 +32,7 @@ import ai.shieldtv.app.core.model.media.SearchResult
 import ai.shieldtv.app.core.model.source.CacheStatus
 import ai.shieldtv.app.core.model.source.SourceResult
 import ai.shieldtv.app.core.model.source.SourceSearchRequest
+import ai.shieldtv.app.debug.PlaybackCrashLogStore
 import ai.shieldtv.app.di.AppContainer
 import ai.shieldtv.app.settings.SourcePreferences
 import ai.shieldtv.app.settings.SourcePreferencesCoordinator
@@ -214,6 +215,8 @@ class MainActivity : ComponentActivity() {
     private var latestUpdateMessage: String? = null
     private var persistedPlaybackSession: PlaybackSessionRecord? = null
     private var activeModalView: View? = null
+    private val playbackCrashLogStore by lazy { PlaybackCrashLogStore(applicationContext) }
+    private var lastFatalPlaybackReport: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -221,6 +224,7 @@ class MainActivity : ComponentActivity() {
         setContentView(buildContentView())
         initializeRenderers()
         attachPlayerView()
+        lastFatalPlaybackReport = playbackCrashLogStore.consumeFatalReport()
         observePlaybackState()
         refreshAuthState()
         persistedPlaybackSession = AppContainer.playbackSessionStore.load()
@@ -1391,6 +1395,11 @@ class MainActivity : ComponentActivity() {
         episodeNumber: Int? = source.episodeNumber,
         forceStartAtZero: Boolean = false
     ) {
+        persistPlaybackCrashContext(
+            source = source,
+            seasonNumber = seasonNumber,
+            episodeNumber = episodeNumber
+        )
         playbackLaunchCoordinator.shouldBlockPlayback(source, authState.isLinked)?.let { blocked ->
             latestPlaybackError = blocked.playbackError
             latestPlaybackMessage = blocked.playbackMessage
@@ -1850,9 +1859,43 @@ class MainActivity : ComponentActivity() {
             appendLine("playback_video_size=${latestPlaybackState.videoSizeLabel ?: "none"}")
             appendLine("playback_error=${latestPlaybackState.errorMessage ?: latestPlaybackError ?: "none"}")
             appendLine("source_diagnostics=${latestSourceDiagnostics ?: "none"}")
+            appendLine("fatal_playback_report_present=${lastFatalPlaybackReport != null}")
+            lastFatalPlaybackReport?.let {
+                appendLine("fatal_playback_report_start")
+                appendLine(it)
+                appendLine("fatal_playback_report_end")
+            }
         }
         clipboard?.setPrimaryClip(ClipData.newPlainText("Asahi Debug Info", debugText))
         statusText.text = "Debug info copied to clipboard"
+    }
+
+    private fun persistPlaybackCrashContext(
+        source: SourceResult,
+        seasonNumber: Int?,
+        episodeNumber: Int?
+    ) {
+        val state = coordinator.currentState()
+        playbackCrashLogStore.savePlaybackContext(
+            buildString {
+                appendLine("selected_media=${state.selectedMedia?.title ?: "none"}")
+                appendLine("selected_season=${seasonNumber ?: state.selectedSeasonNumber ?: "none"}")
+                appendLine("selected_episode=${episodeNumber ?: state.selectedEpisodeNumber ?: "none"}")
+                appendLine("selected_source=${source.displayName}")
+                appendLine("source_provider=${source.providerDisplayName}")
+                appendLine("source_quality=${source.quality}")
+                appendLine("source_cache=${source.cacheStatus}")
+                appendLine("source_size_bytes=${source.sizeBytes ?: "none"}")
+                appendLine("source_info_hash=${source.infoHash ?: "none"}")
+                appendLine("source_url=${source.url}")
+                appendLine(
+                    "source_raw_metadata=${source.rawMetadata.entries.joinToString(",") { "${it.key}=${it.value}" }.ifBlank { "none" }}"
+                )
+                appendLine("playback_url=${AppContainer.playbackEngine.getCurrentUrl() ?: "none"}")
+                appendLine("playback_state=${latestPlaybackState.playerStateLabel}")
+                appendLine("playback_error=${latestPlaybackState.errorMessage ?: latestPlaybackError ?: "none"}")
+            }.trim()
+        )
     }
 
     private fun detachPlayerFromParent() {
