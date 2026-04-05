@@ -26,6 +26,7 @@ import ai.shieldtv.app.ContinueWatchingItem
 import ai.shieldtv.app.SearchMode
 import ai.shieldtv.app.core.model.auth.DeviceCodeFlow
 import ai.shieldtv.app.core.model.auth.RealDebridAuthState
+import ai.shieldtv.app.favorites.toFavoriteStableKey
 import ai.shieldtv.app.core.model.media.EpisodeSummary
 import ai.shieldtv.app.core.model.media.MediaIds
 import ai.shieldtv.app.core.model.media.MediaRef
@@ -517,6 +518,7 @@ class ResultsScreenRenderer(
     fun render(
         state: AppState,
         emptyMessage: String,
+        favoriteKeys: Set<String>,
         onResultSelected: (SearchResult) -> Unit,
         onResultLongPress: (SearchResult) -> Unit,
         onNewSearch: () -> Unit,
@@ -578,6 +580,7 @@ class ResultsScreenRenderer(
                 val absoluteIndex = rowIndex * gridColumnCount + columnIndex
                 val card = focusablePosterCard(
                     result = result,
+                    isFavorite = favoriteKeys.contains(result.toFavoriteStableKey()),
                     onClick = { onResultSelected(result) },
                     onLongPress = { onResultLongPress(result) },
                     elevated = absoluteIndex < gridColumnCount
@@ -614,6 +617,7 @@ class ResultsScreenRenderer(
 
     private fun focusablePosterCard(
         result: SearchResult,
+        isFavorite: Boolean,
         onClick: () -> Unit,
         onLongPress: () -> Unit,
         elevated: Boolean = true
@@ -621,7 +625,7 @@ class ResultsScreenRenderer(
         return viewFactory.panel(elevated = elevated).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.TOP
-            minimumHeight = viewFactory.dp(360)
+            minimumHeight = viewFactory.dp(400)
             isFocusable = true
             isFocusableInTouchMode = true
             isClickable = true
@@ -666,32 +670,32 @@ class ResultsScreenRenderer(
             addView(posterFrame)
             addView(viewFactory.spacer(12))
 
-            addView(TextView(activity).apply {
+            val titleView = TextView(activity).apply {
                 text = result.mediaRef.title
                 setTextColor(viewFactory.textPrimaryColor)
                 textSize = 18f
                 setTypeface(typeface, Typeface.BOLD)
                 maxLines = 2
-            })
-            addView(viewFactory.spacer(6))
-            addView(viewFactory.caption(
-                buildString {
-                    result.mediaRef.year?.let { append(it) }
-                    if (result.badges.isNotEmpty()) {
-                        if (isNotEmpty()) append(" • ")
-                        append(result.badges.take(2).joinToString())
-                    }
-                    if (isEmpty()) {
-                        append(result.mediaRef.mediaType.name.lowercase().replaceFirstChar { it.uppercase() })
-                    }
-                }
-            ))
-            result.subtitle?.takeIf { it.isNotBlank() }?.let { subtitle ->
-                addView(viewFactory.spacer(8))
-                addView(viewFactory.body(subtitle.take(96))).also {
-                    (it as? TextView)?.maxLines = 3
-                }
             }
+            addView(titleView)
+            addView(viewFactory.spacer(6))
+
+            val metadataView = (viewFactory.caption(buildMetadataLine(result, isFavorite, focused = false)) as TextView).apply {
+                maxLines = 2
+            }
+            addView(metadataView)
+            addView(viewFactory.spacer(8))
+
+            val summaryView = (viewFactory.body(collapsedSummary(result, isFavorite)) as TextView).apply {
+                maxLines = 2
+            }
+            addView(summaryView)
+            addView(viewFactory.spacer(8))
+
+            val focusHintView = (viewFactory.caption("Press center to open • Menu for actions") as TextView).apply {
+                visibility = View.GONE
+            }
+            addView(focusHintView)
 
             setOnClickListener { onClick() }
             setOnLongClickListener {
@@ -706,6 +710,10 @@ class ResultsScreenRenderer(
                     context,
                     if (hasFocus) R.drawable.asahi_button_bg else if (elevated) R.drawable.asahi_panel_elevated_bg else R.drawable.asahi_panel_bg
                 )
+                metadataView.text = buildMetadataLine(result, isFavorite, focused = hasFocus)
+                summaryView.text = if (hasFocus) focusedSummary(result, isFavorite) else collapsedSummary(result, isFavorite)
+                summaryView.maxLines = if (hasFocus) 4 else 2
+                focusHintView.visibility = if (hasFocus) View.VISIBLE else View.GONE
                 updateDescendantTextColors(
                     root = view,
                     primary = viewFactory.textPrimaryColor,
@@ -726,6 +734,47 @@ class ResultsScreenRenderer(
                 }
             }
         }
+    }
+
+    private fun buildMetadataLine(result: SearchResult, isFavorite: Boolean, focused: Boolean): String {
+        val tokens = mutableListOf<String>()
+        result.mediaRef.year?.let { tokens += it.toString() }
+        tokens += result.mediaRef.mediaType.name.lowercase().replaceFirstChar { it.uppercase() }
+        if (isFavorite) tokens += "Favorite"
+        if (result.badges.any { it.equals("Watched", ignoreCase = true) }) {
+            tokens += "Watched"
+        }
+        if (focused) {
+            tokens += result.badges.filterNot {
+                it.equals("Favorite", ignoreCase = true) || it.equals("Watched", ignoreCase = true)
+            }.take(2)
+        }
+        return tokens.distinct().joinToString(" • ")
+    }
+
+    private fun collapsedSummary(result: SearchResult, isFavorite: Boolean): String {
+        val subtitle = result.subtitle
+        return when {
+            !subtitle.isNullOrBlank() -> subtitle.take(96)
+            isFavorite -> "Saved in favorites for quick access."
+            result.badges.any { it.equals("Watched", ignoreCase = true) } -> "Previously watched."
+            else -> "Open details for sources or playback."
+        }
+    }
+
+    private fun focusedSummary(result: SearchResult, isFavorite: Boolean): String {
+        val titleWithYear = buildString {
+            append(result.mediaRef.title)
+            result.mediaRef.year?.let { append(" ($it)") }
+        }
+        val subtitle = result.subtitle
+        val detail = when {
+            !subtitle.isNullOrBlank() -> subtitle.take(140)
+            isFavorite -> "Favorited and ready to reopen without another search."
+            result.badges.any { it.equals("Watched", ignoreCase = true) } -> "Marked watched already. Use the menu for quick actions or cleanup."
+            else -> "Ready for details, sources, and playback flow."
+        }
+        return "$titleWithYear. $detail"
     }
 }
 

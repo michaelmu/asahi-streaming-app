@@ -803,6 +803,7 @@ class MainActivity : ComponentActivity() {
             AppDestination.RESULTS -> resultsRenderer.render(
                 state = coordinator.currentState(),
                 emptyMessage = latestSourcesError ?: "No results.",
+                favoriteKeys = AppContainer.favoritesCoordinator.favoriteKeys(),
                 onResultSelected = ::onSearchResultSelected,
                 onResultLongPress = ::showResultActions,
                 onNewSearch = {
