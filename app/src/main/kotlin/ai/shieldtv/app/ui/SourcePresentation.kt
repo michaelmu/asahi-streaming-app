@@ -6,16 +6,16 @@ import ai.shieldtv.app.core.model.source.SourceResult
 
 object SourcePresentation {
     fun groupTitle(source: SourceResult): String = when (source.cacheStatus) {
-        CacheStatus.CACHED -> "Cached Picks"
+        CacheStatus.CACHED -> "Ready to Play"
         CacheStatus.DIRECT -> "Direct Links"
-        CacheStatus.UNCACHED, CacheStatus.UNCHECKED -> "Fallback Sources"
+        CacheStatus.UNCACHED, CacheStatus.UNCHECKED -> "Other Options"
     }
 
     fun sourceLabel(source: SourceResult): String = when {
-        source.cacheStatus == CacheStatus.CACHED && source.quality == Quality.UHD_4K -> "BEST"
-        source.cacheStatus == CacheStatus.CACHED -> "CACHED"
+        source.cacheStatus == CacheStatus.CACHED && source.quality == Quality.UHD_4K -> "TOP PICK"
+        source.cacheStatus == CacheStatus.CACHED -> "READY"
         source.cacheStatus == CacheStatus.DIRECT -> "DIRECT"
-        else -> "FALLBACK"
+        else -> "OTHER"
     }
 
     fun qualityLabel(quality: Quality): String = when (quality) {
@@ -52,8 +52,12 @@ object SourcePresentation {
         sourceLabel(source),
         qualityLabel(source.quality),
         source.sizeLabel,
-        source.seedInfo(),
-        providerChip(source)
+        source.seedInfo()
+    ).joinToString(" • ")
+
+    fun supportLabel(source: SourceResult): String = listOfNotNull(
+        providerChip(source),
+        source.rawMetadata["flags"]?.takeIf { it.isNotBlank() }?.replace(",", " • ")
     ).joinToString(" • ")
 
     private fun SourceResult.seedInfo(): String? = rawMetadata["seeders"] ?: score?.let { null }

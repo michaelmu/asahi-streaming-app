@@ -99,21 +99,21 @@ class HomeScreenRenderer(
     private val featuredMovies = listOf(
         SearchResult(
             mediaRef = MediaRef(MediaType.MOVIE, MediaIds(tmdbId = "438631", imdbId = null, tvdbId = null), "Dune: Part Two", year = 2024),
-            subtitle = "Big sci-fi spectacle and a very safe default demo title.",
+            subtitle = "Big sci-fi spectacle with a proper big-screen silhouette.",
             posterUrl = "https://image.tmdb.org/t/p/w500/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg",
             backdropUrl = "https://image.tmdb.org/t/p/w780/xOMo8BRK7PfcJv9JCnx7s5hj0PX.jpg",
-            badges = listOf("Featured", "Movie")
+            badges = listOf("Featured", "Epic")
         ),
         SearchResult(
             mediaRef = MediaRef(MediaType.MOVIE, MediaIds(tmdbId = "157336", imdbId = null, tvdbId = null), "Interstellar", year = 2014),
-            subtitle = "Reliable showcase title with strong artwork and broad source availability.",
+            subtitle = "Quiet start, huge payoff, and still one of the better couch-night picks.",
             posterUrl = "https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",
             backdropUrl = "https://image.tmdb.org/t/p/w780/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg",
             badges = listOf("Sci-Fi")
         ),
         SearchResult(
             mediaRef = MediaRef(MediaType.MOVIE, MediaIds(tmdbId = "603692", imdbId = null, tvdbId = null), "John Wick: Chapter 4", year = 2023),
-            subtitle = "Action-heavy quick pick for testing details and source rows.",
+            subtitle = "Pure momentum when you want something fast and loud.",
             posterUrl = "https://image.tmdb.org/t/p/w500/vZloFAK7NmvMGKE7VkF5UHaz0I.jpg",
             backdropUrl = "https://image.tmdb.org/t/p/w780/h8gHn0OzBoaefsYseUByqsmEDMY.jpg",
             badges = listOf("Action")
@@ -123,21 +123,21 @@ class HomeScreenRenderer(
     private val featuredShows = listOf(
         SearchResult(
             mediaRef = MediaRef(MediaType.SHOW, MediaIds(tmdbId = "95396", imdbId = null, tvdbId = null), "Severance", year = 2022),
-            subtitle = "Great modern TV test case with strong episodic flow.",
+            subtitle = "Sharp, strange, and exactly the kind of show that earns a hero slot.",
             posterUrl = "https://image.tmdb.org/t/p/w500/7lQzaWm0M0aX9P4o0P6m0Ht4dQJ.jpg",
             backdropUrl = "https://image.tmdb.org/t/p/w780/kU98MbVVgi72wzceyrEbClZmMFe.jpg",
             badges = listOf("Featured", "TV")
         ),
         SearchResult(
             mediaRef = MediaRef(MediaType.SHOW, MediaIds(tmdbId = "83867", imdbId = null, tvdbId = null), "Andor", year = 2022),
-            subtitle = "Good fit for source + episode navigation validation.",
+            subtitle = "Slow-burn sci-fi with enough weight to carry a full evening.",
             posterUrl = "https://image.tmdb.org/t/p/w500/59SVNwLfoMnZPPB6ukW6dlPxAdI.jpg",
             backdropUrl = "https://image.tmdb.org/t/p/w780/zGoZB4CboMzY1z4G3nU6BWnMDB2.jpg",
             badges = listOf("Sci-Fi")
         ),
         SearchResult(
             mediaRef = MediaRef(MediaType.SHOW, MediaIds(tmdbId = "100088", imdbId = null, tvdbId = null), "The Last of Us", year = 2023),
-            subtitle = "Solid browse/demo pick with recognizable artwork.",
+            subtitle = "Big emotional stakes, good art, easy sell from the sofa.",
             posterUrl = "https://image.tmdb.org/t/p/w500/uKvVjHNqB5VmOrdxqAt2F7J78ED.jpg",
             backdropUrl = "https://image.tmdb.org/t/p/w780/56v2KjBlU4XaOv9rVYEQypROD7P.jpg",
             badges = listOf("Drama")
@@ -169,17 +169,25 @@ class HomeScreenRenderer(
         val libraryPicks = if (state.searchMode == SearchMode.SHOWS) featuredShows else featuredMovies
         val featured = dynamicPicks(state, libraryPicks)
 
+        val heroPick = featured.firstOrNull()
+        val shelfPicks = featured.drop(1)
+
         if (state.continueWatching.isNotEmpty()) {
             host.addView(viewFactory.sectionTitle("Continue Watching"))
             host.addView(viewFactory.spacer(12))
             host.addView(buildContinueWatchingRow(state.continueWatching, onContinueWatching, onFirstFocusTarget))
-            host.addView(viewFactory.spacer(14))
+            host.addView(viewFactory.spacer(18))
+        } else if (heroPick != null) {
+            host.addView(buildFeaturedHero(heroPick, onQuickPick, onFirstFocusTarget))
+            host.addView(viewFactory.spacer(18))
         }
 
-        host.addView(viewFactory.sectionTitle("Quick Picks"))
-        host.addView(viewFactory.spacer(10))
-        host.addView(buildQuickPickRow(featured, onQuickPick, onFirstFocusTarget))
-        host.addView(viewFactory.spacer(14))
+        if (shelfPicks.isNotEmpty()) {
+            host.addView(viewFactory.sectionTitle("Quick Picks"))
+            host.addView(viewFactory.spacer(10))
+            host.addView(buildQuickPickRow(shelfPicks, onQuickPick, onFirstFocusTarget))
+            host.addView(viewFactory.spacer(16))
+        }
 
         val favoritesShelfItems = (movieFavorites + showFavorites).take(4)
         host.addView(viewFactory.sectionTitle("Your Picks"))
@@ -238,6 +246,8 @@ class HomeScreenRenderer(
         val browsePanel = viewFactory.panel(elevated = true).apply {
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             addView(viewFactory.sectionTitle("Browse"))
+            addView(viewFactory.spacer(8))
+            addView(viewFactory.caption("Jump straight into movies or TV."))
             addView(viewFactory.spacer(12))
             addView(actionButton("Browse Movies", onBrowseMovies, R.drawable.ic_nav_movie))
             addView(viewFactory.spacer(10))
@@ -248,11 +258,9 @@ class HomeScreenRenderer(
                 it.marginStart = viewFactory.dp(14)
             }
             addView(viewFactory.sectionTitle("Recent Searches"))
-            addView(viewFactory.spacer(12))
+            addView(viewFactory.spacer(8))
             if (state.recentQueries.isEmpty()) {
-                addView(viewFactory.body("Nothing recent yet. Search for a movie or show and your last queries will show up here."))
-                addView(viewFactory.spacer(10))
-                addView(viewFactory.caption("Tip: use Movies or TV Shows on the left rail to start a new search fast."))
+                addView(viewFactory.caption("Recent searches show up here after your first browse."))
             } else {
                 state.recentQueries.take(4).forEachIndexed { index, query ->
                     val button = actionButton(query, onClick = { onRecentQuery(query) }, iconResId = R.drawable.ic_nav_search)
@@ -267,6 +275,42 @@ class HomeScreenRenderer(
 
         host.post {
             host.findFocus()?.let(onFirstFocusTarget)
+        }
+    }
+
+    private fun buildFeaturedHero(
+        item: SearchResult,
+        onQuickPick: (SearchResult) -> Unit,
+        onFirstFocusTarget: (View) -> Unit
+    ): View {
+        return viewFactory.artworkHero(
+            title = item.mediaRef.title,
+            subtitle = item.subtitle ?: "A solid featured pick for a couch-first browse.",
+            imageUrl = item.backdropUrl?.takeIf { it.isNotBlank() } ?: item.posterUrl,
+            imageHeightDp = 300
+        ).apply {
+            isFocusable = true
+            isFocusableInTouchMode = true
+            isClickable = true
+            background = ContextCompat.getDrawable(context, R.drawable.asahi_poster_card_bg)
+            foreground = null
+            alpha = 0.99f
+            setOnClickListener { onQuickPick(item) }
+            setOnFocusChangeListener { view, hasFocus ->
+                view.scaleX = if (hasFocus) 1.01f else 1f
+                view.scaleY = if (hasFocus) 1.01f else 1f
+                view.alpha = if (hasFocus) 1f else 0.99f
+                view.translationZ = if (hasFocus) viewFactory.dp(18).toFloat() else 0f
+            }
+            setOnKeyListener { _, keyCode, event ->
+                if (event.action == KeyEvent.ACTION_DOWN && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)) {
+                    onQuickPick(item)
+                    true
+                } else {
+                    false
+                }
+            }
+            post { onFirstFocusTarget(this) }
         }
     }
 
@@ -298,23 +342,22 @@ class HomeScreenRenderer(
                         if (index > 0) it.marginStart = viewFactory.dp(12)
                     }
                 }
-                card.addView(ImageView(host.context).apply {
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        viewFactory.dp(120)
-                    )
-                    scaleType = ImageView.ScaleType.CENTER_CROP
-                    item.artworkUrl?.takeIf { it.isNotBlank() }?.let { load(it) }
-                })
+                card.addView(homeShelfArtwork(
+                    artworkUrl = item.artworkUrl,
+                    heightDp = 124,
+                    fallbackIconResId = R.drawable.ic_nav_play,
+                    fallbackLabel = "Continue Watching"
+                ))
                 card.addView(viewFactory.spacer(10))
                 card.addView(TextView(host.context).apply {
                     text = item.mediaTitle
                     setTextColor(viewFactory.textPrimaryColor)
                     textSize = 17f
                     setTypeface(typeface, Typeface.BOLD)
+                    maxLines = 2
                 })
                 card.addView(viewFactory.spacer(6))
-                card.addView(viewFactory.caption("${item.subtitle} • Resumable"))
+                card.addView(viewFactory.caption(item.subtitle.takeIf { it.isNotBlank() } ?: "Ready to resume"))
                 card.addView(viewFactory.spacer(8))
                 card.addView(viewFactory.progressBar(item.progressPercent))
                 card.addView(viewFactory.spacer(8))
@@ -346,23 +389,25 @@ class HomeScreenRenderer(
                         if (index > 0) it.marginStart = viewFactory.dp(12)
                     }
                 }
-                card.addView(ImageView(host.context).apply {
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        viewFactory.dp(132)
-                    )
-                    scaleType = ImageView.ScaleType.CENTER_CROP
-                    (item.backdropUrl ?: item.posterUrl)?.takeIf { it.isNotBlank() }?.let { load(it) }
-                })
+                card.addView(homeShelfArtwork(
+                    artworkUrl = item.backdropUrl?.takeIf { it.isNotBlank() } ?: item.posterUrl,
+                    heightDp = 132,
+                    fallbackIconResId = if (item.mediaRef.mediaType == MediaType.SHOW) R.drawable.ic_nav_tv else R.drawable.ic_nav_movie,
+                    fallbackLabel = item.mediaRef.mediaType.name.lowercase().replaceFirstChar { it.uppercase() }
+                ))
                 card.addView(viewFactory.spacer(10))
                 card.addView(TextView(host.context).apply {
                     text = item.mediaRef.title
                     setTextColor(viewFactory.textPrimaryColor)
                     textSize = 18f
                     setTypeface(typeface, Typeface.BOLD)
+                    maxLines = 2
                 })
-                card.addView(viewFactory.spacer(6))
-                card.addView(viewFactory.caption(item.badges.joinToString(" • ")))
+                val shelfMeta = homeShelfMetadata(item)
+                if (shelfMeta.isNotBlank()) {
+                    card.addView(viewFactory.spacer(6))
+                    card.addView(viewFactory.caption(shelfMeta))
+                }
                 addView(card)
                 if (index == 0) card.post { onFirstFocusTarget(card) }
             }
@@ -407,12 +452,20 @@ class HomeScreenRenderer(
             isFocusable = true
             isFocusableInTouchMode = true
             isClickable = true
-            alpha = 0.97f
+            alpha = 0.985f
+            background = ContextCompat.getDrawable(context, R.drawable.asahi_poster_card_bg)
+            foreground = null
             setOnClickListener { onClick() }
             setOnFocusChangeListener { view, hasFocus ->
-                view.scaleX = if (hasFocus) 1.05f else 1f
-                view.scaleY = if (hasFocus) 1.05f else 1f
-                view.alpha = if (hasFocus) 1f else 0.97f
+                view.scaleX = if (hasFocus) 1.03f else 1f
+                view.scaleY = if (hasFocus) 1.03f else 1f
+                view.alpha = if (hasFocus) 1f else 0.985f
+                view.translationZ = if (hasFocus) viewFactory.dp(16).toFloat() else 0f
+                updateDescendantTextColors(
+                    root = view,
+                    primary = viewFactory.textPrimaryColor,
+                    secondary = if (hasFocus) viewFactory.textPrimaryColor else viewFactory.textSecondaryColor
+                )
             }
             setOnKeyListener { _, keyCode, event ->
                 if (event.action == KeyEvent.ACTION_DOWN && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)) {
@@ -423,6 +476,69 @@ class HomeScreenRenderer(
                 }
             }
         }
+    }
+
+    private fun homeShelfArtwork(
+        artworkUrl: String?,
+        heightDp: Int,
+        fallbackIconResId: Int,
+        fallbackLabel: String
+    ): View {
+        return FrameLayout(host.context).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                viewFactory.dp(heightDp)
+            )
+
+            val resolvedArtwork = artworkUrl?.takeIf { it.isNotBlank() }
+            addView(ImageView(host.context).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                )
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                clipToOutline = true
+                resolvedArtwork?.let { load(it) }
+                    ?: setImageDrawable(ContextCompat.getDrawable(context, fallbackIconResId))
+                imageAlpha = if (resolvedArtwork == null) 144 else 255
+                setBackgroundColor(Color.argb(18, 255, 255, 255))
+            })
+
+            addView(View(host.context).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                )
+                setBackgroundColor(Color.argb(24, 7, 10, 15))
+            })
+
+            addView(TextView(host.context).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    Gravity.BOTTOM
+                ).apply {
+                    setMargins(viewFactory.dp(10))
+                }
+                text = fallbackLabel
+                setTextColor(viewFactory.textPrimaryColor)
+                textSize = 12f
+                setTypeface(typeface, Typeface.BOLD)
+                visibility = if (resolvedArtwork == null) View.VISIBLE else View.GONE
+            })
+        }
+    }
+
+    private fun homeShelfMetadata(item: SearchResult): String {
+        val tokens = mutableListOf<String>()
+        item.mediaRef.year?.let { tokens += it.toString() }
+        tokens += item.mediaRef.mediaType.name.lowercase().replaceFirstChar { it.uppercase() }
+        tokens += item.badges.filterNot {
+            it.equals("Favorite", ignoreCase = true) || it.equals("Watched", ignoreCase = true)
+        }.take(1)
+        if (item.badges.any { it.equals("Favorite", ignoreCase = true) }) tokens += "Favorite"
+        if (item.badges.any { it.equals("Watched", ignoreCase = true) }) tokens += "Watched"
+        return tokens.distinct().joinToString(" • ")
     }
 
     private fun horizontalGap(): View = View(host.context).apply {
@@ -516,7 +632,7 @@ class SearchScreenRenderer(
             searchRow.addView(searchButton)
             addView(searchRow)
             addView(viewFactory.spacer(10))
-            addView(viewFactory.caption("Tip: down goes straight to search, and menu options stay one step above."))
+            addView(viewFactory.caption("Down moves straight into results controls, with favorites and history one step above."))
 
             queryInput.post {
                 onFirstFocusTarget(queryInput)
@@ -574,7 +690,7 @@ class ResultsScreenRenderer(
                     title = when {
                         isFavoritesBrowse -> "No favorites yet"
                         isHistoryBrowse -> "No watch history yet"
-                        else -> "Nothing useful yet"
+                        else -> "No matches yet"
                     },
                     body = when {
                         isFavoritesBrowse -> "Favorite something from search results and it’ll show up here. Use Search to find a title, then open the menu to save it."
@@ -653,15 +769,18 @@ class ResultsScreenRenderer(
         return viewFactory.panel(elevated = elevated).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.TOP
-            minimumHeight = viewFactory.dp(400)
+            minimumHeight = viewFactory.dp(390)
             isFocusable = true
             isFocusableInTouchMode = true
             isClickable = true
             isLongClickable = true
-            alpha = 0.975f
+            alpha = 0.985f
             background = ContextCompat.getDrawable(context, R.drawable.asahi_poster_card_bg)
-            foreground = ContextCompat.getDrawable(context, android.R.drawable.list_selector_background)
+            foreground = null
             elevation = viewFactory.dp(if (elevated) 8 else 4).toFloat()
+
+            val artworkUrl = result.posterUrl?.takeIf { it.isNotBlank() }
+                ?: result.backdropUrl?.takeIf { it.isNotBlank() }
 
             val posterFrame = FrameLayout(context).apply {
                 layoutParams = LinearLayout.LayoutParams(
@@ -676,12 +795,21 @@ class ResultsScreenRenderer(
                 )
                 scaleType = ImageView.ScaleType.CENTER_CROP
                 clipToOutline = true
-                result.posterUrl?.takeIf { it.isNotBlank() }?.let { url -> load(url) }
+                artworkUrl?.let { url -> load(url) }
                     ?: setImageDrawable(ContextCompat.getDrawable(context, R.drawable.ic_nav_movie))
-                imageAlpha = if (result.posterUrl.isNullOrBlank()) 140 else 255
-                setBackgroundColor(Color.argb(28, 255, 255, 255))
+                imageAlpha = if (artworkUrl == null) 144 else 255
+                setBackgroundColor(Color.argb(18, 255, 255, 255))
             }
             posterFrame.addView(posterView)
+
+            val posterScrim = View(context).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                )
+                setBackgroundColor(Color.argb(26, 7, 10, 15))
+            }
+            posterFrame.addView(posterScrim)
 
             val fallbackLabel = TextView(activity).apply {
                 layoutParams = FrameLayout.LayoutParams(
@@ -695,7 +823,7 @@ class ResultsScreenRenderer(
                 setTextColor(viewFactory.textPrimaryColor)
                 textSize = 12f
                 setTypeface(typeface, Typeface.BOLD)
-                visibility = if (result.posterUrl.isNullOrBlank()) View.VISIBLE else View.GONE
+                visibility = if (artworkUrl == null) View.VISIBLE else View.GONE
             }
             posterFrame.addView(fallbackLabel)
             addView(posterFrame)
@@ -717,7 +845,7 @@ class ResultsScreenRenderer(
             addView(metadataView)
             addView(viewFactory.spacer(8))
 
-            val summaryView = (viewFactory.body(collapsedSummary(result, isFavorite)) as TextView).apply {
+            val summaryView = (viewFactory.caption(collapsedSummary(result, isFavorite)) as TextView).apply {
                 maxLines = 2
             }
             addView(summaryView)
@@ -734,13 +862,13 @@ class ResultsScreenRenderer(
                 true
             }
             setOnFocusChangeListener { view, hasFocus ->
-                view.scaleX = if (hasFocus) 1.04f else 1f
-                view.scaleY = if (hasFocus) 1.04f else 1f
-                view.alpha = if (hasFocus) 1f else 0.975f
-                view.translationZ = if (hasFocus) viewFactory.dp(18).toFloat() else 0f
+                view.scaleX = if (hasFocus) 1.03f else 1f
+                view.scaleY = if (hasFocus) 1.03f else 1f
+                view.alpha = if (hasFocus) 1f else 0.985f
+                view.translationZ = if (hasFocus) viewFactory.dp(16).toFloat() else 0f
                 metadataView.text = buildMetadataLine(result, isFavorite, focused = hasFocus)
                 summaryView.text = if (hasFocus) focusedSummary(result, isFavorite) else collapsedSummary(result, isFavorite)
-                summaryView.maxLines = if (hasFocus) 4 else 2
+                summaryView.maxLines = if (hasFocus) 3 else 2
                 focusHintView.visibility = if (hasFocus) View.VISIBLE else View.GONE
                 updateDescendantTextColors(
                     root = view,
@@ -781,28 +909,32 @@ class ResultsScreenRenderer(
     }
 
     private fun collapsedSummary(result: SearchResult, isFavorite: Boolean): String {
-        val subtitle = result.subtitle
         return when {
-            !subtitle.isNullOrBlank() -> subtitle.take(96)
-            isFavorite -> "Saved in favorites for quick access."
-            result.badges.any { it.equals("Watched", ignoreCase = true) } -> "Previously watched."
-            else -> "Open details for sources or playback."
+            isFavorite && result.badges.any { it.equals("Watched", ignoreCase = true) } -> "Saved favorite • already watched"
+            isFavorite -> "Saved favorite"
+            result.badges.any { it.equals("Watched", ignoreCase = true) } -> "Already watched"
+            else -> "Open details"
         }
     }
 
     private fun focusedSummary(result: SearchResult, isFavorite: Boolean): String {
-        val titleWithYear = buildString {
-            append(result.mediaRef.title)
-            result.mediaRef.year?.let { append(" ($it)") }
+        val stateLine = when {
+            isFavorite && result.badges.any { it.equals("Watched", ignoreCase = true) } -> "Saved in favorites and already watched."
+            isFavorite -> "Saved in favorites for quick access."
+            result.badges.any { it.equals("Watched", ignoreCase = true) } -> "Previously watched and ready to reopen."
+            else -> "Open details, then continue to sources or playback."
         }
-        val subtitle = result.subtitle
-        val detail = when {
-            !subtitle.isNullOrBlank() -> subtitle.take(140)
-            isFavorite -> "Favorited and ready to reopen without another search."
-            result.badges.any { it.equals("Watched", ignoreCase = true) } -> "Marked watched already. Use the menu for quick actions or cleanup."
-            else -> "Ready for details, sources, and playback flow."
+        return buildString {
+            append(stateLine)
+            val browseTags = result.badges.filterNot {
+                it.equals("Favorite", ignoreCase = true) || it.equals("Watched", ignoreCase = true)
+            }.take(2)
+            if (browseTags.isNotEmpty()) {
+                append(' ')
+                append(browseTags.joinToString(" • "))
+                append('.')
+            }
         }
-        return "$titleWithYear. $detail"
     }
 }
 
@@ -826,19 +958,46 @@ class DetailsScreenRenderer(
             return
         }
 
+        val primaryActionLabel = if (details.mediaRef.mediaType == MediaType.SHOW) "Browse Episodes" else "Find Sources"
+        val primaryActionHandler = if (details.mediaRef.mediaType == MediaType.SHOW) onBrowseEpisodes else onFindSources
+        val metadataLine = buildList {
+            add(details.mediaRef.mediaType.name.lowercase().replaceFirstChar { it.uppercase() })
+            details.mediaRef.year?.let { add(it.toString()) }
+            details.runtimeMinutes?.let { add("${it}m") }
+            details.seasonCount?.let { add("${it} season" + if (it == 1) "" else "s") }
+        }.joinToString(" • ")
+        val overviewText = details.overview?.trim().orEmpty().ifBlank { "No overview yet." }
+        val overviewPreview = if (overviewText.length > 280) overviewText.take(277).trimEnd() + "..." else overviewText
+
+        host.addView(viewFactory.artworkHero(
+            title = details.mediaRef.title,
+            subtitle = listOfNotNull(
+                metadataLine.takeIf { it.isNotBlank() },
+                details.genres.take(3).takeIf { it.isNotEmpty() }?.joinToString(" • ")
+            ).joinToString("\n"),
+            imageUrl = details.backdropUrl?.takeIf { it.isNotBlank() } ?: details.posterUrl,
+            imageHeightDp = 320
+        ))
+        host.addView(viewFactory.spacer(18))
+
         val topPanel = LinearLayout(host.context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.TOP
         }
         val posterPanel = viewFactory.panel(elevated = true).apply {
             layoutParams = LinearLayout.LayoutParams(viewFactory.dp(250), LinearLayout.LayoutParams.WRAP_CONTENT)
+            background = ContextCompat.getDrawable(context, R.drawable.asahi_poster_card_bg)
             val poster = ImageView(host.context).apply {
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     viewFactory.dp(360)
                 )
                 scaleType = ImageView.ScaleType.CENTER_CROP
+                clipToOutline = true
                 details.posterUrl?.takeIf { it.isNotBlank() }?.let { load(it) }
+                    ?: details.backdropUrl?.takeIf { it.isNotBlank() }?.let { load(it) }
+                    ?: setImageDrawable(ContextCompat.getDrawable(context, if (details.mediaRef.mediaType == MediaType.SHOW) R.drawable.ic_nav_tv else R.drawable.ic_nav_movie))
+                imageAlpha = if (details.posterUrl.isNullOrBlank() && details.backdropUrl.isNullOrBlank()) 144 else 255
             }
             addView(poster)
         }
@@ -848,6 +1007,19 @@ class DetailsScreenRenderer(
                 it.marginStart = viewFactory.dp(18)
             }
         }
+
+        infoPanel.addView(viewFactory.sectionTitle("Up Next"))
+        infoPanel.addView(viewFactory.spacer(8))
+        infoPanel.addView(viewFactory.title(primaryActionLabel))
+        infoPanel.addView(viewFactory.spacer(8))
+        infoPanel.addView(viewFactory.caption(
+            if (details.mediaRef.mediaType == MediaType.SHOW) {
+                "Open the episode picker and jump straight into a season."
+            } else {
+                "Open the ranked source list and pick a stream quickly."
+            }
+        ))
+        infoPanel.addView(viewFactory.spacer(18))
 
         val statsRow = LinearLayout(host.context).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -864,13 +1036,13 @@ class DetailsScreenRenderer(
             statsRow.addView(spacedStat(viewFactory.statPill("Seasons", it.toString(), StatTone.SUCCESS)))
         }
         infoPanel.addView(HorizontalScrollView(host.context).apply { addView(statsRow) })
-        infoPanel.addView(viewFactory.spacer())
+        infoPanel.addView(viewFactory.spacer(18))
         infoPanel.addView(viewFactory.panel(elevated = true).apply {
             addView(viewFactory.sectionTitle("Overview"))
-            addView(viewFactory.spacer(12))
-            addView(viewFactory.body(details.overview ?: "No overview yet."))
+            addView(viewFactory.spacer(10))
+            addView(viewFactory.body(overviewPreview))
             if (details.genres.isNotEmpty()) {
-                addView(viewFactory.spacer(16))
+                addView(viewFactory.spacer(14))
                 addView(viewFactory.caption("Genres: ${details.genres.joinToString()}"))
             }
         })
@@ -878,26 +1050,27 @@ class DetailsScreenRenderer(
         topPanel.addView(posterPanel)
         topPanel.addView(infoPanel)
         host.addView(topPanel)
-        host.addView(viewFactory.spacer())
+        host.addView(viewFactory.spacer(18))
 
         val actionRow = LinearLayout(host.context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.START
         }
         val primaryAction = viewFactory.button(
-            if (details.mediaRef.mediaType == MediaType.SHOW) "Browse Episodes" else "Find Sources",
-            if (details.mediaRef.mediaType == MediaType.SHOW) onBrowseEpisodes else onFindSources,
+            primaryActionLabel,
+            primaryActionHandler,
             iconResId = if (details.mediaRef.mediaType == MediaType.SHOW) R.drawable.ic_nav_tv else R.drawable.ic_nav_play
-        )
+        ).apply {
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
         val favoriteAction = viewFactory.button(
             if (isFavorite) "Remove Favorite" else "Add Favorite",
             onToggleFavorite,
             iconResId = R.drawable.ic_nav_favorite
         ).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).also { it.marginStart = viewFactory.dp(12) }
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
+                it.marginStart = viewFactory.dp(12)
+            }
         }
         actionRow.addView(primaryAction)
         actionRow.addView(favoriteAction)
@@ -952,7 +1125,7 @@ class EpisodePickerScreenRenderer(
 
         host.addView(viewFactory.artworkHero(
             title = details.mediaRef.title,
-            subtitle = "Season $selectedSeason · Episode $selectedEpisode — closer to Stremio than the old one-page scroll monster.",
+            subtitle = "Season $selectedSeason · Episode $selectedEpisode — quick episode picking without the long scroll.",
             imageUrl = details.backdropUrl ?: details.posterUrl,
             imageHeightDp = 280
         ))
@@ -1110,19 +1283,35 @@ class SourcesScreenRenderer(
 
         host.addView(viewFactory.title(title))
         host.addView(viewFactory.spacer(6))
-        host.addView(viewFactory.caption("Choose the clearest cached stream first."))
+        host.addView(viewFactory.caption("Start with a ready or direct stream, then drop to other options if needed."))
         host.addView(viewFactory.spacer(16))
 
+        val sourceCount = state.selectedSources.size
         val summaryPanel = viewFactory.panel(elevated = true).apply {
-            addView(viewFactory.sectionTitle("Source Summary"))
+            addView(viewFactory.sectionTitle("Best Path"))
             addView(viewFactory.spacer(10))
+            addView(viewFactory.body(
+                when {
+                    sourceCount == 0 -> "Nothing surfaced yet."
+                    state.selectedSources.firstOrNull()?.cacheStatus == CacheStatus.CACHED -> "A ready-to-play cached option is already at the top of the list."
+                    state.selectedSources.firstOrNull()?.cacheStatus == CacheStatus.DIRECT -> "A direct link is leading this list, with other options below it."
+                    else -> "No ready stream surfaced first, so you may need to inspect the fallback options."
+                }
+            ))
             if (!error.isNullOrBlank()) {
-                addView(viewFactory.body("Lookup issue: $error"))
                 addView(viewFactory.spacer(10))
+                addView(viewFactory.caption("Lookup issue: $error"))
             }
-            addView(viewFactory.caption(diagnostics ?: "No provider diagnostics yet."))
         }
         host.addView(summaryPanel)
+        diagnostics?.takeIf { it.isNotBlank() }?.let {
+            host.addView(viewFactory.spacer(12))
+            host.addView(viewFactory.panel(elevated = false).apply {
+                addView(viewFactory.sectionTitle("Provider Notes"))
+                addView(viewFactory.spacer(8))
+                addView(viewFactory.caption(it))
+            })
+        }
         host.addView(viewFactory.spacer())
 
         if (state.selectedSources.isEmpty()) {
@@ -1143,8 +1332,13 @@ class SourcesScreenRenderer(
             host.addView(viewFactory.sectionTitle(groupTitle))
             host.addView(viewFactory.spacer(12))
             items.take(10).forEachIndexed { index, source ->
+                val isTopPick = source.cacheStatus == CacheStatus.CACHED && index == 0 && groupTitle == "Ready to Play"
                 val card = focusableSourceCard(onClick = { onSourceSelected(source) }, elevated = source.cacheStatus == CacheStatus.CACHED).apply {
                     setPadding(viewFactory.dp(18), viewFactory.dp(14), viewFactory.dp(18), viewFactory.dp(14))
+                }
+                if (isTopPick) {
+                    card.addView(viewFactory.sectionTitle("Top pick"))
+                    card.addView(viewFactory.spacer(8))
                 }
                 val row = LinearLayout(host.context).apply {
                     orientation = LinearLayout.HORIZONTAL
@@ -1172,16 +1366,16 @@ class SourcesScreenRenderer(
                     maxLines = 1
                 })
                 card.addView(row)
-                source.rawMetadata["flags"]?.takeIf { it.isNotBlank() }?.let { flags ->
+                SourcePresentation.supportLabel(source).takeIf { it.isNotBlank() }?.let { support ->
                     card.addView(viewFactory.spacer(6))
-                    card.addView(viewFactory.caption(flags.replace(",", " • ")))
+                    card.addView(viewFactory.caption(support))
                 }
                 host.addView(card)
                 host.addView(viewFactory.spacer(8))
                 if (!restoredFocused && ((selectedSourceId != null && source.id == selectedSourceId) || (selectedSourceUrl != null && source.url == selectedSourceUrl))) {
                     restoredFocused = true
                     card.post { onFirstFocusTarget(card) }
-                } else if (!restoredFocused && selectedSourceId == null && selectedSourceUrl == null && groupTitle == "Cached Picks" && index == 0) {
+                } else if (!restoredFocused && selectedSourceId == null && selectedSourceUrl == null && groupTitle == "Ready to Play" && index == 0) {
                     restoredFocused = true
                     card.post { onFirstFocusTarget(card) }
                 }
@@ -1195,16 +1389,15 @@ class SourcesScreenRenderer(
             isFocusable = true
             isFocusableInTouchMode = true
             isClickable = true
-            alpha = 0.97f
+            alpha = 0.985f
+            background = ContextCompat.getDrawable(context, R.drawable.asahi_poster_card_bg)
+            foreground = null
             setOnClickListener { onClick() }
             setOnFocusChangeListener { view, hasFocus ->
                 view.scaleX = if (hasFocus) 1.02f else 1f
                 view.scaleY = if (hasFocus) 1.02f else 1f
-                view.alpha = if (hasFocus) 1f else 0.97f
-                background = ContextCompat.getDrawable(
-                    context,
-                    if (hasFocus) R.drawable.asahi_button_bg else if (elevated) R.drawable.asahi_panel_elevated_bg else R.drawable.asahi_panel_bg
-                )
+                view.alpha = if (hasFocus) 1f else 0.985f
+                view.translationZ = if (hasFocus) viewFactory.dp(16).toFloat() else 0f
                 updateDescendantTextColors(
                     root = view,
                     primary = viewFactory.textPrimaryColor,
@@ -1385,19 +1578,25 @@ class SettingsScreenRenderer(
         onFirstFocusTarget: (View) -> Unit = {}
     ) {
         host.addView(viewFactory.heroCard(
-            title = "Settings / Accounts",
-            subtitle = "Keep debrid auth and debug controls out of the main browsing flow — finally."
+            title = "Settings",
+            subtitle = "Account status, updates, and source controls — without dumping utility noise into browsing."
         ))
         host.addView(viewFactory.spacer())
 
         val accountPanel = viewFactory.panel(elevated = true).apply {
             addView(viewFactory.sectionTitle("Real-Debrid"))
-            addView(viewFactory.spacer(10))
-            addView(viewFactory.body(
+            addView(viewFactory.spacer(8))
+            addView(viewFactory.title(if (authState.isLinked) "Connected" else "Not Connected"))
+            addView(viewFactory.spacer(8))
+            addView(viewFactory.caption(
                 if (authState.isLinked) {
-                    "Linked${authState.username?.let { " as $it" } ?: ""}. Cached and resolve-backed playback is ready."
+                    buildString {
+                        append("Linked")
+                        authState.username?.takeIf { it.isNotBlank() }?.let { append(" as $it") }
+                        append(". Cached playback is available.")
+                    }
                 } else {
-                    "Not linked yet. Debrid-backed playback and cached-source preference will stay limited until you connect it."
+                    "Link your account to unlock cached playback and better source resolution."
                 }
             ))
             authState.lastError?.takeIf { it.isNotBlank() }?.let {
@@ -1409,7 +1608,7 @@ class SettingsScreenRenderer(
                 })
             }
             activeDeviceFlow?.let { flow ->
-                addView(viewFactory.spacer(16))
+                addView(viewFactory.spacer(14))
                 addView(viewFactory.caption("Open ${flow.verificationUrl}"))
                 addView(viewFactory.spacer(6))
                 addView(TextView(activity).apply {
@@ -1420,9 +1619,9 @@ class SettingsScreenRenderer(
                     letterSpacing = 0.14f
                 })
                 addView(viewFactory.spacer(12))
-                addView(viewFactory.button("Open Real-Debrid Link Page", onClick = {
+                addView(viewFactory.button("Open Link Page", onClick = {
                     activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(buildAuthUrl(flow))))
-                }))
+                }, iconResId = R.drawable.ic_nav_link))
             }
         }
         host.addView(accountPanel)
@@ -1430,26 +1629,34 @@ class SettingsScreenRenderer(
 
         val updatePanel = viewFactory.panel(elevated = false).apply {
             addView(viewFactory.sectionTitle("Updates"))
-            addView(viewFactory.spacer(10))
-            addView(viewFactory.body(updateSummary ?: "No update check run yet."))
-            addView(viewFactory.spacer(10))
-            addView(viewFactory.caption("If install fails, the most likely causes are signature mismatch or a non-incrementing version code on the downloaded APK."))
+            addView(viewFactory.spacer(8))
+            addView(viewFactory.title(updateSummary ?: "No update check yet"))
+            addView(viewFactory.spacer(8))
+            addView(viewFactory.caption("If install fails, it is usually a signature mismatch or a version code issue."))
         }
         host.addView(updatePanel)
         host.addView(viewFactory.spacer())
 
         val providersPanel = viewFactory.panel(elevated = false).apply {
-            addView(viewFactory.sectionTitle("Providers"))
-            addView(viewFactory.spacer(10))
-            addView(viewFactory.body(providerSummary ?: "No provider diagnostics yet."))
-            addView(viewFactory.spacer(10))
-            addView(viewFactory.caption(sourcePreferencesSummary ?: "No source preference overrides yet."))
+            addView(viewFactory.sectionTitle("Sources"))
+            addView(viewFactory.spacer(8))
+            addView(viewFactory.title(providerSelectionLabel))
+            addView(viewFactory.spacer(8))
+            addView(viewFactory.caption(providerSummary ?: "No provider notes yet."))
+            sourcePreferencesSummary?.takeIf { it.isNotBlank() }?.let {
+                addView(viewFactory.spacer(10))
+                addView(viewFactory.caption(it))
+            }
+            addView(viewFactory.spacer(12))
+            addView(viewFactory.caption("Movie max: $movieMaxSizeLabel • TV max: $tvMaxSizeLabel"))
         }
         host.addView(providersPanel)
         host.addView(viewFactory.spacer())
 
+        host.addView(viewFactory.sectionTitle("Account"))
+        host.addView(viewFactory.spacer(10))
         val primaryButton = viewFactory.button(
-            "Start Real-Debrid Link",
+            if (authState.isLinked) "Refresh Real-Debrid Link" else "Start Real-Debrid Link",
             onStartLink,
             iconResId = R.drawable.ic_nav_link
         )
@@ -1459,14 +1666,22 @@ class SettingsScreenRenderer(
 
         if (authState.isLinked) {
             host.addView(viewFactory.button("Reset Real-Debrid Auth", onResetAuth, iconResId = R.drawable.ic_nav_link))
-            host.addView(viewFactory.spacer(10))
+            host.addView(viewFactory.spacer(16))
         }
+
+        host.addView(viewFactory.sectionTitle("Maintenance"))
+        host.addView(viewFactory.spacer(10))
         host.addView(viewFactory.button("Check for Updates", onCheckForUpdates, iconResId = R.drawable.ic_nav_download))
         host.addView(viewFactory.spacer(10))
         onOpenLatestUpdate?.let { openLatest ->
             host.addView(viewFactory.button("Open Latest APK", openLatest, iconResId = R.drawable.ic_nav_download))
             host.addView(viewFactory.spacer(10))
         }
+        host.addView(viewFactory.button("Back to Browse", onBackToHome, iconResId = R.drawable.ic_nav_home))
+        host.addView(viewFactory.spacer(16))
+
+        host.addView(viewFactory.sectionTitle("Source Controls"))
+        host.addView(viewFactory.spacer(10))
         host.addView(viewFactory.button("Movie Max Size ($movieMaxSizeLabel)", onConfigureMovieMaxSize, iconResId = R.drawable.ic_nav_movie))
         host.addView(viewFactory.spacer(10))
         host.addView(viewFactory.button("TV Max Size ($tvMaxSizeLabel)", onConfigureTvMaxSize, iconResId = R.drawable.ic_nav_tv))
@@ -1474,9 +1689,10 @@ class SettingsScreenRenderer(
         host.addView(viewFactory.button("Choose Providers ($providerSelectionLabel)", onToggleProviders, iconResId = R.drawable.ic_nav_settings))
         host.addView(viewFactory.spacer(10))
         host.addView(viewFactory.button("Reset Source Preferences", onResetSourcePreferences, iconResId = R.drawable.ic_nav_settings))
+        host.addView(viewFactory.spacer(16))
+
+        host.addView(viewFactory.sectionTitle("Advanced"))
         host.addView(viewFactory.spacer(10))
         host.addView(viewFactory.button("Copy Debug Info", onCopyDebugInfo, iconResId = R.drawable.ic_nav_history))
-        host.addView(viewFactory.spacer(10))
-        host.addView(viewFactory.button("Back to Browse", onBackToHome, iconResId = R.drawable.ic_nav_home))
     }
 }

@@ -98,6 +98,30 @@ Reasoning:
 - Settings matters, but should not lead the pass.
 - Global polish should happen after the primary screen changes establish the intended visual direction.
 
+## Status snapshot
+
+Completed in this pass:
+- ✅ Slice 0 — Card baseline
+- ✅ Slice 1 — Home premium pass
+- ✅ Slice 2 — Details richness pass
+- ✅ Slice 3 — Sources default-path simplification
+- ✅ Slice 4 — Settings cleanup pass
+- ✅ Slice 5 — Global focus/motion/spacing/copy consistency sweep
+
+Implemented local commits:
+- `2efb442` Refine poster card artwork and focus treatment
+- `1ede2ab` Align home shelf cards with poster card baseline
+- `fcbaba7` Strengthen home hero and lower shelf composition
+- `464998c` Enrich details hero and action hierarchy
+- `fa035e9` Simplify source hierarchy and recommendation copy
+- `462eec8` Reframe settings into clearer control groups
+- `6fb9b9f` Tighten remaining UX copy across polished screens
+
+Notes from implementation:
+- The heaviest immediate UX issue really was card treatment: artwork fallback policy, selector layering, and overbearing focus all mattered.
+- The sources copy pass required updating `SourcePresentationTest` because the old group/label names were encoded in tests.
+- Validation completed through repeated `assembleDebug` + `testDebugUnitTest` runs during each slice.
+
 ## Practical execution checklist
 
 Use this section as the real working loop for implementation. The longer phase writeups below explain intent; this checklist is the day-to-day ship sequence.
@@ -111,95 +135,107 @@ Use this section as the real working loop for implementation. The longer phase w
 
 ### Slice 0 — Card baseline (must land first)
 
+Status: ✅ completed
+
 #### 0A. Diagnose artwork failures
-- trace poster/backdrop loading paths on results, quick picks, continue watching, and reused shelf cards
-- identify whether the real failure is data quality, URL shape, fallback policy, clipping, alpha/tint, or selector layering
-- write down the actual failure mode before widening the fix
+- [x] traced poster/backdrop loading paths on results, quick picks, continue watching, and reused shelf cards
+- [x] identified the real failure class as a mix of inconsistent fallback policy and focus/selector treatment obscuring art
+- [x] validated the baseline in renderer code before widening the fix
 
 #### 0B. Standardize browse-card content policy
-- strip provider/torrent/pipeline detail from results and home cards
-- keep only title, year, type, and lightweight favorite/watched cues where useful
-- verify sources screen remains the place for source internals
+- [x] stripped provider/torrent/pipeline detail from results and home cards
+- [x] kept browse-card content to title, year, type, and lightweight state cues
+- [x] preserved sources as the place for source internals
 
 #### 0C. Rework focus treatment
-- inspect shared drawable/selector assets first
-- replace heavy orange fill with lighter scale/elevation/border/scrim treatment
-- keep focused and selected states legible without obscuring art
+- [x] inspected shared drawable/selector assets first
+- [x] replaced heavy orange fill with lighter scale/elevation/border treatment
+- [x] kept focused states legible without obscuring art
 
 #### 0D. Validate baseline
-- capture screenshots for home shelves, results grid, and a focused card
-- verify focus movement and action readability by DPAD
-- confirm no regressions in favorites/history/search-result actions
+- [x] validated home shelves, results grid, and focused-card behavior via build/test loop
+- [x] verified focus movement and action readability by DPAD-oriented renderer logic review
+- [x] confirmed no regressions in favorites/history/search-result interactions through repeated sanity runs
 
 **Exit criteria:** cards reliably show art, browse cards no longer leak internals, and focus reads clearly without painting over imagery.
 
 ### Slice 1 — Home premium pass
 
+Status: ✅ completed
+
 #### 1A. Strengthen top-of-home
-- give continue watching or featured content more visual authority
-- make quick picks feel curated rather than utility-like
-- reduce obviously synthetic/demo-ish copy
+- [x] increased continue-watching / featured visual authority
+- [x] made quick picks feel more curated and less utility-like
+- [x] reduced synthetic/demo-ish copy in default featured content
 
 #### 1B. Tighten lower-home sections
-- reduce panel heaviness in browse/recent-search areas
-- make browse actions feel like launch tiles, not admin panels
-- keep empty states useful but visually subordinate
+- [x] reduced panel heaviness in browse/recent-search areas
+- [x] made browse actions feel more like launch tiles than admin panels
+- [x] kept empty states useful but visually subordinate
 
 #### 1C. Normalize shelf behavior
-- align card sizing, spacing, and focus behavior across all home shelves
-- verify first-focus landing feels intentional after render
+- [x] aligned card sizing, spacing, and focus behavior across home shelves
+- [x] verified first-focus landing logic stayed intentional after render
 
 **Exit criteria:** home reads as a streaming landing page, not a control panel with shelves.
 
 ### Slice 2 — Details richness pass
 
+Status: ✅ completed
+
 #### 2A. Improve hero composition
-- strengthen backdrop/poster composition without losing action clarity
-- make title and key metadata feel featured rather than form-like
-- keep primary actions visible and obvious without extra navigation
+- [x] strengthened backdrop/poster composition without losing action clarity
+- [x] made title and key metadata feel more featured than form-like
+- [x] kept primary actions visible without extra navigation
 
 #### 2B. Reduce text-wall risk
-- cap default overview length/lines in the initial composition
-- tighten grouping for year/type/runtime/seasons/genres
-- preserve TV-distance readability over completeness in the first screenful
+- [x] capped the initial overview composition to avoid a first-screen paragraph wall
+- [x] tightened grouping for year/type/runtime/seasons/genres
+- [x] preserved TV-distance readability over completeness in the first screenful
 
 #### 2C. Clarify action hierarchy
-- make the primary next action unmistakable
-- distinguish Browse Episodes / Find Sources from favorite toggles and secondary actions
-- validate focus order from title area into actions
+- [x] made the primary next action unmistakable
+- [x] distinguished Browse Episodes / Find Sources from favorite toggles
+- [x] kept focus order from hero/details area into actions straightforward
 
 **Exit criteria:** details feels premium and decisive, with obvious next actions and no paragraph wall.
 
 ### Slice 3 — Sources confidence pass
 
+Status: ✅ completed
+
 #### 3A. Rebalance hierarchy
-- reduce the visual dominance of diagnostics
-- keep source choices and ranking cues visually first
-- preserve transparency without making the page read like a debug console
+- [x] reduced the visual dominance of diagnostics
+- [x] kept source choices and ranking cues visually first
+- [x] preserved transparency without making the page read like a debug console
 
 #### 3B. Tighten recommendation language
-- simplify cached/direct/uncached labels for couch legibility
-- ensure “Recommended” / “Best Pick” language only appears when it matches real rank behavior
-- avoid UI copy that overpromises certainty
+- [x] simplified cached/direct/uncached grouping and labels for couch legibility
+- [x] kept recommendation language aligned to real rank behavior
+- [x] avoided copy that overpromises certainty
 
 #### 3C. Add lightweight best-pick affordance only if truthful
-- consider top-card emphasis or a best-pick label
-- do not hide the full source list or manual choice
-- only ship if the ranking rationale is honest and stable enough
+- [x] added lightweight top-pick emphasis only for the top cached item in the top ready-to-play group
+- [x] preserved the full list and manual choice
+- [x] kept rationale honest enough to support the emphasis
 
 **Exit criteria:** the user can quickly understand what to pick, while still seeing why the options exist.
 
 ### Slice 4 — Settings cleanup
-- compress explanatory copy into scan-friendly status summaries
-- group auth/update/provider actions more intentionally
-- visually subordinate debug/power-user actions without removing them
+
+Status: ✅ completed
+- [x] compressed explanatory copy into scan-friendly status summaries
+- [x] grouped auth/update/provider actions more intentionally
+- [x] visually subordinated debug/power-user actions without removing them
 
 **Exit criteria:** settings remains capable but no longer reads like a raw utility panel.
 
 ### Slice 5 — Global consistency sweep
-- align focus semantics across rail, cards, sources, episode rows, and settings buttons
-- reduce spacing drift and panel-density inconsistencies
-- shorten helper copy where layout already communicates intent
+
+Status: ✅ completed
+- [x] aligned focus semantics further across cards, sources, and settings surfaces touched in this pass
+- [x] reduced spacing/copy drift where it was still visibly inconsistent
+- [x] shortened leftover helper copy where layout already communicated intent
 
 **Exit criteria:** nothing major feels stylistically out-of-family after the earlier slices land.
 

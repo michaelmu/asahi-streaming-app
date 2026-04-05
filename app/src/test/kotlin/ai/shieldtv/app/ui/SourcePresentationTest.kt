@@ -13,8 +13,8 @@ import org.junit.Test
 
 class SourcePresentationTest {
     @Test
-    fun cached_4k_source_is_labeled_best() {
-        assertEquals("BEST", SourcePresentation.sourceLabel(source(CacheStatus.CACHED, Quality.UHD_4K)))
+    fun cached_4k_source_is_labeled_top_pick() {
+        assertEquals("TOP PICK", SourcePresentation.sourceLabel(source(CacheStatus.CACHED, Quality.UHD_4K)))
     }
 
     @Test
@@ -23,8 +23,8 @@ class SourcePresentationTest {
     }
 
     @Test
-    fun unchecked_source_is_grouped_as_fallback() {
-        assertEquals("Fallback Sources", SourcePresentation.groupTitle(source(CacheStatus.UNCHECKED, Quality.HD_720P)))
+    fun unchecked_source_is_grouped_as_other_options() {
+        assertEquals("Other Options", SourcePresentation.groupTitle(source(CacheStatus.UNCHECKED, Quality.HD_720P)))
     }
 
     @Test
