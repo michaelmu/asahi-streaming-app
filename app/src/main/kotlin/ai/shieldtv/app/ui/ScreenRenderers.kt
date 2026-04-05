@@ -14,6 +14,8 @@ import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.view.children
+import androidx.core.view.setMargins
 import android.view.inputmethod.EditorInfo
 import androidx.core.content.ContextCompat
 import androidx.core.view.setPadding
@@ -510,6 +512,8 @@ class ResultsScreenRenderer(
     private val host: LinearLayout,
     private val viewFactory: ScreenViewFactory
 ) {
+    private val gridColumnCount = 4
+
     fun render(
         state: AppState,
         emptyMessage: String,
@@ -560,78 +564,143 @@ class ResultsScreenRenderer(
             return
         }
 
-        state.searchResults.take(20).forEachIndexed { index, result ->
-            val card = focusableMediaCard(
-                onClick = { onResultSelected(result) },
-                onLongPress = { onResultLongPress(result) },
-                elevated = index < 4
-            ).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-            }
-
-            val posterView = ImageView(activity).apply {
-                layoutParams = LinearLayout.LayoutParams(viewFactory.dp(104), viewFactory.dp(156)).apply {
-                    marginEnd = viewFactory.dp(18)
-                }
-                scaleType = ImageView.ScaleType.CENTER_CROP
-                clipToOutline = true
-                result.posterUrl?.takeIf { it.isNotBlank() }?.let { url -> load(url) }
-            }
-
-            val textColumn = LinearLayout(activity).apply {
-                orientation = LinearLayout.VERTICAL
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            }
-            textColumn.addView(TextView(activity).apply {
-                text = buildString {
-                    append(result.mediaRef.title)
-                    result.mediaRef.year?.let { append(" ($it)") }
-                }
-                setTextColor(viewFactory.textPrimaryColor)
-                textSize = 21f
-                setTypeface(typeface, Typeface.BOLD)
-            })
-            textColumn.addView(viewFactory.spacer(4))
-            textColumn.addView(viewFactory.caption(
-                buildString {
-                    append(result.mediaRef.mediaType.name.lowercase().replaceFirstChar { it.uppercase() })
-                    if (result.badges.isNotEmpty()) {
-                        append(" • ")
-                        append(result.badges.take(2).joinToString())
-                    }
-                }
-            ))
-            result.subtitle?.takeIf { it.isNotBlank() }?.let { subtitle ->
-                textColumn.addView(viewFactory.spacer(8))
-                textColumn.addView(viewFactory.body(subtitle.take(140)))
-            }
-
-            card.addView(posterView)
-            card.addView(textColumn)
-            host.addView(card)
-            host.addView(viewFactory.spacer(12))
-            if (index == 0) card.post { onFirstFocusTarget(card) }
+        val results = state.searchResults.take(20)
+        val grid = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
         }
 
+        results.chunked(gridColumnCount).forEachIndexed { rowIndex, rowItems ->
+            val row = LinearLayout(activity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.TOP
+            }
+            rowItems.forEachIndexed { columnIndex, result ->
+                val absoluteIndex = rowIndex * gridColumnCount + columnIndex
+                val card = focusablePosterCard(
+                    result = result,
+                    onClick = { onResultSelected(result) },
+                    onLongPress = { onResultLongPress(result) },
+                    elevated = absoluteIndex < gridColumnCount
+                ).apply {
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
+                        if (columnIndex > 0) it.marginStart = viewFactory.dp(14)
+                    }
+                }
+                row.addView(card)
+                if (absoluteIndex == 0) {
+                    card.post { onFirstFocusTarget(card) }
+                }
+            }
+            repeat((gridColumnCount - rowItems.size).coerceAtLeast(0)) { spacerIndex ->
+                row.addView(View(activity).apply {
+                    layoutParams = LinearLayout.LayoutParams(0, 1, 1f).also {
+                        if (rowItems.isNotEmpty() || spacerIndex > 0) it.marginStart = viewFactory.dp(14)
+                    }
+                    isFocusable = false
+                    isClickable = false
+                    alpha = 0f
+                })
+            }
+            grid.addView(row)
+            if (rowIndex < results.chunked(gridColumnCount).lastIndex) {
+                grid.addView(viewFactory.spacer(14))
+            }
+        }
+
+        host.addView(grid)
+        host.addView(viewFactory.spacer(18))
         host.addView(viewFactory.button("New Search", onNewSearch, iconResId = R.drawable.ic_nav_search))
     }
 
-    private fun focusableMediaCard(onClick: () -> Unit, onLongPress: () -> Unit, elevated: Boolean = true): LinearLayout {
+    private fun focusablePosterCard(
+        result: SearchResult,
+        onClick: () -> Unit,
+        onLongPress: () -> Unit,
+        elevated: Boolean = true
+    ): LinearLayout {
         return viewFactory.panel(elevated = elevated).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.TOP
+            minimumHeight = viewFactory.dp(360)
             isFocusable = true
             isFocusableInTouchMode = true
             isClickable = true
             isLongClickable = true
             alpha = 0.97f
+
+            val posterFrame = FrameLayout(context).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    viewFactory.dp(250)
+                )
+            }
+            val posterView = ImageView(activity).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                )
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                clipToOutline = true
+                result.posterUrl?.takeIf { it.isNotBlank() }?.let { url -> load(url) }
+                    ?: setImageDrawable(ContextCompat.getDrawable(context, R.drawable.ic_nav_movie))
+                imageAlpha = if (result.posterUrl.isNullOrBlank()) 140 else 255
+                setBackgroundColor(Color.argb(28, 255, 255, 255))
+            }
+            posterFrame.addView(posterView)
+
+            val fallbackLabel = TextView(activity).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    Gravity.BOTTOM
+                ).apply {
+                    setMargins(viewFactory.dp(10))
+                }
+                text = result.mediaRef.mediaType.name.lowercase().replaceFirstChar { it.uppercase() }
+                setTextColor(viewFactory.textPrimaryColor)
+                textSize = 12f
+                setTypeface(typeface, Typeface.BOLD)
+                visibility = if (result.posterUrl.isNullOrBlank()) View.VISIBLE else View.GONE
+            }
+            posterFrame.addView(fallbackLabel)
+            addView(posterFrame)
+            addView(viewFactory.spacer(12))
+
+            addView(TextView(activity).apply {
+                text = result.mediaRef.title
+                setTextColor(viewFactory.textPrimaryColor)
+                textSize = 18f
+                setTypeface(typeface, Typeface.BOLD)
+                maxLines = 2
+            })
+            addView(viewFactory.spacer(6))
+            addView(viewFactory.caption(
+                buildString {
+                    result.mediaRef.year?.let { append(it) }
+                    if (result.badges.isNotEmpty()) {
+                        if (isNotEmpty()) append(" • ")
+                        append(result.badges.take(2).joinToString())
+                    }
+                    if (isEmpty()) {
+                        append(result.mediaRef.mediaType.name.lowercase().replaceFirstChar { it.uppercase() })
+                    }
+                }
+            ))
+            result.subtitle?.takeIf { it.isNotBlank() }?.let { subtitle ->
+                addView(viewFactory.spacer(8))
+                addView(viewFactory.body(subtitle.take(96))).also {
+                    (it as? TextView)?.maxLines = 3
+                }
+            }
+
             setOnClickListener { onClick() }
             setOnLongClickListener {
                 onLongPress()
                 true
             }
             setOnFocusChangeListener { view, hasFocus ->
-                view.scaleX = if (hasFocus) 1.02f else 1f
-                view.scaleY = if (hasFocus) 1.02f else 1f
+                view.scaleX = if (hasFocus) 1.03f else 1f
+                view.scaleY = if (hasFocus) 1.03f else 1f
                 view.alpha = if (hasFocus) 1f else 0.97f
                 background = ContextCompat.getDrawable(
                     context,
@@ -639,7 +708,7 @@ class ResultsScreenRenderer(
                 )
                 updateDescendantTextColors(
                     root = view,
-                    primary = if (hasFocus) viewFactory.textPrimaryColor else viewFactory.textPrimaryColor,
+                    primary = viewFactory.textPrimaryColor,
                     secondary = if (hasFocus) viewFactory.textPrimaryColor else viewFactory.textSecondaryColor
                 )
             }
