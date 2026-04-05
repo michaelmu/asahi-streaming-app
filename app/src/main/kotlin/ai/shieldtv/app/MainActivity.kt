@@ -480,7 +480,7 @@ class MainActivity : ComponentActivity() {
         val record = persistedPlaybackSession ?: return
         val item = ContinueWatchingHydrator.fromActiveResume(record) ?: return
         coordinator.recordContinueWatching(
-            mediaRef = coordinator.currentState().selectedMedia
+            mediaRef = item.mediaRef ?: coordinator.currentState().selectedMedia
                 ?: ai.shieldtv.app.core.model.media.MediaRef(
                     mediaType = coordinator.currentState().searchMode.mediaType,
                     ids = ai.shieldtv.app.core.model.media.MediaIds(tmdbId = null, imdbId = null, tvdbId = null),
@@ -499,6 +499,11 @@ class MainActivity : ComponentActivity() {
     private fun resumePositionFor(source: SourceResult, seasonNumber: Int?, episodeNumber: Int?): Long {
         return PlaybackResumeDecider.resumePositionFor(
             record = persistedPlaybackSession,
+            remembered = AppContainer.playbackMemoryStore.find(
+                mediaRef = source.mediaRef,
+                seasonNumber = seasonNumber,
+                episodeNumber = episodeNumber
+            ),
             source = source,
             seasonNumber = seasonNumber,
             episodeNumber = episodeNumber
@@ -721,7 +726,27 @@ class MainActivity : ComponentActivity() {
                         runSearch(coordinator.currentState().searchMode, recentQuery)
                     },
                     onContinueWatching = { item ->
-                        runSearch(coordinator.currentState().searchMode, item.queryHint)
+                        item.mediaRef?.let { mediaRef ->
+                            lifecycleScope.launch {
+                                when (
+                                    val selection = browseFlowCoordinator.openResult(
+                                        coordinator = coordinator,
+                                        result = ai.shieldtv.app.core.model.media.SearchResult(
+                                            mediaRef = mediaRef,
+                                            subtitle = item.subtitle,
+                                            posterUrl = item.artworkUrl,
+                                            backdropUrl = item.artworkUrl
+                                        )
+                                    )
+                                ) {
+                                    is ai.shieldtv.app.browse.BrowseSelectionResult.Completed -> {
+                                        statusText.text = selection.statusMessage
+                                        selection.errorMessage?.let { latestPlaybackMessage = it }
+                                        renderCurrentScreen()
+                                    }
+                                }
+                            }
+                        } ?: runSearch(coordinator.currentState().searchMode, item.queryHint)
                     },
                     onFavoriteSelected = { result ->
                         onSearchResultSelected(result)
@@ -1515,6 +1540,15 @@ class MainActivity : ComponentActivity() {
                     latestPlaybackMessage = null
                     setLoading(false, result.statusMessage)
                     persistedPlaybackSession = AppContainer.playbackSessionStore.loadActiveResume()
+                    AppContainer.playbackMemoryStore.record(
+                        mediaRef = source.mediaRef,
+                        seasonNumber = seasonNumber,
+                        episodeNumber = episodeNumber,
+                        source = result.selectedSource,
+                        positionMs = if (forceStartAtZero) 0L else resumePositionFor(source, seasonNumber, episodeNumber),
+                        durationMs = latestPlaybackState.durationMs,
+                        progressPercent = if (latestPlaybackState.durationMs > 0) ((latestPlaybackState.positionMs * 100) / latestPlaybackState.durationMs).toInt() else 0
+                    )
                     coordinator.showPlayer(result.selectedSource)
                     AppContainer.playbackEngine.play()
                 }

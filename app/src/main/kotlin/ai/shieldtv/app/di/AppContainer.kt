@@ -43,12 +43,14 @@ import ai.shieldtv.app.integration.scrapers.ranking.DefaultSourceRanker
 import ai.shieldtv.app.integration.scrapers.ranking.RealDebridSourceCacheMarker
 import ai.shieldtv.app.settings.SourcePreferencesStore
 import ai.shieldtv.app.continuewatching.ContinueWatchingStore
+import ai.shieldtv.app.playback.PlaybackMemoryStore
 import ai.shieldtv.app.favorites.FavoritesCoordinator
 import ai.shieldtv.app.favorites.FavoritesStore
 import ai.shieldtv.app.history.WatchHistoryCoordinator
 import ai.shieldtv.app.history.WatchHistoryStore
 import ai.shieldtv.app.integration.scrapers.repository.SourceRepositoryImpl
 import ai.shieldtv.app.playback.PlaybackSessionStore
+import ai.shieldtv.app.sources.SourceListCacheStore
 import java.io.File
 
 object AppContainer {
@@ -152,6 +154,10 @@ object AppContainer {
         PlaybackSessionStore(requireContext())
     }
 
+    val playbackMemoryStore by lazy {
+        PlaybackMemoryStore(requireContext())
+    }
+
     val favoritesStore by lazy {
         FavoritesStore(requireContext())
     }
@@ -162,6 +168,10 @@ object AppContainer {
 
     val continueWatchingStore by lazy {
         ContinueWatchingStore(requireContext())
+    }
+
+    val sourceListCacheStore by lazy {
+        SourceListCacheStore(requireContext())
     }
 
     val watchHistoryStore by lazy {

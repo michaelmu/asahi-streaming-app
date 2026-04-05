@@ -14,43 +14,43 @@ import org.junit.Test
 class PlaybackResumeDeciderTest {
     @Test
     fun returns_zero_when_record_missing() {
-        assertEquals(0L, PlaybackResumeDecider.resumePositionFor(null, movieSource(), null, null))
+        assertEquals(0L, PlaybackResumeDecider.resumePositionFor(null, null, movieSource(), null, null))
     }
 
     @Test
     fun returns_zero_when_progress_too_low() {
         val record = record(progressPercent = 2, positionMs = 12000)
-        assertEquals(0L, PlaybackResumeDecider.resumePositionFor(record, movieSource(), null, null))
+        assertEquals(0L, PlaybackResumeDecider.resumePositionFor(record, null, movieSource(), null, null))
     }
 
     @Test
     fun returns_zero_when_progress_too_high() {
         val record = record(progressPercent = 95, positionMs = 12000)
-        assertEquals(0L, PlaybackResumeDecider.resumePositionFor(record, movieSource(), null, null))
+        assertEquals(0L, PlaybackResumeDecider.resumePositionFor(record, null, movieSource(), null, null))
     }
 
     @Test
     fun returns_zero_when_title_does_not_match() {
         val record = record(mediaTitle = "Something Else", progressPercent = 40, positionMs = 12000)
-        assertEquals(0L, PlaybackResumeDecider.resumePositionFor(record, movieSource(), null, null))
+        assertEquals(0L, PlaybackResumeDecider.resumePositionFor(record, null, movieSource(), null, null))
     }
 
     @Test
     fun returns_position_when_movie_matches_and_progress_valid() {
         val record = record(progressPercent = 40, positionMs = 12000)
-        assertEquals(12000L, PlaybackResumeDecider.resumePositionFor(record, movieSource(), null, null))
+        assertEquals(12000L, PlaybackResumeDecider.resumePositionFor(record, null, movieSource(), null, null))
     }
 
     @Test
     fun returns_zero_when_show_episode_does_not_match() {
         val record = record(mediaTitle = "Severance", progressPercent = 40, positionMs = 33000, seasonNumber = 1, episodeNumber = 2)
-        assertEquals(0L, PlaybackResumeDecider.resumePositionFor(record, showSource(season = 1, episode = 3), 1, 3))
+        assertEquals(0L, PlaybackResumeDecider.resumePositionFor(record, null, showSource(season = 1, episode = 3), 1, 3))
     }
 
     @Test
     fun returns_position_when_show_episode_matches() {
         val record = record(mediaTitle = "Severance", progressPercent = 40, positionMs = 33000, seasonNumber = 1, episodeNumber = 2)
-        assertEquals(33000L, PlaybackResumeDecider.resumePositionFor(record, showSource(season = 1, episode = 2), 1, 2))
+        assertEquals(33000L, PlaybackResumeDecider.resumePositionFor(record, null, showSource(season = 1, episode = 2), 1, 2))
     }
 
     private fun movieSource(): SourceResult = SourceResult(

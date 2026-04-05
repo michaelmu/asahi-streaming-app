@@ -1,6 +1,7 @@
 package ai.shieldtv.app.sources
 
 import ai.shieldtv.app.core.model.media.MediaRef
+import ai.shieldtv.app.di.AppContainer
 import ai.shieldtv.app.core.model.source.SourceFilters
 import ai.shieldtv.app.core.model.source.SourceResult
 import ai.shieldtv.app.core.model.source.SourceSearchRequest
@@ -58,6 +59,27 @@ class SourceLoadingCoordinator(
         partialSources.clear()
         val enabledProviders = request.preferences.providerSelection.effectiveEnabledProviders(request.availableProviderIds)
         val totalProviders = enabledProviders.ifEmpty { request.availableProviderIds }.size
+        val sourceCacheStore = runCatching { AppContainer.sourceListCacheStore }.getOrNull()
+        val cacheKey = sourceCacheStore?.keyFor(
+            mediaRef = request.mediaRef,
+            seasonNumber = request.seasonNumber,
+            episodeNumber = request.episodeNumber,
+            authLinked = request.authLinked
+        )
+        if (sourceCacheStore != null && cacheKey != null) {
+            sourceCacheStore.load(cacheKey, maxAgeMs = 30L * 60L * 1000L)?.takeIf { it.isNotEmpty() }?.let { cachedSources ->
+                partialSources.putAll(cachedSources.associateBy { it.id })
+                onStarted()
+                onCompleted(
+                    SourceLoadResult(
+                        sources = cachedSources,
+                        diagnostics = "source_cache=hit | results=${cachedSources.size}",
+                        error = null
+                    )
+                )
+                return
+            }
+        }
         onStarted()
 
         loadJob = lifecycleScope.launch {
@@ -95,6 +117,9 @@ class SourceLoadingCoordinator(
             partialSources.clear()
             filteredSources.forEach { partialSources[it.id] = it }
 
+            if (sourceCacheStore != null && cacheKey != null) {
+                sourceCacheStore.save(cacheKey, filteredSources)
+            }
             onCompleted(
                 SourceLoadResult(
                     sources = filteredSources,

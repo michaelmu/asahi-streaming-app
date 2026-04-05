@@ -98,6 +98,15 @@ class PlaybackLaunchCoordinator(
                 seasonNumber = seasonNumber,
                 episodeNumber = episodeNumber
             )
+            AppContainer.playbackMemoryStore.record(
+                mediaRef = source.mediaRef,
+                seasonNumber = seasonNumber,
+                episodeNumber = episodeNumber,
+                source = source,
+                positionMs = latestPlaybackState.positionMs,
+                durationMs = latestPlaybackState.durationMs,
+                progressPercent = progressPercent
+            )
             watchHistoryCoordinator.recordPlayback(
                 item = currentItem,
                 seasonNumber = seasonNumber,

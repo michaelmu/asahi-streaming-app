@@ -100,7 +100,14 @@ class AppCoordinator(
             selectedDetails = details,
             selectedSeasonNumber = seasonNumber,
             selectedEpisodeNumber = episodeNumber,
-            selectedSource = null,
+            selectedSource = state.selectedSource?.takeIf { current ->
+                sources.any { it.id == current.id || it.url == current.url }
+            } ?: ai.shieldtv.app.di.AppContainer.playbackMemoryStore.find(mediaRef, seasonNumber, episodeNumber)?.let { memory ->
+                sources.firstOrNull { source ->
+                    (memory.sourceId != null && source.id == memory.sourceId) ||
+                        (memory.sourceUrl != null && source.url == memory.sourceUrl)
+                }
+            },
             selectedSources = sources
         )
         navigator.goTo(AppDestination.SOURCES)
@@ -172,7 +179,8 @@ class AppCoordinator(
             subtitle = subtitle,
             artworkUrl = artworkUrl,
             queryHint = mediaRef.title,
-            progressPercent = progressPercent.coerceIn(0, 100)
+            progressPercent = progressPercent.coerceIn(0, 100),
+            mediaRef = mediaRef
         )
         state = state.copy(
             continueWatching = (listOf(item) + state.continueWatching.filterNot { it.mediaTitle == item.mediaTitle && it.subtitle == item.subtitle })
@@ -191,7 +199,12 @@ class AppCoordinator(
             subtitle = item.subtitle,
             artworkUrl = item.artworkUrl,
             queryHint = item.queryHint,
-            progressPercent = item.progressPercent
+            progressPercent = item.progressPercent,
+            mediaType = item.mediaRef?.mediaType,
+            tmdbId = item.mediaRef?.ids?.tmdbId,
+            imdbId = item.mediaRef?.ids?.imdbId,
+            tvdbId = item.mediaRef?.ids?.tvdbId,
+            year = item.mediaRef?.year
         )
     }
 }
