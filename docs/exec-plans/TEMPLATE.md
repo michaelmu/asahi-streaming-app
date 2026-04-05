@@ -34,10 +34,20 @@ Minimum required updates:
 - progress log entries after meaningful milestones
 - scope-change notes when direction shifts
 - validation notes after completed steps
+- exact commit hashes for meaningful landed slices
+
+Commit-tracking guidance:
+- Track commits for milestone-sized changes that materially moved the plan forward.
+- Do **not** turn the plan into a full changelog; skip tiny fixup commits unless they changed the meaning of the plan.
+- When a task is half historical / half future, use the progress log to tie completed slices to commit hashes so the reader can jump from plan -> code cleanly.
+- Prefer the format: `Commit: <hash> (\`subject\`)`.
+- If multiple commits belong to one milestone, list them together under the same progress entry.
+- If work is validated before commit or spans local-only commits not yet pushed, say so explicitly in the validation note.
 
 ### Completion rule
 A task is only `DONE` when:
 - the code landed
+- the milestone commit(s) are named when practical
 - relevant tests/build/manual validation happened
 - follow-up work is captured here if needed
 
@@ -207,6 +217,21 @@ Current recommendation:
 
 ## Progress Log
 
+Guidance:
+- Use one entry per meaningful milestone, not one per tiny edit.
+- For implemented work, include the validation outcome and the exact milestone commit hash(es) when practical.
+- If a milestone is local-only and not pushed yet, say that plainly.
+- If a later fix corrects an earlier mistaken assumption, record that honestly instead of rewriting history.
+
+Example implemented milestone:
+
+### YYYY-MM-DD HH:MM UTC
+- Completed the first results-grid slice and kept navigation behavior stable.
+- Validation: `./gradlew testDebugUnitTest` and `./gradlew assembleDebug` passed; emulator browse checks looked sane.
+- Commit: `abc1234` (`Convert results screen to poster grid`)
+
+Example planning milestone:
+
 ### YYYY-MM-DD HH:MM UTC
 - Created the plan.
 - No implementation work completed yet.
@@ -233,6 +258,7 @@ Intended task: <what this session is starting with>
 This plan is complete for its intended pass when:
 - all accepted items are marked `DONE`, `DEFERRED`, `OPTIONAL`, or removed
 - validation is recorded for completed work
+- meaningful landed milestones are traceable to commit hashes where practical
 - major follow-up work is explicitly captured
 - `Current Focus` no longer implies unfinished required work
 - the file is ready to move out of `in_progress/` without misleading anyone

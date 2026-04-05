@@ -1,7 +1,7 @@
 # Asahi TV UX Borrowed Patterns Pass
 
 Last updated: 2026-04-05 UTC
-Status: TODO
+Status: IN_PROGRESS
 Owner: OpenClaw main session
 Location: `docs/exec-plans/in_progress/2026-04-05-tv-ux-borrowed-patterns-pass.md`
 Supersedes: none
@@ -63,12 +63,12 @@ A task is only `DONE` when:
 
 ## Current Focus
 
-**Current phase:** Phase A — UX translation and repo mapping
+**Current phase:** Phase B/C transition — shipped browse/home UX, deciding remaining polish
 
-**Immediate target:** translate the APK review into app-native work slices and confirm where each slice should land in the current repo
+**Immediate target:** keep the plan honest about what has already landed locally, what is still being validated on-device, and whether any playback/status or visual-kit work still belongs in this pass
 
 **Why this now:**
-The UX direction is fresh from review, and the next useful step is turning vague inspiration into honest, sequenced work that fits the real app rather than accumulating as hand-wavy design debt.
+The pass is no longer at the “translate inspiration into work” stage. The main browse/home slices have already landed locally, and the useful planning work now is to track those changes precisely, keep the remaining scope tight, and avoid letting optional polish work drift into an open-ended redesign.
 
 > Update this section whenever the active phase or immediate target changes.
 
@@ -176,7 +176,7 @@ The repo has already proven that assuming the wrong file shapes wastes time. Thi
 ---
 
 ## A2. Define the minimum viable “borrowed patterns” set for this pass
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
@@ -186,9 +186,23 @@ Reduce the inspiration set into a small, shippable batch of UX improvements.
 Without an explicit cut line, this will sprawl into a full home/browse/player redesign.
 
 ### Proposed sub-steps
-- [TODO] Choose the top 3-5 UX upgrades with the best leverage.
-- [TODO] Mark which ideas are explicitly deferred.
-- [TODO] Translate each chosen idea into concrete user-visible outcomes.
+- [DONE] Choose the top 3-5 UX upgrades with the best leverage.
+- [DONE] Mark which ideas are explicitly deferred.
+- [DONE] Translate each chosen idea into concrete user-visible outcomes.
+
+### Accepted scope for this pass
+- Convert results/favorites/history browsing to a poster-grid presentation that still behaves well with D-pad navigation.
+- Enrich focused poster states using locally available metadata only.
+- Improve empty states so favorites/history/search/home feel actionable rather than dead-end.
+- Tighten the home surface into a more shelf-like landing experience using existing local/stateful data.
+- Improve fresh-search focus/query behavior so the screen behaves like a clean search entry point instead of inheriting stale browse state.
+
+### Explicit deferrals / non-goals
+- No full information-architecture rewrite.
+- No Kodi-style multiple view-mode explosion.
+- No recommendation engine or speculative network shelves just to make home look busy.
+- No branding/theme cloning from Red Wizard or Kodi.
+- No risky playback-engine rewrite just to support overlay polish.
 
 ### Validation
 - A final accepted scope is written into this plan.
@@ -199,7 +213,7 @@ Without an explicit cut line, this will sprawl into a full home/browse/player re
 # Phase B — Home and Browse Improvements
 
 ## B1. Add or improve home shelves that answer “what should I do now?”
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
@@ -209,12 +223,16 @@ Create a more useful landing experience with dynamic, high-intent rows such as c
 The APK’s strongest UX pattern is a home screen that gives immediate choices. Asahi currently benefits from stronger first-screen usefulness if users can reach content without always starting at search.
 
 ### Proposed sub-steps
-- [TODO] Define an MVP shelf set capped at 2-4 rows for this pass.
-- [TODO] Restrict first-pass shelves to rows powered by existing local/stateful data now.
-- [TODO] Add shelf models and UI wiring for the chosen rows.
-- [TODO] Ensure rows are ordered by user usefulness, not implementation convenience.
-- [TODO] Handle empty shelf cases cleanly.
-- [TODO] Explicitly defer recommendation-engine behavior or shelves that require speculative network fetches just to look populated.
+- [DONE] Define an MVP shelf set capped at 2-4 high-intent content rows, with browse/search utilities retained below them.
+- [DONE] Restrict first-pass shelves to rows powered by existing local/stateful data now.
+- [DONE] Add shelf-style home wiring using the current renderer structure rather than introducing a new home architecture.
+- [DONE] Ensure rows are ordered by user usefulness, not implementation convenience.
+- [DONE] Handle empty shelf cases cleanly.
+- [DONE] Explicitly defer recommendation-engine behavior or shelves that require speculative network fetches just to look populated.
+
+### Implemented shape
+- Home now favors a shelf-style flow built from current data sources: Continue Watching, Quick Picks, combined Your Picks, combined Recently Watched, then Browse / Recent Searches utility sections.
+- The change intentionally tightens the landing surface rather than pretending to be a full recommendation system.
 
 ### Validation
 - Manual navigation confirms shelves are reachable and sensible with the remote.
@@ -225,7 +243,7 @@ The APK’s strongest UX pattern is a home screen that gives immediate choices. 
 ---
 
 ## B2. Convert search results into a poster wall / TV grid
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
@@ -235,12 +253,16 @@ Change search results from a stacked vertical list into a poster-wall/grid prese
 The current results renderer uses horizontally arranged list cards. That works functionally, but it undersells browsing and makes the results screen feel more like a utility screen than a destination. A poster wall better matches the product direction and the APK-inspired TV browsing patterns.
 
 ### Proposed sub-steps
-- [TODO] Re-read `ResultsScreenRenderer` and the surrounding screen composition to confirm the cheapest path to a grid/panel layout.
-- [TODO] Decide whether favorites/history should share the same poster-wall renderer or keep a distinct presentation.
-- [TODO] Implement a poster-first card layout with remote-friendly spacing, aspect ratio, and conservative row/column density suitable for TV distance.
-- [TODO] Preserve click and long-press actions while making D-pad traversal predictable.
-- [TODO] Ensure the grid still supports empty-state and footer actions like "New Search" without awkward focus traps.
-- [TODO] Define poster fallback behavior for missing artwork so sparse metadata does not collapse the layout.
+- [DONE] Re-read `ResultsScreenRenderer` and the surrounding screen composition to confirm the cheapest path to a grid/panel layout.
+- [DONE] Decide whether favorites/history should share the same poster-wall renderer or keep a distinct presentation.
+- [DONE] Implement a poster-first card layout with remote-friendly spacing, aspect ratio, and conservative row/column density suitable for TV distance.
+- [DONE] Preserve click and long-press actions while making D-pad traversal predictable.
+- [DONE] Ensure the grid still supports empty-state and footer actions like "New Search" without awkward focus traps.
+- [DONE] Define poster fallback behavior for missing artwork so sparse metadata does not collapse the layout.
+
+### Implemented shape
+- Search, favorites browse, and watch-history browse now share a poster-grid direction through the existing `RESULTS` flow rather than splitting into separate destination types.
+- The results surface was converted from stacked horizontal cards into a TV-oriented multi-column poster grid with fallback artwork handling.
 
 ### Validation
 - Manual navigation verifies smooth left/right/up/down traversal across the full result set.
@@ -253,7 +275,7 @@ The current results renderer uses horizontally arranged list cards. That works f
 ---
 
 ## B3. Enrich focus states on browse/result cards
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
@@ -263,12 +285,16 @@ Make focused cards reveal more value immediately: synopsis, year/runtime, source
 TV UIs benefit when focus acts like preview. This reduces unnecessary click depth and makes browsing feel more alive.
 
 ### Proposed sub-steps
-- [TODO] Identify which metadata is already available for focused items without expensive extra fetches.
-- [TODO] Lock a preferred metadata priority order for the first pass (for example: title, year/runtime, source count, best quality, watch progress, favorite state) so the focused UI does not grow ad hoc.
-- [TODO] Design a focus treatment that stays legible at TV distance.
-- [TODO] Implement richer focused/unfocused states in the relevant result/browse views.
-- [TODO] Avoid layout jumps that make D-pad browsing feel unstable.
-- [TODO] Make the focus treatment work well specifically in the new poster-wall search results layout.
+- [DONE] Identify which metadata is already available for focused items without expensive extra fetches.
+- [DONE] Lock a preferred metadata priority order for the first pass around locally available cues.
+- [DONE] Design a focus treatment that stays legible at TV distance.
+- [DONE] Implement richer focused/unfocused states in the relevant result/browse views.
+- [DONE] Avoid layout jumps that make D-pad browsing feel unstable.
+- [DONE] Make the focus treatment work well specifically in the new poster-wall search results layout.
+
+### Implemented shape
+- Focused poster cards now reveal richer locally available cues such as year/media-type/favorite/watched context, stronger focus styling, and clearer action hints.
+- The implementation intentionally avoids focus-triggered network fetches or heavy synopsis expansion that would make navigation feel sluggish.
 
 ### Validation
 - Manual browse testing verifies focus movement remains smooth and predictable.
@@ -279,7 +305,7 @@ TV UIs benefit when focus acts like preview. This reduces unnecessary click dept
 ---
 
 ## B4. Add actionable empty states across key media surfaces
-Status: TODO
+Status: DONE
 Priority: Medium
 
 ### Goal
@@ -289,9 +315,9 @@ Replace dead-end empty screens with context-aware prompts and actions.
 Empty states are a major part of perceived polish, especially on TV surfaces where users can feel “stuck” quickly.
 
 ### Proposed sub-steps
-- [TODO] Inventory current empty states for favorites, history, search results, and home shelves.
-- [TODO] Replace generic/no-content copy with explicit next actions.
-- [TODO] Ensure actions are remote-accessible and lead somewhere useful.
+- [DONE] Inventory current empty states for favorites, history, search results, and home shelves.
+- [DONE] Replace generic/no-content copy with explicit next actions.
+- [DONE] Ensure actions are remote-accessible and lead somewhere useful.
 
 ### Validation
 - Manual checks cover each targeted empty state.
@@ -417,14 +443,13 @@ Once home shelves exist, they can become smarter. But this should wait until the
 
 1. A1. Audit current screen structure against the borrowed patterns
 2. A2. Define the minimum viable “borrowed patterns” set for this pass
-3. C0.1. Turn the asset review into a borrow / recreate / avoid inventory with exact Asahi targets
-4. C0. Define an Asahi visual asset kit inspired by the APK review
-5. B2. Convert search results into a poster wall / TV grid
-6. B3. Enrich focus states on browse/result cards
-7. B4. Add actionable empty states across key media surfaces
-8. B1. Add or improve home shelves that answer “what should I do now?”
-9. C1. Introduce lighter-weight playback/status overlays
-10. C2. Improve loading/busy states without losing context
+3. B2. Convert search results into a poster wall / TV grid
+4. B3. Enrich focus states on browse/result cards
+5. B4. Add actionable empty states across key media surfaces
+6. B1. Add or improve home shelves that answer “what should I do now?”
+7. Validate fresh-search entry/focus behavior and clean up any state bugs exposed by the browse changes
+8. Decide whether C0/C0.1 visual-kit work is still worth doing in this pass
+9. Only then consider C1 playback/status overlays or C2 loading-state polish if they remain localized and low-risk
 
 ---
 
@@ -462,6 +487,10 @@ Probably yes at the primitive level because all three flows already share `RESUL
 Current recommendation:
 Start inside this exec plan unless it becomes too bulky; split into a linked design/asset note only if the inventory grows enough to hurt plan readability.
 
+### Q9. Should the progress log track exact commits for completed milestones in this pass?
+Current recommendation:
+Yes. This pass is already half historical and half forward-looking, so meaningful landed slices should name the commit hash alongside validation notes. Do not log every tiny tweak; track milestone commits that materially changed the plan state.
+
 ---
 
 ## Risks / Watchouts
@@ -482,8 +511,13 @@ Start inside this exec plan unless it becomes too bulky; split into a linked des
 
 ### Plan creation
 - Validated by: APK structure review, current exec-plan directory check, canonical plan inventory, and visual asset category inventory from the extracted package.
-- Not validated: actual current app UI file/class targets for home, browse, and playback; licensing suitability of any direct asset reuse.
-- Known uncertainty: this plan intentionally stops short of naming exact implementation files until the repo mapping pass is done, and it assumes recreate-over-copy for most visual assets.
+- Not validated at creation time: actual current app UI file/class targets for home, browse, and playback; licensing suitability of any direct asset reuse.
+- Known uncertainty at creation time: the initial draft intentionally stopped short of naming exact implementation files until the repo mapping pass was done, and it assumed recreate-over-copy for most visual assets.
+
+### Mid-pass implementation state
+- Validated by: local renderer/code inspection, repeated `testDebugUnitTest` and `assembleDebug` runs during shipped slices, and emulator/manual checks for home/search/results behavior.
+- Not fully validated yet: whether any playback/status overlay follow-up is worth the risk in this same pass; full real-device validation of every poster-grid edge case; a completed asset-kit inventory.
+- Known uncertainty: emulator Android TV IME behavior still makes automated results-entry capture a little misleading unless the keyboard is explicitly dismissed/submitted, so screenshot evidence should be interpreted with that caveat.
 
 ---
 
@@ -494,6 +528,7 @@ Start inside this exec plan unless it becomes too bulky; split into a linked des
 - Captured the main borrowable patterns: home shelves, rich focus states, actionable empty states, lighter overlays, and less disruptive loading states.
 - Explicitly marked non-goals: branding/theme cloning, plugin behavior, first-run installer behavior, and Kodi-level view complexity.
 - No implementation work completed yet.
+- Commit: `bbdad7c` (`Refine TV UX borrowed patterns exec plan`)
 
 ### 2026-04-05 17:37 UTC
 - Expanded the plan to include a visual asset strategy derived from the APK inspection.
@@ -518,6 +553,28 @@ Start inside this exec plan unless it becomes too bulky; split into a linked des
 - Confirmed there is no separate grid/list adapter infrastructure yet; renderer work is handwritten view composition inside `ScreenRenderers.kt`.
 - Confirmed playback overlays are currently thin: Media3 controller UI plus a small app-side overlay path in `PlayerScreenRenderer`, so Phase C should stay cautious.
 - Updated the plan to recommend incremental home improvement, shared result-card primitives, and likely prioritizing browse/result work before trying to redesign playback UI.
+- Commit: `a2d2a9d` (`Ground TV UX plan in current app structure`)
+
+### 2026-04-05 18:xx UTC
+- Completed the main browse/home UX implementation slices this plan was created to drive.
+- Search, favorites, and watch history now route through a poster-grid-style results presentation rather than the old stacked horizontal-card list.
+- Focus states were enriched using locally available metadata and stronger TV-distance affordances instead of fetch-on-focus behavior.
+- Empty states across home/results/favorites/history were made more actionable.
+- Home was tightened into a shelf-style landing surface built from existing data rather than speculative recommendation fetches.
+- Commit: `de23f07` (`Convert results screen to poster grid`)
+- Commit: `1eac112` (`Enrich poster grid focus states`)
+- Commit: `a9c5bef` (`Improve actionable empty states`)
+- Commit: `25eb184` (`Tighten home screen into shelf-style layout`)
+- Validation: repeated `./gradlew testDebugUnitTest` and `./gradlew assembleDebug` runs passed during these slices; emulator/manual checks confirmed the new home/search/results flows were rendering and navigable.
+
+### 2026-04-05 18:xx UTC
+- Continued the pass with search-entry cleanup prompted by emulator/manual validation.
+- Improved fresh-search focus flow so search opens on a saner input target.
+- Found and fixed a real state bug where a fresh search could inherit stale `Favorites` / `Watch History` browse labels because browse-mode reset did not also clear the active query.
+- This was a meaningful UX correctness fix, not just emulator cleanup.
+- Commit: `df6219b` (`Improve search screen focus flow`)
+- Commit: `73845de` (`Clear browse labels from fresh search state`)
+- Validation: emulator/manual checks reached a correct empty Movies search surface with the input focused and no bogus inherited query text.
 
 ---
 
@@ -526,6 +583,7 @@ Start inside this exec plan unless it becomes too bulky; split into a linked des
 ### 2026-04-05
 - Initial scope established.
 - Future hooks to preserve: shelf model flexibility, locally available metadata for focus enrichment, a small reusable asset kit, a reusable poster-card primitive for search/favorites/history, and a possible later split of playback overlay polish into its own plan if Phase C proves riskier than expected.
+- Scope has since effectively narrowed around honest midpoint tracking: the main browse/home changes are now landed locally, while visual-kit and playback/loading polish remain explicitly optional until proven worth the risk.
 
 ---
 
@@ -533,6 +591,9 @@ Start inside this exec plan unless it becomes too bulky; split into a linked des
 
 ### 2026-04-05 17:46 UTC
 Intended task: execute A1 by mapping the real repo structure for home, results/favorites/history, and playback overlays, then update the plan with concrete targets and constraints.
+
+### 2026-04-05 18:40 UTC
+Intended task: update the plan so it cleanly tracks the already-landed local UX work by milestone commit, while keeping the remaining future scope explicit and narrow.
 
 ---
 
