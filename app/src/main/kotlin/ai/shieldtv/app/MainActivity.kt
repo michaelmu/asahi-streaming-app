@@ -478,15 +478,16 @@ class MainActivity : ComponentActivity() {
         }
 
         val record = persistedPlaybackSession ?: return
-        val item = ContinueWatchingHydrator.fromActiveResume(record) ?: return
+        val fallbackMediaRef = coordinator.currentState().selectedMedia
+            ?: ai.shieldtv.app.core.model.media.MediaRef(
+                mediaType = coordinator.currentState().searchMode.mediaType,
+                ids = ai.shieldtv.app.core.model.media.MediaIds(tmdbId = null, imdbId = null, tvdbId = null),
+                title = record.mediaTitle,
+                year = null
+            )
+        val item = ContinueWatchingHydrator.fromActiveResume(record, fallbackMediaRef) ?: return
         coordinator.recordContinueWatching(
-            mediaRef = item.mediaRef ?: coordinator.currentState().selectedMedia
-                ?: ai.shieldtv.app.core.model.media.MediaRef(
-                    mediaType = coordinator.currentState().searchMode.mediaType,
-                    ids = ai.shieldtv.app.core.model.media.MediaIds(tmdbId = null, imdbId = null, tvdbId = null),
-                    title = item.mediaTitle,
-                    year = null
-                ),
+            mediaRef = item.mediaRef ?: fallbackMediaRef,
             artworkUrl = item.artworkUrl,
             seasonNumber = record.seasonNumber,
             episodeNumber = record.episodeNumber,

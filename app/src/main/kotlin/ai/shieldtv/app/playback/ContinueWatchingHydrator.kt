@@ -1,9 +1,10 @@
 package ai.shieldtv.app.playback
 
 import ai.shieldtv.app.ContinueWatchingItem
+import ai.shieldtv.app.core.model.media.MediaRef
 
 object ContinueWatchingHydrator {
-    fun fromActiveResume(record: ActivePlaybackResumeRecord?): ContinueWatchingItem? {
+    fun fromActiveResume(record: ActivePlaybackResumeRecord?, fallbackMediaRef: MediaRef? = null): ContinueWatchingItem? {
         if (record == null) return null
         if (record.progressPercent !in 3..92) return null
         return ContinueWatchingItem(
@@ -18,9 +19,10 @@ object ContinueWatchingHydrator {
             artworkUrl = record.artworkUrl,
             queryHint = record.queryHint,
             progressPercent = record.progressPercent,
-            mediaRef = null
+            mediaRef = fallbackMediaRef
         )
     }
 
-    fun fromPersistedSession(record: PlaybackSessionRecord?): ContinueWatchingItem? = fromActiveResume(record)
+    fun fromPersistedSession(record: PlaybackSessionRecord?, fallbackMediaRef: MediaRef? = null): ContinueWatchingItem? =
+        fromActiveResume(record, fallbackMediaRef)
 }

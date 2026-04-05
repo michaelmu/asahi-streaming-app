@@ -60,7 +60,7 @@ A task is only `DONE` when:
 
 **Current phase:** Phase B — remaining shell cleanup
 
-**Immediate target:** continue breaking up `MainActivity` by extracting the source/settings preferences workflow into a focused coordinator.
+**Immediate target:** keep shrinking small workflow seams in `MainActivity`, starting with continue-watching hydration fallback logic that currently leaks screen-state repair into the activity.
 
 **Why this now:**
 The previous plan materially improved the app’s internal architecture and source pipeline.
@@ -260,6 +260,13 @@ Not yet. Finish the smaller shell extractions first and reassess.
 - Kept modal/view construction in `MainActivity` for now to keep the extraction low-risk and incremental.
 - Validation: `./gradlew testDebugUnitTest` and `./gradlew assembleDebug` passed.
 
+### 2026-04-05 05:38 UTC
+- Continued the shell-cleanup pass with a small continue-watching hydration refactor.
+- Updated `ContinueWatchingHydrator` to accept an optional fallback `MediaRef` so the hydrator can produce a more complete `ContinueWatchingItem` without forcing `MainActivity` to repair `mediaRef` after the fact.
+- Simplified the persisted-session hydration path in `MainActivity` by moving the fallback handoff closer to the hydrator boundary.
+- Kept persistence formats unchanged; this was intentionally a low-risk cleanup, not a playback-session schema expansion.
+- Validation: `./gradlew testDebugUnitTest assembleDebug` passed.
+
 ---
 
 ## Scope Changes
@@ -271,6 +278,7 @@ Not yet. Finish the smaller shell extractions first and reassess.
 - Shell cleanup is currently being approached in small low-risk slices rather than a broad rewrite.
 - Modal workflow glue is being peeled away incrementally so behavior stays stable while `MainActivity` gets thinner.
 - Settings/source-preferences workflow is now also being peeled away incrementally, starting with mutation/summary logic before view-layer extraction.
+- Continue-watching hydration cleanup is being handled the same way: prefer small boundary cleanups that reduce activity glue without expanding persistence schema unless that expansion is clearly justified.
 
 ---
 
@@ -278,6 +286,9 @@ Not yet. Finish the smaller shell extractions first and reassess.
 
 ### 2026-04-04 18:33 UTC
 Intended task: Continue the active device/shell plan by extracting the source/settings preferences workflow from `MainActivity`.
+
+### 2026-04-05 05:38 UTC
+Intended task: reduce `MainActivity` glue further by moving continue-watching hydration fallback handling behind the hydrator boundary
 
 ---
 
