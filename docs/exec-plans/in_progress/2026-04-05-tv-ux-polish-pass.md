@@ -31,23 +31,28 @@ This plan focuses on the product/UI changes most likely to improve perceived qua
 
 ### Main remaining UX/UI weaknesses
 
-1. **Home still feels partly like a utility dashboard**
+1. **Card rendering/focus polish needs immediate correction**
+   - some cards are not reliably surfacing artwork, which undercuts the whole poster-led direction
+   - cards are still exposing torrent/provider-ish detail that does not belong on primary browse surfaces
+   - selected/focused treatment can overfill cards with bright orange, obscuring artwork and making focus feel heavy-handed
+
+2. **Home still feels partly like a utility dashboard**
    - shelves exist, but lower sections still feel panel-driven rather than entertainment-led
    - featured/quick-pick area does not yet fully sell “browse from the couch”
 
-2. **Some surfaces remain too text-heavy**
+3. **Some surfaces remain too text-heavy**
    - details, settings, and sources still lean heavily on explanatory text panels
    - TV UI should privilege artwork, hierarchy, and action confidence over paragraphs
 
-3. **Sources flow is readable but not yet elegant**
+4. **Sources flow is readable but not yet elegant**
    - current UI is good for power-user inspection
    - default “pick something good and play” path could feel more confident and lighter
 
-4. **Details screen is functional, not yet premium**
+5. **Details screen is functional, not yet premium**
    - structure is sound, but overall visual hierarchy is still conventional
    - more emotional/visual pull would help selection confidence
 
-5. **Settings still reads as developer-utility UI**
+6. **Settings still reads as developer-utility UI**
    - acceptable for now, but a weaker product surface than browse/results/home
 
 ---
@@ -78,6 +83,7 @@ After this pass, the app should feel:
 
 Recommended order:
 
+0. **Card rendering and focus correction pass**
 1. **Home premium pass**
 2. **Details screen richness pass**
 3. **Sources default-path simplification**
@@ -85,10 +91,100 @@ Recommended order:
 5. **Global focus/motion/spacing consistency pass**
 
 Reasoning:
-- Home and details have the biggest impact on perceived product quality.
+- Broken/missing artwork and overbearing selection treatment are immediate UX defects, not optional polish.
+- The current poster-led browse direction only works if cards actually show art and keep that art visible under focus.
+- Home and details still have the biggest impact on perceived product quality after the card baseline is fixed.
 - Sources has major UX value, but should be adjusted after home/details visual language is clearer.
 - Settings matters, but should not lead the pass.
 - Global polish should happen after the primary screen changes establish the intended visual direction.
+
+---
+
+# Phase 0 — Card rendering and focus correction pass
+
+## Goal
+
+Fix the current high-visibility card defects before broader UX polish work continues.
+
+This phase is priority zero because the app’s browse surfaces now depend on poster/image-led cards. If artwork is missing, metadata is noisy, or focus fill obscures the card, the rest of the polish pass is built on a weak baseline.
+
+## 0.1. Fix card artwork rendering
+
+### Current state
+- some cards are not showing artwork even when the UI is meant to be poster-led
+- this is likely affecting perception of the whole results/home direction more than any typography/layout issue
+
+### Changes
+- inspect current image-loading paths for poster/backdrop cards across:
+  - results poster cards
+  - quick-pick cards
+  - continue-watching cards
+  - any related shelf cards using `ImageView.load(...)`
+- verify fallback behavior separately from genuine image-load failure
+- ensure card dimensions, clipping, alpha, overlays, and drawable fallbacks are not masking successfully loaded images
+- validate with real emulator screenshots after the fix
+
+### Likely implementation surfaces
+- `ResultsScreenRenderer.focusablePosterCard(...)`
+- `HomeScreenRenderer.buildQuickPickRow(...)`
+- `HomeScreenRenderer.buildContinueWatchingRow(...)`
+- shared styling/drawable behavior in `ScreenViewFactory` and `app/src/main/res/drawable/*`
+
+### Done when
+- poster/shelf cards reliably display their image art when URLs exist
+- fallback icon/label behavior only appears when artwork is actually unavailable
+
+## 0.2. Remove torrent/provider-ish metadata from primary cards
+
+### Current state
+- card surfaces are carrying information that reads like torrent/source internals rather than browse UI
+- this is especially wrong on primary browse/result cards where users should mainly see title, year/type, and simple state cues
+
+### Changes
+- remove torrent-specific or provider-ish card text from primary browse cards
+- keep only high-value couch-legible metadata on cards, such as:
+  - title
+  - year
+  - movie/show type
+  - favorite / watched state if useful
+- keep advanced source/torrent detail off browse cards and confined to the sources screen if needed
+
+### Done when
+- cards read like streaming-app browse cards rather than scraper/torrent objects
+
+## 0.3. Replace heavy orange focus fill with subtler selected/focused treatment
+
+### Current state
+- selected/focused card treatment can flood the card with orange and obscure the artwork
+- this hurts readability and undermines the visual value of poster art
+- Mike has previously preferred toning down loud selection styling in similar UI passes (Source: memory/2026-04-04-sidebar-simplify.md#L88-L126)
+
+### Changes
+- rework selected/focused card visuals so focus is obvious without covering the image
+- prefer a lighter-touch combination such as:
+  - subtle scale/elevation
+  - controlled border/glow/outline
+  - restrained scrim or tint rather than full fill
+  - text contrast adjustments that preserve the artwork
+- ensure selected state and focused state remain distinguishable when needed, but not visually punishing
+
+### Done when
+- focused cards remain clearly active
+- artwork remains visible while focused
+- the UI no longer feels like focus is “painting over” the card
+
+## 0.4. Validate the corrected card baseline before broader polish
+
+### Validation
+- capture fresh emulator screenshots for:
+  - home shelves
+  - search results grid
+  - focused result card
+- manually verify DPAD focus movement and readability
+- confirm no regressions in favorites/history/result actions
+
+### Done when
+- card visuals are stable enough to treat as the baseline for the remaining UX pass
 
 ---
 
@@ -339,6 +435,12 @@ Make the app feel more intentionally polished across screens, not just individua
 ---
 
 # Suggested implementation slices
+
+## Slice 0 — Card rendering/focus correction
+- 0.1
+- 0.2
+- 0.3
+- 0.4
 
 ## Slice 1 — Home premium pass
 - A1
