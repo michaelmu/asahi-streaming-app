@@ -63,12 +63,12 @@ A task is only `DONE` when:
 
 ## Current Focus
 
-**Current phase:** Phase C — first-wave visual-kit implementation
+**Current phase:** Closeout / archive readiness
 
-**Immediate target:** land the smallest worthwhile visual-kit slice against the shipped poster grid so the browse surface gains stronger TV-distance focus and depth without spawning a full theme pass
+**Immediate target:** keep the document honest about what has already landed, make remaining non-landed polish explicit, and leave the pass ready either for archive or for a deliberately separate follow-up
 
 **Why this now:**
-The browse/home structure is already in place. If this pass is going to keep going, the safest high-leverage move is a tiny visual refinement attached directly to the shipped results grid rather than jumping straight into playback overlay work.
+The core borrowed-pattern work is no longer hypothetical: browse, home, visual-kit first wave, and a narrow playback-status slice have all landed locally. The right next move is clean closeout discipline, not pretending this pass still has a large required roadmap inside it.
 
 > Update this section whenever the active phase or immediate target changes.
 
@@ -328,7 +328,7 @@ Empty states are a major part of perceived polish, especially on TV surfaces whe
 # Phase C — Playback and Status Polish
 
 ## C0. Define an Asahi visual asset kit inspired by the APK review
-Status: IN_PROGRESS
+Status: DONE
 Priority: Medium
 
 ### Goal
@@ -482,7 +482,7 @@ Right now the asset guidance is directionally useful but still abstract. This ta
 ---
 
 ## C1. Introduce a minimal playback status strip without replacing Media3 controls
-Status: IN_PROGRESS
+Status: DONE
 Priority: Medium
 
 ### Goal
@@ -519,7 +519,7 @@ The useful pattern from the APK review is not “build a whole custom HUD.” It
 ---
 
 ## C2. Improve loading/busy states without losing context
-Status: TODO
+Status: DEFERRED
 Priority: Medium
 
 ### Goal
@@ -528,14 +528,18 @@ Make loading feel intentional and less jarring by preserving the surrounding con
 ### Why this matters
 Abrupt blocking states make TV apps feel clunky. Small loading indicators, dim overlays, or inline busy states can preserve flow.
 
+### Deferred rationale
+- This pass already landed the higher-leverage browse/home/focus/empty-state/playback-status work.
+- No clearly broken loading state has been singled out as worth extending this pass further.
+- If loading polish becomes important, it should start from a concrete ugly flow rather than a generic “polish loading” bucket.
+
 ### Proposed sub-steps
-- [TODO] Audit current loading patterns in search, source loading, browse, and playback preparation.
-- [TODO] Replace the most disruptive full-screen/blocking states where low-risk.
-- [TODO] Keep loading affordances visible enough to communicate progress.
+- [DEFERRED] Audit current loading patterns in search, source loading, browse, and playback preparation.
+- [DEFERRED] Replace the most disruptive full-screen/blocking states where low-risk.
+- [DEFERRED] Keep loading affordances visible enough to communicate progress.
 
 ### Validation
-- Manual flow checks confirm users can still understand that work is happening.
-- Regressions like double-spinners or trapped focus do not appear.
+- Deferred: no implementation work was taken under C2 in this pass.
 
 ---
 
@@ -561,15 +565,19 @@ Once home shelves exist, they can become smarter. But this should wait until the
 
 ## Recommended Order
 
+Completed in this pass:
 1. A1. Audit current screen structure against the borrowed patterns
 2. A2. Define the minimum viable “borrowed patterns” set for this pass
 3. B2. Convert search results into a poster wall / TV grid
 4. B3. Enrich focus states on browse/result cards
 5. B4. Add actionable empty states across key media surfaces
 6. B1. Add or improve home shelves that answer “what should I do now?”
-7. Validate fresh-search entry/focus behavior and clean up any state bugs exposed by the browse changes
-8. Use the completed C0.1 inventory to decide whether to implement a tiny first-wave visual kit now or stop at planning
-9. Only then consider C1 playback/status overlays or C2 loading-state polish if they remain localized and low-risk
+7. Validate fresh-search entry/focus behavior and clean up state bugs exposed by the browse changes
+8. C0.1 / C0 first-wave visual-kit definition and small implementation slices
+9. C1 narrow playback-status strip that respects Media3 as the real playback UI
+
+Not completed in this pass:
+10. C2 loading-state polish — deferred unless a concrete ugly flow justifies a follow-up
 
 ---
 
@@ -634,9 +642,9 @@ Yes. This pass is already half historical and half forward-looking, so meaningfu
 - Not validated at creation time: actual current app UI file/class targets for home, browse, and playback; licensing suitability of any direct asset reuse.
 - Known uncertainty at creation time: the initial draft intentionally stopped short of naming exact implementation files until the repo mapping pass was done, and it assumed recreate-over-copy for most visual assets.
 
-### Mid-pass implementation state
+### End-of-pass implementation state
 - Validated by: local renderer/code inspection, repeated `testDebugUnitTest` and `assembleDebug` runs during shipped slices, emulator/manual checks for home/search/results behavior, and a follow-up repo scan tying the visual-kit inventory to current renderer/component seams.
-- Not fully validated yet: whether any playback/status overlay follow-up is worth the risk in this same pass; full real-device validation of every poster-grid edge case; whether the first-wave visual kit should actually be implemented now versus left as scoped guidance.
+- Not fully validated: full real-device validation of every poster-grid edge case and every playback-status-strip moment; C2 loading-state work was intentionally not taken.
 - Known uncertainty: emulator Android TV IME behavior still makes automated results-entry capture a little misleading unless the keyboard is explicitly dismissed/submitted, so screenshot evidence should be interpreted with that caveat.
 
 ---
@@ -724,7 +732,14 @@ Yes. This pass is already half historical and half forward-looking, so meaningfu
 - Kept Media3 controller UI as the primary playback surface.
 - Replaced the old top-overlay trigger (`playbackState.errorMessage != null`) with a minimal app-side status strip for paused / buffering / recent-start states.
 - Kept the dedicated bottom error panel intact for real playback failures.
+- Commit: `a912041` (`Add minimal playback status strip`)
 - Validation: `./gradlew testDebugUnitTest assembleDebug` passed after the playback-strip adjustment.
+
+### 2026-04-05 19:5x UTC
+- Reconciled the plan for closeout after the main browse/home/visual/playback slices landed.
+- Marked C0 and C1 as done for the intended scope of this pass.
+- Marked C2 as explicitly deferred instead of leaving it as implied future work.
+- Shifted `Current Focus` from implementation to archive-readiness so the document no longer pretends large required work remains.
 
 ---
 
@@ -733,7 +748,8 @@ Yes. This pass is already half historical and half forward-looking, so meaningfu
 ### 2026-04-05
 - Initial scope established.
 - Future hooks to preserve: shelf model flexibility, locally available metadata for focus enrichment, a small reusable asset kit, a reusable poster-card primitive for search/favorites/history, and a possible later split of playback overlay polish into its own plan if Phase C proves riskier than expected.
-- Scope has since effectively narrowed around honest midpoint tracking: the main browse/home changes are now landed locally, while visual-kit and playback/loading polish remain explicitly optional until proven worth the risk.
+- Scope later narrowed around honest midpoint tracking as the main browse/home changes landed locally.
+- Scope is now effectively closed for this pass: first-wave visual-kit work and a narrow playback-status slice landed, while generic loading-state polish was consciously deferred.
 
 ---
 
@@ -768,3 +784,7 @@ This plan is complete for its intended pass when:
 - validation notes explain what was actually exercised manually or by tests
 - `Current Focus` no longer implies unfinished required work
 - the file is ready to move out of `in_progress/` without misleading anyone
+
+Current assessment:
+- This definition is now met for the intended scope of this pass.
+- The remaining decision is procedural, not architectural: archive this plan as complete now, or leave it in `in_progress/` briefly if Mike wants one more explicit review pass before moving it.
