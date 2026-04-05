@@ -409,15 +409,19 @@ class MainActivity : ComponentActivity() {
         playerView = createPlayerView().apply {
             player = engine.attach(this@MainActivity)
             showController()
-            post {
-                showController()
-                findViewById<View?>(androidx.media3.ui.R.id.exo_progress)?.let { progressView ->
-                    progressView.isFocusable = true
-                    progressView.isFocusableInTouchMode = true
-                    progressView.requestFocus()
-                }
-            }
+            post { focusPlayerSeekBar() }
+            postDelayed({ focusPlayerSeekBar() }, 120)
+            postDelayed({ focusPlayerSeekBar() }, 300)
         }
+    }
+
+    private fun focusPlayerSeekBar() {
+        playerView.showController()
+        val progressView = playerView.findViewById<View?>(androidx.media3.ui.R.id.exo_progress) ?: return
+        progressView.isFocusable = true
+        progressView.isFocusableInTouchMode = true
+        progressView.requestFocus()
+        progressView.requestFocusFromTouch()
     }
 
     private fun teardownPlaybackSession() {
@@ -923,22 +927,7 @@ class MainActivity : ComponentActivity() {
                     playbackMessage = latestPlaybackMessage,
                     playbackError = latestPlaybackError,
                     playerView = playerView,
-                    playbackState = latestPlaybackState,
-                    onStopPlayback = {
-                        teardownPlaybackSession()
-                        val state = coordinator.currentState()
-                        val mediaRef = state.selectedMedia
-                        if (mediaRef != null) {
-                            coordinator.showSources(
-                                mediaRef = mediaRef,
-                                details = state.selectedDetails,
-                                seasonNumber = state.selectedSeasonNumber,
-                                episodeNumber = state.selectedEpisodeNumber,
-                                sources = state.selectedSources
-                            )
-                            renderCurrentScreen()
-                        }
-                    }
+                    playbackState = latestPlaybackState
                 )
             }
             AppDestination.SETTINGS -> settingsRenderer.render(

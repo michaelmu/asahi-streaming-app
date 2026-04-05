@@ -1066,8 +1066,7 @@ class PlayerScreenRenderer(
         playbackMessage: String?,
         playbackError: String?,
         playerView: PlayerView,
-        playbackState: PlaybackState,
-        onStopPlayback: () -> Unit
+        playbackState: PlaybackState
     ) {
         val source = state.selectedSource
         if (source == null) {
@@ -1094,37 +1093,6 @@ class PlayerScreenRenderer(
         playerView.useController = true
         playerView.controllerShowTimeoutMs = 3500
         playerFrame.addView(playerView)
-
-        val stopButton = TextView(host.context).apply {
-            text = "Stop"
-            isFocusable = true
-            isFocusableInTouchMode = true
-            setPadding(viewFactory.dp(16), viewFactory.dp(10), viewFactory.dp(16), viewFactory.dp(10))
-            setTextColor(viewFactory.textPrimaryColor)
-            setBackgroundColor(Color.argb(190, 20, 20, 20))
-            textSize = 16f
-            setTypeface(typeface, Typeface.BOLD)
-            setOnClickListener { onStopPlayback() }
-            setOnKeyListener { _, keyCode, event ->
-                if (event.action == KeyEvent.ACTION_UP &&
-                    (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)
-                ) {
-                    onStopPlayback()
-                    true
-                } else {
-                    false
-                }
-            }
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                Gravity.TOP or Gravity.END
-            ).also {
-                it.topMargin = viewFactory.dp(20)
-                it.marginEnd = viewFactory.dp(20)
-            }
-        }
-        playerFrame.addView(stopButton)
 
         val playbackStateLabel = playbackState.playerStateLabel
         val playbackPositionMs = playbackState.positionMs
