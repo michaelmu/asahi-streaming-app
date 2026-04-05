@@ -98,6 +98,125 @@ Reasoning:
 - Settings matters, but should not lead the pass.
 - Global polish should happen after the primary screen changes establish the intended visual direction.
 
+## Practical execution checklist
+
+Use this section as the real working loop for implementation. The longer phase writeups below explain intent; this checklist is the day-to-day ship sequence.
+
+### Global rules for this pass
+- Prefer one narrow visual/system fix at a time over broad concurrent restyling.
+- Preserve current navigation, search, favorites, history, sources, and playback behavior unless a slice explicitly changes them.
+- Do not introduce metadata on primary browse cards beyond title, year, type, and lightweight state cues.
+- Do not let richer art treatment hide primary actions or confuse focus order.
+- Treat emulator screenshots and DPAD validation as required exit criteria, not optional nice-to-haves.
+
+### Slice 0 — Card baseline (must land first)
+
+#### 0A. Diagnose artwork failures
+- trace poster/backdrop loading paths on results, quick picks, continue watching, and reused shelf cards
+- identify whether the real failure is data quality, URL shape, fallback policy, clipping, alpha/tint, or selector layering
+- write down the actual failure mode before widening the fix
+
+#### 0B. Standardize browse-card content policy
+- strip provider/torrent/pipeline detail from results and home cards
+- keep only title, year, type, and lightweight favorite/watched cues where useful
+- verify sources screen remains the place for source internals
+
+#### 0C. Rework focus treatment
+- inspect shared drawable/selector assets first
+- replace heavy orange fill with lighter scale/elevation/border/scrim treatment
+- keep focused and selected states legible without obscuring art
+
+#### 0D. Validate baseline
+- capture screenshots for home shelves, results grid, and a focused card
+- verify focus movement and action readability by DPAD
+- confirm no regressions in favorites/history/search-result actions
+
+**Exit criteria:** cards reliably show art, browse cards no longer leak internals, and focus reads clearly without painting over imagery.
+
+### Slice 1 — Home premium pass
+
+#### 1A. Strengthen top-of-home
+- give continue watching or featured content more visual authority
+- make quick picks feel curated rather than utility-like
+- reduce obviously synthetic/demo-ish copy
+
+#### 1B. Tighten lower-home sections
+- reduce panel heaviness in browse/recent-search areas
+- make browse actions feel like launch tiles, not admin panels
+- keep empty states useful but visually subordinate
+
+#### 1C. Normalize shelf behavior
+- align card sizing, spacing, and focus behavior across all home shelves
+- verify first-focus landing feels intentional after render
+
+**Exit criteria:** home reads as a streaming landing page, not a control panel with shelves.
+
+### Slice 2 — Details richness pass
+
+#### 2A. Improve hero composition
+- strengthen backdrop/poster composition without losing action clarity
+- make title and key metadata feel featured rather than form-like
+- keep primary actions visible and obvious without extra navigation
+
+#### 2B. Reduce text-wall risk
+- cap default overview length/lines in the initial composition
+- tighten grouping for year/type/runtime/seasons/genres
+- preserve TV-distance readability over completeness in the first screenful
+
+#### 2C. Clarify action hierarchy
+- make the primary next action unmistakable
+- distinguish Browse Episodes / Find Sources from favorite toggles and secondary actions
+- validate focus order from title area into actions
+
+**Exit criteria:** details feels premium and decisive, with obvious next actions and no paragraph wall.
+
+### Slice 3 — Sources confidence pass
+
+#### 3A. Rebalance hierarchy
+- reduce the visual dominance of diagnostics
+- keep source choices and ranking cues visually first
+- preserve transparency without making the page read like a debug console
+
+#### 3B. Tighten recommendation language
+- simplify cached/direct/uncached labels for couch legibility
+- ensure “Recommended” / “Best Pick” language only appears when it matches real rank behavior
+- avoid UI copy that overpromises certainty
+
+#### 3C. Add lightweight best-pick affordance only if truthful
+- consider top-card emphasis or a best-pick label
+- do not hide the full source list or manual choice
+- only ship if the ranking rationale is honest and stable enough
+
+**Exit criteria:** the user can quickly understand what to pick, while still seeing why the options exist.
+
+### Slice 4 — Settings cleanup
+- compress explanatory copy into scan-friendly status summaries
+- group auth/update/provider actions more intentionally
+- visually subordinate debug/power-user actions without removing them
+
+**Exit criteria:** settings remains capable but no longer reads like a raw utility panel.
+
+### Slice 5 — Global consistency sweep
+- align focus semantics across rail, cards, sources, episode rows, and settings buttons
+- reduce spacing drift and panel-density inconsistencies
+- shorten helper copy where layout already communicates intent
+
+**Exit criteria:** nothing major feels stylistically out-of-family after the earlier slices land.
+
+### Per-slice working loop
+1. pick one slice/sub-slice
+2. inspect current implementation surfaces before editing
+3. make the smallest change that proves the direction
+4. build with `./gradlew assembleDebug`
+5. run targeted tests or `testDebugUnitTest` when touched areas justify it
+6. validate in emulator with screenshots and DPAD checks
+7. only then move to the next sub-slice
+
+### Suggested commit cadence
+- one commit per meaningful sub-slice when possible
+- avoid bundling unrelated visual fixes just because they touch the same renderer file
+- prefer honest commit messages tied to visible product changes
+
 ---
 
 # Phase 0 — Card rendering and focus correction pass
@@ -155,10 +274,11 @@ Across results, home shelves, and any reused poster-led card surfaces:
   - year
   - movie/show type
   - lightweight state cues such as favorite / watched when helpful
-- provider, torrent, or pipeline-detail text belongs on the sources screen, not on primary browse cards
+- provider, torrent, or pipeline-detail text does **not** belong on primary browse cards
+- provider, torrent, and pipeline detail belongs on the sources screen, not on primary browse cards
 - focus treatment must preserve artwork readability rather than painting over it
 
-This policy should be treated as a guardrail for later slices so home/details polish does not reintroduce noisy metadata or heavy-handed focus styling.
+This is a hard guardrail for the whole pass, not a soft preference. Home/details polish should not reintroduce noisy metadata or heavy-handed focus styling later.
 
 ## 0.2. Remove torrent/provider-ish metadata from primary cards
 
@@ -296,6 +416,7 @@ Upgrade details from functional metadata page to confident selection surface.
 - improve separation between title/metadata/overview/actions
 - make the selected title feel more “featured” and less like a form layout
 - reduce flatness in the top composition
+- keep the primary next action visible without forcing the user to scroll or hunt below a hero block
 
 ### Likely implementation
 - evolve `DetailsScreenRenderer.render(...)`
