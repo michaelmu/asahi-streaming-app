@@ -181,48 +181,50 @@ class HomeScreenRenderer(
         host.addView(buildQuickPickRow(featured, onQuickPick, onFirstFocusTarget))
         host.addView(viewFactory.spacer(14))
 
-        host.addView(viewFactory.panel(elevated = false).apply {
-            addView(viewFactory.sectionTitle("Favorites"))
-            addView(viewFactory.spacer(10))
-            addView(viewFactory.caption("Movies"))
-            addView(viewFactory.spacer(8))
-            addView(buildDashboardList(movieFavorites, emptyMessage = "No movie favorites yet. Add one from search results and it’ll show up here for quick access.", onItemSelected = onFavoriteSelected))
-            addView(viewFactory.spacer(10))
-            addView(actionButton("Open Movie Favorites", onMovieFavorites, R.drawable.ic_nav_favorite))
-            addView(viewFactory.spacer(12))
-            addView(viewFactory.caption("TV Shows"))
-            addView(viewFactory.spacer(8))
-            addView(buildDashboardList(showFavorites, emptyMessage = "No TV favorites yet. Save a show from search results and it’ll land here.", onItemSelected = onFavoriteSelected))
-            addView(viewFactory.spacer(10))
-            addView(actionButton("Open TV Favorites", onShowFavorites, R.drawable.ic_nav_favorite))
-        })
+        val favoritesShelfItems = (movieFavorites + showFavorites).take(4)
+        host.addView(viewFactory.sectionTitle("Your Picks"))
+        host.addView(viewFactory.spacer(10))
+        if (favoritesShelfItems.isNotEmpty()) {
+            host.addView(buildQuickPickRow(favoritesShelfItems, onFavoriteSelected, onFirstFocusTarget))
+        } else {
+            host.addView(viewFactory.panel(elevated = false).apply {
+                addView(viewFactory.body("No favorites yet. Save a movie or show from search results and it’ll appear here."))
+                addView(viewFactory.spacer(10))
+                addView(viewFactory.caption("Use the menu on a search result to add it quickly."))
+            })
+        }
+        host.addView(viewFactory.spacer(10))
+        host.addView(buildHomeActionRow(
+            primaryLabel = "Open Movie Favorites",
+            onPrimary = onMovieFavorites,
+            primaryIcon = R.drawable.ic_nav_favorite,
+            secondaryLabel = "Open TV Favorites",
+            onSecondary = onShowFavorites,
+            secondaryIcon = R.drawable.ic_nav_favorite
+        ))
         host.addView(viewFactory.spacer(14))
 
-        val historyRow = LinearLayout(host.context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.TOP
+        val historyShelfItems = (showHistory + movieHistory).take(4)
+        host.addView(viewFactory.sectionTitle("Recently Watched"))
+        host.addView(viewFactory.spacer(10))
+        if (historyShelfItems.isNotEmpty()) {
+            host.addView(buildQuickPickRow(historyShelfItems, onHistorySelected, onFirstFocusTarget))
+        } else {
+            host.addView(viewFactory.panel(elevated = true).apply {
+                addView(viewFactory.body("No watch history yet. Start a movie or episode and it’ll show up here for quick return."))
+                addView(viewFactory.spacer(10))
+                addView(viewFactory.caption("Playback automatically turns this into a resume shelf."))
+            })
         }
-        val movieHistoryPanel = viewFactory.panel(elevated = true).apply {
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            addView(viewFactory.sectionTitle("Recently Watched Movies"))
-            addView(viewFactory.spacer(10))
-            addView(buildDashboardList(movieHistory, emptyMessage = "No movie watch history yet. Start a movie and it’ll appear here to reopen fast.", onItemSelected = onHistorySelected))
-            addView(viewFactory.spacer(10))
-            addView(actionButton("Open Movie Watch History", onMovieHistory, R.drawable.ic_nav_history))
-        }
-        val showHistoryPanel = viewFactory.panel(elevated = false).apply {
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
-                it.marginStart = viewFactory.dp(14)
-            }
-            addView(viewFactory.sectionTitle("Recently Watched TV"))
-            addView(viewFactory.spacer(10))
-            addView(buildDashboardList(showHistory, emptyMessage = "No TV watch history yet. Watch an episode and it’ll show up here for easy return.", onItemSelected = onHistorySelected))
-            addView(viewFactory.spacer(10))
-            addView(actionButton("Open TV Watch History", onShowHistory, R.drawable.ic_nav_history))
-        }
-        historyRow.addView(movieHistoryPanel)
-        historyRow.addView(showHistoryPanel)
-        host.addView(historyRow)
+        host.addView(viewFactory.spacer(10))
+        host.addView(buildHomeActionRow(
+            primaryLabel = "Open Movie Watch History",
+            onPrimary = onMovieHistory,
+            primaryIcon = R.drawable.ic_nav_history,
+            secondaryLabel = "Open TV Watch History",
+            onSecondary = onShowHistory,
+            secondaryIcon = R.drawable.ic_nav_history
+        ))
         host.addView(viewFactory.spacer(14))
 
         val lowerRow = LinearLayout(host.context).apply {
@@ -248,10 +250,10 @@ class HomeScreenRenderer(
                 addView(viewFactory.spacer(10))
                 addView(viewFactory.caption("Tip: use Movies or TV Shows on the left rail to start a new search fast."))
             } else {
-                state.recentQueries.take(6).forEachIndexed { index, query ->
+                state.recentQueries.take(4).forEachIndexed { index, query ->
                     val button = actionButton(query, onClick = { onRecentQuery(query) }, iconResId = R.drawable.ic_nav_search)
                     addView(button)
-                    if (index < state.recentQueries.take(6).lastIndex) addView(viewFactory.spacer(10))
+                    if (index < state.recentQueries.take(4).lastIndex) addView(viewFactory.spacer(10))
                 }
             }
         }
@@ -363,25 +365,25 @@ class HomeScreenRenderer(
         }
     }
 
-    private fun buildDashboardList(
-        items: List<SearchResult>,
-        emptyMessage: String,
-        onItemSelected: (SearchResult) -> Unit
+    private fun buildHomeActionRow(
+        primaryLabel: String,
+        onPrimary: () -> Unit,
+        primaryIcon: Int,
+        secondaryLabel: String,
+        onSecondary: () -> Unit,
+        secondaryIcon: Int
     ): View {
         return LinearLayout(host.context).apply {
-            orientation = LinearLayout.VERTICAL
-            if (items.isEmpty()) {
-                addView(viewFactory.body(emptyMessage))
-            } else {
-                items.take(4).forEachIndexed { index, item ->
-                    addView(actionButton(item.mediaRef.title, onClick = { onItemSelected(item) }))
-                    item.subtitle?.takeIf { it.isNotBlank() }?.let { subtitle ->
-                        addView(viewFactory.spacer(4))
-                        addView(viewFactory.caption(subtitle.take(44)))
-                    }
-                    if (index < items.take(4).lastIndex) addView(viewFactory.spacer(10))
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.TOP
+            addView(actionButton(primaryLabel, onPrimary, primaryIcon).apply {
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            })
+            addView(actionButton(secondaryLabel, onSecondary, secondaryIcon).apply {
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
+                    it.marginStart = viewFactory.dp(12)
                 }
-            }
+            })
         }
     }
 
