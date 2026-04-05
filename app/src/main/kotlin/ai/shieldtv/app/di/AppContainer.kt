@@ -42,6 +42,7 @@ import ai.shieldtv.app.integration.scrapers.provider.zilean.ZileanSourceProvider
 import ai.shieldtv.app.integration.scrapers.ranking.DefaultSourceRanker
 import ai.shieldtv.app.integration.scrapers.ranking.RealDebridSourceCacheMarker
 import ai.shieldtv.app.settings.SourcePreferencesStore
+import ai.shieldtv.app.continuewatching.ContinueWatchingStore
 import ai.shieldtv.app.favorites.FavoritesCoordinator
 import ai.shieldtv.app.favorites.FavoritesStore
 import ai.shieldtv.app.history.WatchHistoryCoordinator
@@ -157,6 +158,10 @@ object AppContainer {
 
     val favoritesCoordinator by lazy {
         FavoritesCoordinator(favoritesStore)
+    }
+
+    val continueWatchingStore by lazy {
+        ContinueWatchingStore(requireContext())
     }
 
     val watchHistoryStore by lazy {

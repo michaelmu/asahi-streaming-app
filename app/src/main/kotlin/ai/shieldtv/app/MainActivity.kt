@@ -471,6 +471,12 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun hydrateContinueWatchingFromPersistedSession() {
+        val persistedItems = AppContainer.continueWatchingStore.load().map { it.toUiItem() }
+        if (persistedItems.isNotEmpty()) {
+            coordinator.hydrateContinueWatching(persistedItems)
+            return
+        }
+
         val record = persistedPlaybackSession ?: return
         val item = ContinueWatchingHydrator.fromActiveResume(record) ?: return
         coordinator.recordContinueWatching(
@@ -485,7 +491,9 @@ class MainActivity : ComponentActivity() {
             seasonNumber = record.seasonNumber,
             episodeNumber = record.episodeNumber,
             progressPercent = item.progressPercent
-        )
+        ).also {
+            AppContainer.continueWatchingStore.record(coordinator.persistedContinueWatchingItem(it))
+        }
     }
 
     private fun resumePositionFor(source: SourceResult, seasonNumber: Int?, episodeNumber: Int?): Long {

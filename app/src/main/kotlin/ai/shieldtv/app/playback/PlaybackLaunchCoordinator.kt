@@ -1,6 +1,7 @@
 package ai.shieldtv.app.playback
 
 import ai.shieldtv.app.AppCoordinator
+import ai.shieldtv.app.di.AppContainer
 import ai.shieldtv.app.core.model.playback.PlaybackState
 import ai.shieldtv.app.core.model.source.DebridService
 import ai.shieldtv.app.core.model.source.SourceResult
@@ -81,12 +82,15 @@ class PlaybackLaunchCoordinator(
                 latestPlaybackState.durationMs > 0 -> ((latestPlaybackState.positionMs * 100) / latestPlaybackState.durationMs).toInt()
                 else -> 8
             }
-            coordinator.recordContinueWatching(
+            val continueWatchingItem = coordinator.recordContinueWatching(
                 mediaRef = source.mediaRef,
                 artworkUrl = artworkUrl,
                 seasonNumber = seasonNumber,
                 episodeNumber = episodeNumber,
                 progressPercent = progressPercent
+            )
+            AppContainer.continueWatchingStore.record(
+                coordinator.persistedContinueWatchingItem(continueWatchingItem)
             )
             playbackSessionStore.saveActiveResume(
                 item = currentItem,

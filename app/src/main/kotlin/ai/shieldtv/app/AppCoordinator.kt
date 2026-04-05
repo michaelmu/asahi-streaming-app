@@ -1,5 +1,6 @@
 package ai.shieldtv.app
 
+import ai.shieldtv.app.continuewatching.PersistedContinueWatchingItem
 import ai.shieldtv.app.core.model.media.MediaRef
 import ai.shieldtv.app.core.model.media.MediaType
 import ai.shieldtv.app.core.model.media.SearchResult
@@ -160,7 +161,7 @@ class AppCoordinator(
         seasonNumber: Int?,
         episodeNumber: Int?,
         progressPercent: Int
-    ) {
+    ): ContinueWatchingItem {
         val subtitle = if (mediaRef.mediaType == MediaType.SHOW && seasonNumber != null && episodeNumber != null) {
             "S${seasonNumber.toString().padStart(2, '0')}E${episodeNumber.toString().padStart(2, '0')}"
         } else {
@@ -176,6 +177,21 @@ class AppCoordinator(
         state = state.copy(
             continueWatching = (listOf(item) + state.continueWatching.filterNot { it.mediaTitle == item.mediaTitle && it.subtitle == item.subtitle })
                 .take(6)
+        )
+        return item
+    }
+
+    fun hydrateContinueWatching(items: List<ContinueWatchingItem>) {
+        state = state.copy(continueWatching = items.take(6))
+    }
+
+    fun persistedContinueWatchingItem(item: ContinueWatchingItem): PersistedContinueWatchingItem {
+        return PersistedContinueWatchingItem(
+            mediaTitle = item.mediaTitle,
+            subtitle = item.subtitle,
+            artworkUrl = item.artworkUrl,
+            queryHint = item.queryHint,
+            progressPercent = item.progressPercent
         )
     }
 }
