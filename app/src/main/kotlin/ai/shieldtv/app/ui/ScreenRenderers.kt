@@ -651,6 +651,8 @@ class DetailsScreenRenderer(
 ) {
     fun render(
         state: AppState,
+        isFavorite: Boolean,
+        onToggleFavorite: () -> Unit,
         onBrowseEpisodes: () -> Unit,
         onFindSources: () -> Unit,
         onFirstFocusTarget: (View) -> Unit = {}
@@ -662,14 +664,6 @@ class DetailsScreenRenderer(
             host.addView(viewFactory.body("No details loaded."))
             return
         }
-
-        host.addView(viewFactory.artworkHero(
-            title = details.mediaRef.title,
-            subtitle = details.overview?.take(180) ?: "No overview yet.",
-            imageUrl = details.backdropUrl ?: details.posterUrl,
-            imageHeightDp = 320
-        ))
-        host.addView(viewFactory.spacer())
 
         val topPanel = LinearLayout(host.context).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -725,12 +719,28 @@ class DetailsScreenRenderer(
         host.addView(topPanel)
         host.addView(viewFactory.spacer())
 
+        val actionRow = LinearLayout(host.context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.START
+        }
         val primaryAction = viewFactory.button(
             if (details.mediaRef.mediaType == MediaType.SHOW) "Browse Episodes" else "Find Sources",
             if (details.mediaRef.mediaType == MediaType.SHOW) onBrowseEpisodes else onFindSources,
             iconResId = if (details.mediaRef.mediaType == MediaType.SHOW) R.drawable.ic_nav_tv else R.drawable.ic_nav_play
         )
-        host.addView(primaryAction)
+        val favoriteAction = viewFactory.button(
+            if (isFavorite) "Remove Favorite" else "Add Favorite",
+            onToggleFavorite,
+            iconResId = R.drawable.ic_nav_favorite
+        ).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).also { it.marginStart = viewFactory.dp(12) }
+        }
+        actionRow.addView(primaryAction)
+        actionRow.addView(favoriteAction)
+        host.addView(actionRow)
         primaryAction.post { onFirstFocusTarget(primaryAction) }
     }
 

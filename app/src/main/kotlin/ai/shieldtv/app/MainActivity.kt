@@ -778,6 +778,34 @@ class MainActivity : ComponentActivity() {
             )
             AppDestination.DETAILS -> detailsRenderer.render(
                 state = coordinator.currentState(),
+                isFavorite = coordinator.currentState().selectedDetails?.let { details ->
+                    AppContainer.favoritesCoordinator.isFavorited(
+                        ai.shieldtv.app.core.model.media.SearchResult(
+                            mediaRef = details.mediaRef,
+                            subtitle = details.overview,
+                            posterUrl = details.posterUrl,
+                            backdropUrl = details.backdropUrl
+                        )
+                    )
+                } ?: false,
+                onToggleFavorite = {
+                    coordinator.currentState().selectedDetails?.let { details ->
+                        val toggledFavorite = AppContainer.favoritesCoordinator.toggle(
+                            ai.shieldtv.app.core.model.media.SearchResult(
+                                mediaRef = details.mediaRef,
+                                subtitle = details.overview,
+                                posterUrl = details.posterUrl,
+                                backdropUrl = details.backdropUrl
+                            )
+                        )
+                        statusText.text = if (toggledFavorite) {
+                            "Added ${details.mediaRef.title} to favorites"
+                        } else {
+                            "Removed ${details.mediaRef.title} from favorites"
+                        }
+                        renderCurrentScreen()
+                    }
+                },
                 onBrowseEpisodes = {
                     coordinator.currentState().selectedDetails?.let { details ->
                         detailsNavigationCoordinator.openEpisodes(
