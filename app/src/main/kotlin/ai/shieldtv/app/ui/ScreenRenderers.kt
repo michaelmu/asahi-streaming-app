@@ -342,26 +342,13 @@ class HomeScreenRenderer(
                         if (index > 0) it.marginStart = viewFactory.dp(12)
                     }
                 }
+                card.minimumHeight = viewFactory.dp(124)
                 card.addView(homeShelfArtwork(
                     artworkUrl = item.artworkUrl,
                     heightDp = 124,
                     fallbackIconResId = R.drawable.ic_nav_play,
                     fallbackLabel = "Continue Watching"
                 ))
-                card.addView(viewFactory.spacer(10))
-                card.addView(TextView(host.context).apply {
-                    text = item.mediaTitle
-                    setTextColor(viewFactory.textPrimaryColor)
-                    textSize = 17f
-                    setTypeface(typeface, Typeface.BOLD)
-                    maxLines = 2
-                })
-                card.addView(viewFactory.spacer(6))
-                card.addView(viewFactory.caption(item.subtitle.takeIf { it.isNotBlank() } ?: "Ready to resume"))
-                card.addView(viewFactory.spacer(8))
-                card.addView(viewFactory.progressBar(item.progressPercent))
-                card.addView(viewFactory.spacer(8))
-                card.addView(viewFactory.caption("Resume from ${formatProgress(item.progressPercent)}"))
                 addView(card)
                 if (index == 0) card.post { onFirstFocusTarget(card) }
             }
@@ -389,25 +376,13 @@ class HomeScreenRenderer(
                         if (index > 0) it.marginStart = viewFactory.dp(12)
                     }
                 }
+                card.minimumHeight = viewFactory.dp(132)
                 card.addView(homeShelfArtwork(
                     artworkUrl = item.backdropUrl?.takeIf { it.isNotBlank() } ?: item.posterUrl,
                     heightDp = 132,
                     fallbackIconResId = if (item.mediaRef.mediaType == MediaType.SHOW) R.drawable.ic_nav_tv else R.drawable.ic_nav_movie,
                     fallbackLabel = item.mediaRef.mediaType.name.lowercase().replaceFirstChar { it.uppercase() }
                 ))
-                card.addView(viewFactory.spacer(10))
-                card.addView(TextView(host.context).apply {
-                    text = item.mediaRef.title
-                    setTextColor(viewFactory.textPrimaryColor)
-                    textSize = 18f
-                    setTypeface(typeface, Typeface.BOLD)
-                    maxLines = 2
-                })
-                val shelfMeta = homeShelfMetadata(item)
-                if (shelfMeta.isNotBlank()) {
-                    card.addView(viewFactory.spacer(6))
-                    card.addView(viewFactory.caption(shelfMeta))
-                }
                 addView(card)
                 if (index == 0) card.post { onFirstFocusTarget(card) }
             }
@@ -769,7 +744,7 @@ class ResultsScreenRenderer(
         return viewFactory.panel(elevated = elevated).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.TOP
-            minimumHeight = viewFactory.dp(390)
+            minimumHeight = viewFactory.dp(250)
             isFocusable = true
             isFocusableInTouchMode = true
             isClickable = true
@@ -807,7 +782,7 @@ class ResultsScreenRenderer(
                     FrameLayout.LayoutParams.MATCH_PARENT,
                     FrameLayout.LayoutParams.MATCH_PARENT
                 )
-                setBackgroundColor(Color.argb(26, 7, 10, 15))
+                setBackgroundColor(Color.argb(if (isFavorite) 18 else 24, 7, 10, 15))
             }
             posterFrame.addView(posterScrim)
 
@@ -827,34 +802,6 @@ class ResultsScreenRenderer(
             }
             posterFrame.addView(fallbackLabel)
             addView(posterFrame)
-            addView(viewFactory.spacer(12))
-
-            val titleView = TextView(activity).apply {
-                text = result.mediaRef.title
-                setTextColor(viewFactory.textPrimaryColor)
-                textSize = 18f
-                setTypeface(typeface, Typeface.BOLD)
-                maxLines = 2
-            }
-            addView(titleView)
-            addView(viewFactory.spacer(6))
-
-            val metadataView = (viewFactory.caption(buildMetadataLine(result, isFavorite, focused = false)) as TextView).apply {
-                maxLines = 2
-            }
-            addView(metadataView)
-            addView(viewFactory.spacer(8))
-
-            val summaryView = (viewFactory.caption(collapsedSummary(result, isFavorite)) as TextView).apply {
-                maxLines = 2
-            }
-            addView(summaryView)
-            addView(viewFactory.spacer(8))
-
-            val focusHintView = (viewFactory.caption("Press center to open • Menu for actions") as TextView).apply {
-                visibility = View.GONE
-            }
-            addView(focusHintView)
 
             setOnClickListener { onClick() }
             setOnLongClickListener {
@@ -866,15 +813,6 @@ class ResultsScreenRenderer(
                 view.scaleY = if (hasFocus) 1.03f else 1f
                 view.alpha = if (hasFocus) 1f else 0.985f
                 view.translationZ = if (hasFocus) viewFactory.dp(16).toFloat() else 0f
-                metadataView.text = buildMetadataLine(result, isFavorite, focused = hasFocus)
-                summaryView.text = if (hasFocus) focusedSummary(result, isFavorite) else collapsedSummary(result, isFavorite)
-                summaryView.maxLines = if (hasFocus) 3 else 2
-                focusHintView.visibility = if (hasFocus) View.VISIBLE else View.GONE
-                updateDescendantTextColors(
-                    root = view,
-                    primary = viewFactory.textPrimaryColor,
-                    secondary = if (hasFocus) viewFactory.textPrimaryColor else viewFactory.textSecondaryColor
-                )
             }
             setOnKeyListener { _, keyCode, event ->
                 when {
@@ -888,57 +826,6 @@ class ResultsScreenRenderer(
                     }
                     else -> false
                 }
-            }
-        }
-    }
-
-    private fun buildMetadataLine(result: SearchResult, isFavorite: Boolean, focused: Boolean): String {
-        val tokens = mutableListOf<String>()
-        result.mediaRef.year?.let { tokens += it.toString() }
-        tokens += result.mediaRef.mediaType.name.lowercase().replaceFirstChar { it.uppercase() }
-        if (isFavorite) tokens += "Favorite"
-        if (result.badges.any { it.equals("Watched", ignoreCase = true) }) {
-            tokens += "Watched"
-        }
-        if (focused) {
-            val mediaTypeLabel = result.mediaRef.mediaType.name.lowercase()
-            tokens += result.badges.filterNot {
-                it.equals("Favorite", ignoreCase = true) ||
-                    it.equals("Watched", ignoreCase = true) ||
-                    it.equals(mediaTypeLabel, ignoreCase = true)
-            }.take(2)
-        }
-        return tokens.distinct().joinToString(" • ")
-    }
-
-    private fun collapsedSummary(result: SearchResult, isFavorite: Boolean): String {
-        return when {
-            isFavorite && result.badges.any { it.equals("Watched", ignoreCase = true) } -> "Saved favorite • already watched"
-            isFavorite -> "Saved favorite"
-            result.badges.any { it.equals("Watched", ignoreCase = true) } -> "Already watched"
-            else -> "Open details"
-        }
-    }
-
-    private fun focusedSummary(result: SearchResult, isFavorite: Boolean): String {
-        val stateLine = when {
-            isFavorite && result.badges.any { it.equals("Watched", ignoreCase = true) } -> "Saved in favorites and already watched."
-            isFavorite -> "Saved in favorites for quick access."
-            result.badges.any { it.equals("Watched", ignoreCase = true) } -> "Previously watched and ready to reopen."
-            else -> "Open details, then continue to sources or playback."
-        }
-        return buildString {
-            append(stateLine)
-            val mediaTypeLabel = result.mediaRef.mediaType.name.lowercase()
-            val browseTags = result.badges.filterNot {
-                it.equals("Favorite", ignoreCase = true) ||
-                    it.equals("Watched", ignoreCase = true) ||
-                    it.equals(mediaTypeLabel, ignoreCase = true)
-            }.take(2)
-            if (browseTags.isNotEmpty()) {
-                append(' ')
-                append(browseTags.joinToString(" • "))
-                append('.')
             }
         }
     }
