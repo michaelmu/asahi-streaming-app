@@ -448,9 +448,11 @@ class SearchScreenRenderer(
                 gravity = Gravity.CENTER_VERTICAL
             }
             val favoritesButton = viewFactory.button("Favorites", onClick = onOpenFavorites, iconResId = R.drawable.ic_nav_favorite).apply {
+                id = View.generateViewId()
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             }
             val historyButton = viewFactory.button("Watch History", onClick = onOpenHistory, iconResId = R.drawable.ic_nav_history).apply {
+                id = View.generateViewId()
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
                     it.marginStart = viewFactory.dp(16)
                 }
@@ -469,8 +471,9 @@ class SearchScreenRenderer(
                     SearchMode.MOVIES -> "Try: Dune, Alien, Blade Runner"
                     SearchMode.SHOWS -> "Try: Severance, Andor, The Last of Us"
                 },
-                initialValue = state.query
+                initialValue = state.query.takeIf { state.favoritesBrowseMode == null && state.historyBrowseMode == null } ?: ""
             ).apply {
+                id = View.generateViewId()
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 inputType = InputType.TYPE_CLASS_TEXT
             }
@@ -491,17 +494,31 @@ class SearchScreenRenderer(
             val searchButton = viewFactory.button("Search", onClick = {
                 submitSearch()
             }, iconResId = R.drawable.ic_nav_search).apply {
+                id = View.generateViewId()
                 layoutParams = LinearLayout.LayoutParams(
                     viewFactory.dp(180),
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 ).also { it.marginStart = viewFactory.dp(16) }
             }
 
+            favoritesButton.nextFocusDownId = queryInput.id
+            historyButton.nextFocusDownId = searchButton.id
+            queryInput.nextFocusUpId = favoritesButton.id
+            queryInput.nextFocusRightId = searchButton.id
+            searchButton.nextFocusUpId = historyButton.id
+            searchButton.nextFocusLeftId = queryInput.id
+
             searchRow.addView(queryInput)
             searchRow.addView(searchButton)
             addView(searchRow)
+            addView(viewFactory.spacer(10))
+            addView(viewFactory.caption("Tip: down goes straight to search, and menu options stay one step above."))
 
-            favoritesButton.post { onFirstFocusTarget(favoritesButton) }
+            queryInput.post {
+                onFirstFocusTarget(queryInput)
+                queryInput.requestFocus()
+                queryInput.setSelection(queryInput.text?.length ?: 0)
+            }
         }
 
         host.addView(searchPanel)
