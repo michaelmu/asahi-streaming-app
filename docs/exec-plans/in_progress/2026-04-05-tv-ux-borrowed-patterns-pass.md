@@ -481,28 +481,40 @@ Right now the asset guidance is directionally useful but still abstract. This ta
 
 ---
 
-## C1. Introduce lighter-weight playback/status overlays
-Status: TODO
+## C1. Introduce a minimal playback status strip without replacing Media3 controls
+Status: IN_PROGRESS
 Priority: Medium
 
 ### Goal
-Improve playback feedback with a layered, less disruptive status overlay before full controls are shown.
+Improve playback reassurance with a very small app-side status strip for key playback moments while keeping Media3's controller as the primary playback UI.
 
 ### Why this matters
-The APK review highlighted a good pattern: users often need quick reassurance (progress, title, pause/seek state) before they need a full control surface.
+The useful pattern from the APK review is not “build a whole custom HUD.” It is “show lightweight status quickly when users pause, buffer, or resume, without making them wait for or depend on a full control surface.” The real repo already relies on Media3 controls, so this pass should respect that.
 
 ### Proposed sub-steps
-- [TODO] Identify current playback overlay/control architecture in the real repo.
-- [TODO] Separate lightweight playback status from heavier control/detail surfaces if feasible.
-- [TODO] Surface minimal progress/time/metadata cleanly during pause/seek transitions.
-- [TODO] Keep this pass scoped away from risky playback-engine rewrites.
-- [TODO] If the work begins to require deeper player-engine or timing-sensitive state changes, stop and split the overlay work into a follow-up plan instead of forcing it into this pass.
+- [DONE] Identify current playback overlay/control architecture in the real repo.
+- [DONE] Confirm that the current app-side overlay path is thin and that Media3 controller UI remains the primary control surface.
+- [DONE] Retarget the lightweight overlay idea into a minimal playback status strip for real state moments like paused / buffering / recent-start instead of tying it to `playbackState.errorMessage`.
+- [DONE] Keep the bottom error panel intact while making the top status strip visually consistent with the first-wave visual kit.
+- [DONE] Stop and split this work into a follow-up if it begins to require deeper controller-lifecycle or timing-sensitive playback changes.
+
+### Implemented shape
+- The app now keeps Media3 controls as the real playback UI.
+- The app-side top overlay has been narrowed into a small status strip shown for paused / buffering / recent-start moments.
+- The old `playbackState.errorMessage != null` gate for the general status strip has been removed.
+- The bottom error panel remains the dedicated failure surface.
+
+### Current repo reality
+- `PlayerScreenRenderer` is small and mostly wraps `PlayerView`.
+- Media3 controller UI is still the real playback control surface.
+- `MainActivity` already explicitly shows/focuses controller controls.
+- The existing app-side top overlay is currently gated by `playbackState.errorMessage != null`, which is not a sensible long-term trigger for a generic status strip.
 
 ### Validation
-- Manual playback testing covers play, pause, seek, and resume transitions.
-- Overlay timing/focus behavior is stable under remote input.
-- Known limitations are documented if full validation is not possible.
-- Any split/follow-up decision is logged explicitly rather than implied.
+- Manual playback testing should cover play, pause, buffering, and resume transitions at minimum.
+- The app-side strip must not interfere with Media3 controller focus/visibility.
+- Known limitations should be documented if full validation is not possible.
+- Any split/follow-up decision should be logged explicitly rather than implied.
 
 ---
 
@@ -573,7 +585,7 @@ Only use locally available or already-fetched metadata in this pass. If extra da
 
 ### Q3. Should playback overlay work be included in the same pass as home/browse work?
 Current recommendation:
-Only if the overlay architecture is localized and low-risk. A1 suggests the custom playback overlay layer is currently thin and tightly coupled to `PlayerScreenRenderer`, so home/browse work should probably land first and playback polish should split out quickly if it starts demanding deeper controller-state changes.
+Yes, but only in a narrowed form. The acceptable version for this pass is a minimal playback status strip inside `PlayerScreenRenderer` while Media3 remains the real control surface. If the work starts demanding custom seek HUD behavior, deeper controller coordination, or timing-heavy state machinery, split it out.
 
 ### Q4. Are favorites/history mature enough to drive home recommendations now?
 Current recommendation:
@@ -704,7 +716,15 @@ Yes. This pass is already half historical and half forward-looking, so meaningfu
 - Implemented the next visual-kit slice by introducing a reusable empty-state panel composition in `ScreenViewFactory` and applying it to the results empty state plus the home favorites/history shelf fallbacks.
 - This tightened the visual language of “nothing here yet” surfaces without changing navigation behavior or adding more one-off panels.
 - Kept the slice scoped to shared empty-state presentation rather than turning it into a broader copy/layout rewrite.
+- Commit: `5926850` (`Polish empty state surfaces`)
 - Validation: `./gradlew testDebugUnitTest assembleDebug` passed after the empty-state refactor.
+
+### 2026-04-05 19:5x UTC
+- Tightened C1 around the real player architecture and implemented only the narrow playback slice that fit it.
+- Kept Media3 controller UI as the primary playback surface.
+- Replaced the old top-overlay trigger (`playbackState.errorMessage != null`) with a minimal app-side status strip for paused / buffering / recent-start states.
+- Kept the dedicated bottom error panel intact for real playback failures.
+- Validation: `./gradlew testDebugUnitTest assembleDebug` passed after the playback-strip adjustment.
 
 ---
 
@@ -733,6 +753,9 @@ Intended task: implement the smallest worthwhile first-wave visual-kit slice by 
 
 ### 2026-04-05 19:47 UTC
 Intended task: implement the next small visual-kit slice by unifying empty-state panel treatment across results and home shelf fallbacks.
+
+### 2026-04-05 19:51 UTC
+Intended task: tighten C1 around the real player architecture, then only implement a minimal playback status strip if it stays local to `PlayerScreenRenderer`.
 
 ---
 

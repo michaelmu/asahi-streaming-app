@@ -1290,22 +1290,31 @@ class PlayerScreenRenderer(
             }
             playerFrame.addView(errorOverlay)
         } else {
-            val shouldShowOverlay = playbackState.errorMessage != null
-            if (shouldShowOverlay) {
-                val subtleOverlay = LinearLayout(host.context).apply {
-                    orientation = LinearLayout.VERTICAL
+            val shouldShowStatusStrip = playbackState.isBuffering ||
+                playbackStateLabel.equals("paused", ignoreCase = true) ||
+                (playbackPositionMs in 1..15_000L)
+            if (shouldShowStatusStrip) {
+                val subtleOverlay = viewFactory.panel(elevated = true).apply {
                     layoutParams = FrameLayout.LayoutParams(
                         FrameLayout.LayoutParams.WRAP_CONTENT,
                         FrameLayout.LayoutParams.WRAP_CONTENT,
                         Gravity.TOP or Gravity.START
-                    )
-                    setPadding(viewFactory.dp(20))
+                    ).also {
+                        it.marginStart = viewFactory.dp(24)
+                        it.topMargin = viewFactory.dp(24)
+                    }
+                    alpha = 0.92f
+                    minimumWidth = viewFactory.dp(300)
+                    addView(viewFactory.sectionTitle("Now Playing"))
+                    addView(viewFactory.spacer(8))
                     addView(TextView(host.context).apply {
                         text = source.mediaRef.title
                         setTextColor(viewFactory.textPrimaryColor)
                         textSize = 20f
                         setTypeface(typeface, Typeface.BOLD)
+                        maxLines = 2
                     })
+                    addView(viewFactory.spacer(6))
                     addView(viewFactory.caption(buildString {
                         append(stateLabel(playbackStateLabel))
                         append(" • ")
