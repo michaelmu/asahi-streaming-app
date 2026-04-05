@@ -80,8 +80,14 @@ Before implementation begins, confirm:
 - the repo already contains prior execution-plan work for favorites, watch history, activity extraction, ranking, and UI polish
 - the current canonical plan set lives under `docs/exec-plans/`
 - `2026-04-04-next-pass-ranking-orchestration.md` is already in `complete/`, so this UX plan is a fresh pass rather than a continuation of that document
-- actual browse, search, favorites, and playback entry points must be re-read in the current branch before coding against any assumed screen structure
+- actual browse, search, favorites, and playback entry points were re-read in the current branch during A1 and are currently orchestrated centrally from `app/src/main/kotlin/ai/shieldtv/app/MainActivity.kt` via `renderCurrentScreen()`
+- current navigation/state transitions are driven by `app/src/main/kotlin/ai/shieldtv/app/AppCoordinator.kt` and `app/src/main/kotlin/ai/shieldtv/app/AppState.kt`; favorites/history browse are not separate destinations, but `RESULTS` variants keyed by `favoritesBrowseMode` / `historyBrowseMode`
+- current home, search, results, details, episodes, sources, player, and settings UI renderers are all defined together in `app/src/main/kotlin/ai/shieldtv/app/ui/ScreenRenderers.kt`, not split into per-file renderer classes
+- current home already contains more dynamic behavior than the earlier plan implied: `HomeScreenRenderer.render(...)` surfaces Continue Watching, Quick Picks, Favorites, Watch History, Browse actions, and Recent Searches using existing local/stateful data plus a small baked-in featured fallback set
 - current search results are rendered in `app/src/main/kotlin/ai/shieldtv/app/ui/ScreenRenderers.kt` by `ResultsScreenRenderer.render(...)`, which today builds a vertical list of horizontal media cards rather than a poster wall/grid
+- the current results surface is capped to `state.searchResults.take(20)` and re-used for plain search, favorites browse, and watch-history browse, so any poster-wall/grid change likely needs to preserve those three modes or consciously split them
+- current player rendering is also centralized in `ScreenRenderers.kt` via `PlayerScreenRenderer.render(...)`; the app already uses Media3 controller UI plus a custom app overlay that currently only appears on playback error / `playbackState.errorMessage != null`, so the “lighter overlay” work should start by clarifying that condition rather than assuming a larger overlay stack already exists
+- current modal/overlay affordances outside playback are handled by `app/src/main/kotlin/ai/shieldtv/app/ui/OverlayPopup.kt`, which already provides focus-trapped panels and may be reusable for some empty-state or action-sheet polish but is not a playback HUD
 - the APK review source was a Kodi-derived app package, so the borrowable material is interaction design, screen behavior, and generic visual pattern categories rather than Android-native implementation details or app branding
 - likely useful visual source categories were confirmed in the extracted APK: background patterns (`skin.estuary/extras/backgrounds/*`), panel/dialog chrome (`themes/*/dialogs/*`, `themes/*/overlays/shadow.png`), state overlays (`OverlayWatched.png`, `OverlayUnwatched.png`, `OverlayWatching.png`), focus/list treatments (`list_focus.png`, panel/shadow assets), and media-tech badge systems (`media/flagging/*`)
 - direct-branded assets also exist (`assets/media/banner.png`, `vendor_logo.png`, splash assets), and those should be treated as explicit non-borrow targets
@@ -139,7 +145,7 @@ This plan assumes the app should keep its current product identity: fast, opinio
 # Phase A — UX Translation and App Mapping
 
 ## A1. Audit current screen structure against the borrowed patterns
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
@@ -149,13 +155,22 @@ Identify the real app screens, coordinators, adapters, and models that would own
 The repo has already proven that assuming the wrong file shapes wastes time. This pass should begin by mapping the real UI structure before proposing implementation details.
 
 ### Proposed sub-steps
-- [TODO] Re-read the current Android TV entry flow and main navigation structure.
-- [TODO] Identify the real browse/results/favorites/history surfaces and their adapters/view holders/composables.
-- [TODO] Identify the real playback controls or overlay entry points.
-- [TODO] Record mismatches between the ideal UX slices and the current app architecture.
+- [DONE] Re-read the current Android TV entry flow and main navigation structure.
+- [DONE] Identify the real browse/results/favorites/history surfaces and their adapters/view holders/composables.
+- [DONE] Identify the real playback controls or overlay entry points.
+- [DONE] Record mismatches between the ideal UX slices and the current app architecture.
+
+### A1 findings
+- Main screen orchestration still lives in `MainActivity.renderCurrentScreen()`, which switches shells, wires callbacks, and invokes renderer classes directly.
+- The app is still classic Android Views with handwritten `LinearLayout`/`FrameLayout` composition via `ScreenViewFactory`; there are no RecyclerView adapters or Compose screens to plug into for a grid rewrite.
+- Home is already closer to a dynamic dashboard than the plan initially implied. It is not a blank slate: it already uses continue-watching, favorites, watch history, recent searches, and browse actions, plus quick-pick fallbacks.
+- Favorites and history are currently implemented as flavored `RESULTS` screens rather than separate browse destinations. That makes shared card primitives attractive, but it also means a results-grid rewrite can easily spill into favorites/history behavior if not scoped carefully.
+- Results today are rendered as a simple vertical stack of custom horizontal cards, with focus behavior implemented per-card inside `ResultsScreenRenderer` rather than by a reusable browse/list infrastructure.
+- Player UI is mostly Media3 controller UI plus a very small custom overlay path in `PlayerScreenRenderer`; there is not yet a richer internal overlay/state-layer system waiting to be styled.
+- Because renderers are grouped in one large `ScreenRenderers.kt` file, the cheapest execution path is likely targeted renderer extraction or helper extraction around the touched surfaces, not a broad UI architecture rewrite as part of this UX pass.
 
 ### Validation
-- Notes added to this plan’s `Repository Reality Check` and/or `Progress Log`.
+- Notes added to this plan’s `Repository Reality Check` and `Progress Log`.
 - File/class targets are named concretely before any implementation task is marked `IN_PROGRESS`.
 
 ---
@@ -417,7 +432,7 @@ Once home shelves exist, they can become smarter. But this should wait until the
 
 ### Q1. Should this pass introduce a true new home screen, or improve the existing entry surface incrementally?
 Current recommendation:
-Prefer incremental improvement unless the current entry surface is structurally incapable of supporting dynamic shelves.
+Prefer incremental improvement. A1 confirmed the current home screen already behaves like a lightweight dashboard, so this pass should improve and reorder that surface rather than replace it wholesale unless a specific blocker appears.
 
 ### Q2. Which metadata is safe to reveal on focus without causing fetch churn?
 Current recommendation:
@@ -425,7 +440,7 @@ Only use locally available or already-fetched metadata in this pass. If extra da
 
 ### Q3. Should playback overlay work be included in the same pass as home/browse work?
 Current recommendation:
-Only if the overlay architecture is localized and low-risk. If not, complete the home/browse work first and split playback into a separate follow-up plan.
+Only if the overlay architecture is localized and low-risk. A1 suggests the custom playback overlay layer is currently thin and tightly coupled to `PlayerScreenRenderer`, so home/browse work should probably land first and playback polish should split out quickly if it starts demanding deeper controller-state changes.
 
 ### Q4. Are favorites/history mature enough to drive home recommendations now?
 Current recommendation:
@@ -441,7 +456,7 @@ Treat direct reuse as a licensing/design review item rather than the default pat
 
 ### Q7. Should favorites and watch history use the same poster-wall renderer as normal search results?
 Current recommendation:
-Probably yes if the renderer can gracefully handle browse-specific labels and actions. If the UX becomes muddy, keep a shared card primitive but allow separate screen composition.
+Probably yes at the primitive level because all three flows already share `RESULTS`, but not necessarily as identical full-screen composition. A1 confirmed that favorites/history are mode-flavored results screens today, so the safest path is likely a shared poster card/grid primitive with room for browse-specific labels and actions.
 
 ### Q8. Where should the exact borrow / recreate / avoid inventory live?
 Current recommendation:
@@ -496,6 +511,14 @@ Start inside this exec plan unless it becomes too bulky; split into a linked des
 - Explicitly called out first-wave asset targets like poster focus treatment, shadow plate, result-card surface, empty-state panel, playback strip surface, state badges, and quality/codec chips.
 - Kept the recommendation lightweight: start the inventory inside this plan unless it grows too large.
 
+### 2026-04-05 17:46 UTC
+- Completed A1 by re-reading the current app flow in `MainActivity`, `AppCoordinator`, `AppState`, `ScreenRenderers.kt`, and `OverlayPopup.kt`.
+- Confirmed the app already has a dashboard-style home surface backed by continue-watching, favorites, watch history, recent searches, browse actions, and quick-pick fallback content.
+- Confirmed search, favorites, and history all currently converge on the same `RESULTS` destination and `ResultsScreenRenderer`, which today renders a vertical stack of horizontal cards capped to 20 items.
+- Confirmed there is no separate grid/list adapter infrastructure yet; renderer work is handwritten view composition inside `ScreenRenderers.kt`.
+- Confirmed playback overlays are currently thin: Media3 controller UI plus a small app-side overlay path in `PlayerScreenRenderer`, so Phase C should stay cautious.
+- Updated the plan to recommend incremental home improvement, shared result-card primitives, and likely prioritizing browse/result work before trying to redesign playback UI.
+
 ---
 
 ## Scope Changes
@@ -508,8 +531,8 @@ Start inside this exec plan unless it becomes too bulky; split into a linked des
 
 ## Session Start
 
-### 2026-04-05 17:40 UTC
-Intended task: add an explicit plan item for producing a borrow / recreate / avoid inventory with exact visual target assets for Asahi.
+### 2026-04-05 17:46 UTC
+Intended task: execute A1 by mapping the real repo structure for home, results/favorites/history, and playback overlays, then update the plan with concrete targets and constraints.
 
 ---
 
