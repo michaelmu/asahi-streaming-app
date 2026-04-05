@@ -142,8 +142,6 @@ class HomeScreenRenderer(
 
     fun render(
         state: AppState,
-        authLinked: Boolean,
-        statusMessage: String,
         movieFavorites: List<SearchResult>,
         showFavorites: List<SearchResult>,
         movieHistory: List<SearchResult>,
@@ -154,8 +152,6 @@ class HomeScreenRenderer(
         onBrowseShows: () -> Unit,
         onShowFavorites: () -> Unit,
         onShowHistory: () -> Unit,
-        onOpenSettings: () -> Unit,
-        onResumeSearch: (() -> Unit)?,
         onQuickPick: (SearchResult) -> Unit,
         onRecentQuery: (String) -> Unit,
         onContinueWatching: (ContinueWatchingItem) -> Unit,
@@ -169,30 +165,16 @@ class HomeScreenRenderer(
         val libraryPicks = if (state.searchMode == SearchMode.SHOWS) featuredShows else featuredMovies
         val featured = dynamicPicks(state, libraryPicks)
 
-        val statusRow = LinearLayout(host.context).apply { orientation = LinearLayout.HORIZONTAL }
-        statusRow.addView(
-            viewFactory.statPill(
-                "Real-Debrid",
-                if (authLinked) "Linked" else "Not linked",
-                if (authLinked) StatTone.SUCCESS else StatTone.WARNING
-            )
-        )
-        statusRow.addView(horizontalGap())
-        statusRow.addView(viewFactory.statPill("Status", statusMessage.ifBlank { "Ready" }.take(24), StatTone.ACCENT))
-        host.addView(HorizontalScrollView(host.context).apply { addView(statusRow) })
-        host.addView(viewFactory.spacer(14))
+        if (state.continueWatching.isNotEmpty()) {
+            host.addView(viewFactory.sectionTitle("Continue Watching"))
+            host.addView(viewFactory.spacer(12))
+            host.addView(buildContinueWatchingRow(state.continueWatching, onContinueWatching, onFirstFocusTarget))
+            host.addView(viewFactory.spacer(14))
+        }
 
-        host.addView(viewFactory.panel(elevated = true).apply {
-            addView(viewFactory.sectionTitle("Real-Debrid"))
-            addView(viewFactory.spacer(10))
-            addView(viewFactory.body(if (authLinked) "Linked and ready for cached-source playback." else "Not linked yet. Open Settings to connect it."))
-            addView(viewFactory.spacer(12))
-            addView(actionButton("Settings / Accounts", onOpenSettings, R.drawable.ic_nav_settings))
-            onResumeSearch?.let {
-                addView(viewFactory.spacer(10))
-                addView(actionButton("Resume Last Flow", it, R.drawable.ic_nav_search))
-            }
-        })
+        host.addView(viewFactory.sectionTitle("Quick Picks"))
+        host.addView(viewFactory.spacer(10))
+        host.addView(buildQuickPickRow(featured, onQuickPick, onFirstFocusTarget))
         host.addView(viewFactory.spacer(14))
 
         host.addView(viewFactory.panel(elevated = false).apply {
@@ -237,18 +219,6 @@ class HomeScreenRenderer(
         historyRow.addView(movieHistoryPanel)
         historyRow.addView(showHistoryPanel)
         host.addView(historyRow)
-        host.addView(viewFactory.spacer(14))
-
-        if (state.continueWatching.isNotEmpty()) {
-            host.addView(viewFactory.sectionTitle("Continue Watching"))
-            host.addView(viewFactory.spacer(12))
-            host.addView(buildContinueWatchingRow(state.continueWatching, onContinueWatching, onFirstFocusTarget))
-            host.addView(viewFactory.spacer(14))
-        }
-
-        host.addView(viewFactory.sectionTitle("Quick Picks"))
-        host.addView(viewFactory.spacer(10))
-        host.addView(buildQuickPickRow(featured, onQuickPick, onFirstFocusTarget))
         host.addView(viewFactory.spacer(14))
 
         val lowerRow = LinearLayout(host.context).apply {

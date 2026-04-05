@@ -144,6 +144,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var contentPane: LinearLayout
     private lateinit var railHost: LinearLayout
     private lateinit var contentScrollView: ScrollView
+    private lateinit var realDebridStatusText: android.widget.TextView
     private lateinit var statusText: android.widget.TextView
     private lateinit var loadingView: ProgressBar
     private lateinit var screenHost: LinearLayout
@@ -224,6 +225,7 @@ class MainActivity : ComponentActivity() {
         setContentView(buildContentView())
         initializeRenderers()
         attachPlayerView()
+        updateSidebarStatus(authLinked = false)
         lastFatalPlaybackReport = playbackCrashLogStore.consumeFatalReport()
         observePlaybackState()
         refreshAuthState()
@@ -316,6 +318,12 @@ class MainActivity : ComponentActivity() {
             indeterminateTintList = android.content.res.ColorStateList.valueOf(viewFactory.accentColor)
         }
 
+        realDebridStatusText = android.widget.TextView(this).apply {
+            text = "Real-Debrid: Not linked"
+            textSize = 14f
+            setTextColor(viewFactory.textSecondaryColor)
+        }
+
         statusText = android.widget.TextView(this).apply {
             text = "Ready"
             textSize = 15f
@@ -333,6 +341,8 @@ class MainActivity : ComponentActivity() {
         sidebar.addView(title)
         sidebar.addView(viewFactory.spacer(6))
         sidebar.addView(subtitle)
+        sidebar.addView(viewFactory.spacer(6))
+        sidebar.addView(realDebridStatusText)
         sidebar.addView(viewFactory.spacer(4))
         sidebar.addView(buildInfo)
         sidebar.addView(viewFactory.spacer(18))
@@ -524,11 +534,13 @@ class MainActivity : ComponentActivity() {
     private fun refreshAuthState() {
         lifecycleScope.launch {
             authState = AppContainer.getRealDebridAuthStateUseCase()
+            updateSidebarStatus()
             renderCurrentScreen()
         }
     }
 
     private fun refreshAuthUiOnly() {
+        updateSidebarStatus()
         renderCurrentScreen()
     }
 
@@ -646,8 +658,6 @@ class MainActivity : ComponentActivity() {
                 }
                 homeRenderer.render(
                     state = coordinator.currentState(),
-                    authLinked = authState.isLinked,
-                    statusMessage = statusText.text?.toString().orEmpty(),
                     movieFavorites = AppContainer.favoritesCoordinator.listByType(ai.shieldtv.app.core.model.media.MediaType.MOVIE),
                     showFavorites = AppContainer.favoritesCoordinator.listByType(ai.shieldtv.app.core.model.media.MediaType.SHOW),
                     movieHistory = AppContainer.watchHistoryCoordinator.listResultsByType(ai.shieldtv.app.core.model.media.MediaType.MOVIE),
@@ -691,18 +701,6 @@ class MainActivity : ComponentActivity() {
                         )
                         statusText.text = settingsCoordinator.historyStatusLabel(ai.shieldtv.app.core.model.media.MediaType.SHOW)
                         renderCurrentScreen()
-                    },
-                    onOpenSettings = {
-                        coordinator.openSettings()
-                        renderCurrentScreen()
-                    },
-                    onResumeSearch = coordinator.currentState().takeIf {
-                        it.query.isNotBlank() && (it.searchResults.isNotEmpty() || it.selectedMedia != null)
-                    }?.let {
-                        {
-                            coordinator.openSearch(it.searchMode)
-                            renderCurrentScreen()
-                        }
                     },
                     onQuickPick = { quickPick ->
                         coordinator.openSearch(
@@ -1205,6 +1203,7 @@ class MainActivity : ComponentActivity() {
         authState = settingsCoordinator.resetAuth()
         latestSourcesError = null
         statusText.text = "Real-Debrid auth reset."
+        updateSidebarStatus()
         renderCurrentScreen()
     }
 
@@ -1309,6 +1308,7 @@ class MainActivity : ComponentActivity() {
             onStateUpdated = { result ->
                 authState = result.authState
                 activeDeviceFlow = result.activeDeviceFlow
+                updateSidebarStatus()
                 result.statusMessage?.let { statusText.text = it }
                 result.errorType?.let { latestPlaybackMessage = "Auth flow warning: $it" }
                 result.linkedMessage?.let { linkedMessage ->
@@ -1332,6 +1332,7 @@ class MainActivity : ComponentActivity() {
             },
             onTimeout = { timeout ->
                 authState = timeout.authState
+                updateSidebarStatus()
                 statusText.text = timeout.statusMessage
                 val spec = settingsModalCoordinator.realDebridTimedOutSpec(
                     errorType = timeout.errorType,
@@ -1675,6 +1676,14 @@ class MainActivity : ComponentActivity() {
     private fun setLoading(isLoading: Boolean, message: String) {
         loadingView.visibility = if (isLoading) View.VISIBLE else View.GONE
         statusText.text = message
+    }
+
+    private fun updateSidebarStatus(authLinked: Boolean = authState.isLinked) {
+        realDebridStatusText.text = if (authLinked) {
+            authState.username?.takeIf { it.isNotBlank() }?.let { "Real-Debrid: Linked as $it" } ?: "Real-Debrid: Linked"
+        } else {
+            "Real-Debrid: Not linked"
+        }
     }
 
     private fun showPlayerFullscreenShell() {
