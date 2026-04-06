@@ -60,7 +60,7 @@ Translate the image into a stable TV UI language:
 - note where existing semantic resource names should be remapped rather than replaced with one-off colors
 
 #### 0C. Produce a small implementation artifact
-- add a compact token table to this plan or a companion note
+- append a compact token table directly to this plan before implementation begins
 - map each token to likely XML resource names / drawable touchpoints
 - call out any intentionally neutral surfaces that should resist branding pressure
 
@@ -199,7 +199,7 @@ For each major slice:
    - home
    - search/results
    - details
-   - sources
+   - sources / resolver flows
    - settings/modal flows
 4. verify DPAD focus visibility on every touched control type
 5. verify both focused and unfocused states on the same touched screens
