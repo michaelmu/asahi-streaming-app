@@ -86,6 +86,52 @@ Translate the image into a stable TV UI language:
 - settings/source screens feel branded, not merely recolored
 - the app feels intentionally styled, not over-skinned
 
+#### 0F. Append implementation tables before coding begins
+
+##### Token table stub
+
+| Token name | Hex | Role | Allowed usage | Banned usage | Existing resources / drawables to remap |
+| --- | --- | --- | --- | --- | --- |
+| `asahi_color_bg_app` | `TBD` | app background | root app background, large negative space | focused outlines, warning states | `colorBackground`, `asahi_app_bg.xml` |
+| `asahi_color_surface_1` | `TBD` | base panel surface | standard cards, panels, rails, neutral control fills | semantic warning/success/error, hero text on imagery | `asahi_panel_bg.xml`, rail/container backgrounds |
+| `asahi_color_surface_2` | `TBD` | elevated panel surface | dialogs, elevated panels, selected neutral containers | global page background, focused ring | `asahi_panel_elevated_bg.xml`, modal surfaces |
+| `asahi_color_surface_3` | `TBD` | deepest or strongest surface | high-emphasis containers, inset wells, utility groupings | default fill for all components | utility-heavy surfaces as needed |
+| `asahi_color_accent_primary` | `TBD` | branded primary accent | primary CTAs, selected accents, branded emphasis | body text, warning/error semantics, blanket card tinting | `asahi_button_selected_bg.xml`, selected states |
+| `asahi_color_accent_secondary` | `TBD` | secondary accent | chips, secondary highlights, decorative support | primary focus indicator, dense body text | chip/selectable accent usage |
+| `asahi_color_focus` | `TBD` | focus indicator | focused strokes, glow, high-confidence DPAD focus cues | passive decoration, unfocused fills | focused card/button/input/nav states |
+| `asahi_color_warning` | `TBD` | warning/destructive semantic | warnings, destructive choices, caution copy accents | generic branding, primary CTA styling | warning/destructive components |
+| `asahi_color_text_primary` | `TBD` | primary text | titles, primary body text, critical labels | disabled text, decorative accents | shared text color mappings |
+| `asahi_color_text_secondary` | `TBD` | secondary text | metadata, helper copy, supporting labels | primary CTA fill, warning states | shared secondary text mappings |
+| `asahi_color_text_tertiary` | `TBD` | tertiary/quiet text | low-priority metadata, subdued helper text | important status/focus labels | shared tertiary text mappings |
+
+##### Component rules table stub
+
+| Component family | Default surface token(s) | Default text token(s) | Accent usage | Focus recipe | Notes / neutrality rules |
+| --- | --- | --- | --- | --- | --- |
+| App shell / root canvas | `asahi_color_bg_app` | `asahi_color_text_primary`, `asahi_color_text_secondary` | minimal | none on static shell; focus belongs to active child controls | keep neutral enough that content and dialogs pop |
+| Left rail / navigation | `asahi_color_surface_1` | `asahi_color_text_primary`, `asahi_color_text_secondary` | selected/active item may use primary accent sparingly | focused item uses explicit focus ring/fill shift with high contrast | should feel branded, not louder than content area |
+| Panels / containers | `asahi_color_surface_1` / `asahi_color_surface_2` | text primary/secondary | accent only for intentional highlights | focus only if container itself is actionable | default to neutral branded surfaces |
+| Buttons — primary | surface + `asahi_color_accent_primary` | text chosen for contrast | primary accent is allowed | focused state may combine scale + ring + fill shift | primary CTA should read clearly from distance |
+| Buttons — secondary | `asahi_color_surface_2` | text primary | accent optional, restrained | focused state must still be unmistakable on warm fills | avoid making all buttons equally loud |
+| Chips / pills / badges | `asahi_color_surface_1` / accent secondary where useful | text primary/secondary | secondary accent preferred over primary | focused chip uses same family focus rule, not bespoke styling | keep small elements legible and not candy-colored |
+| Inputs / search fields | `asahi_color_surface_2` | text primary/secondary/tertiary by state | accent only for active cursor/selection/helpful affordance | focused input must be obvious even before text entry | utility clarity beats decorative styling |
+| Content cards / poster cards | neutral or near-neutral surfaces around artwork | text on supporting metadata only | minimal accent; do not tint artwork | focused card uses one standard card recipe (ring/stroke + scale/elevation + optional metadata reveal) | artwork stays primary; branding supports, does not compete |
+| Progress / status bars | neutral track + branded or semantic fill | n/a | accent or semantic fill as appropriate | focus only if directly actionable | preserve semantic meaning; do not recolor blindly |
+| Modals / dialogs / pickers | `asahi_color_surface_2` / `asahi_color_surface_3` | text primary/secondary | selective accent on primary actions only | focused actions/rows use shared control focus recipe | layered surfaces should still read above shell |
+| Details hero overlays | likely neutral/darkened overlay surface | high-contrast text tokens | very restrained accent | focus applies to actions, not decorative hero region | backdrop readability wins over brand expressiveness |
+| Settings / sources / utility screens | `asahi_color_surface_1` / `asahi_color_surface_2` | text primary/secondary/tertiary | restrained accent to reduce “tooling” feel | focus must remain stronger than branding | should feel trustworthy, crisp, and not fuzzy |
+
+##### Focus rules table stub
+
+| Control family | Allowed focus signals | Disallowed focus signals | Minimum expectation |
+| --- | --- | --- | --- |
+| Navigation items | ring/stroke, fill shift, mild scale, text emphasis | subtle tint-only focus with no shape/value change | instantly identifiable in peripheral vision |
+| Buttons / action rows | ring/stroke, fill shift, mild scale/elevation | focus that depends only on color temperature change | obvious from couch distance before label is read |
+| Chips / pills | ring/stroke, fill shift, text emphasis | tiny glow-only treatment | readable without looking decorative |
+| Inputs | ring/stroke, fill shift, cursor/selection accent | relying only on caret visibility | obvious when ready for typing |
+| Content cards | ring/stroke, scale/elevation, optional metadata reveal | heavy artwork tinting, decorative overlays that muddy art | unmistakable while preserving poster fidelity |
+| Modal choices / list rows | ring/stroke, fill shift, text emphasis | ambiguous low-contrast focus | clear within layered surfaces |
+
 **Exit criteria:** there is a clear token/system map, including explicit focus behavior, before wide visual churn begins.
 
 ### Slice 1 — Core palette and surface rebalance
