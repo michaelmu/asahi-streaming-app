@@ -52,6 +52,13 @@ Translate the image into a stable TV UI language:
 - assign stable resource names for those tokens before implementation begins
 - document which colors are decorative vs interactive vs semantic
 - avoid using every image color everywhere; keep the token set small and reusable
+- record each token with:
+  - token/resource name
+  - hex value
+  - semantic role
+  - allowed usage
+  - banned usage
+  - existing resource(s) or drawable touchpoints to remap
 
 #### 0B. Define component-level styling rules
 - specify how buttons, panels, chips, cards, inputs, focus rings, progress bars, and modals should use the new tokens
@@ -59,18 +66,27 @@ Translate the image into a stable TV UI language:
 - document when to use coral vs amber vs plum to avoid inconsistent theming
 - note where existing semantic resource names should be remapped rather than replaced with one-off colors
 
-#### 0C. Produce a small implementation artifact
+#### 0C. Define explicit TV focus rules
+- specify the focused-state recipe for each major control family: nav items, buttons, chips, cards, inputs, list rows, and modal actions
+- decide, per family, which focus signals are allowed: stroke/ring, fill shift, scale, glow, elevation, text-color shift, badge reveal
+- define one default focus approach for content cards and one default focus approach for control surfaces; avoid one-off focus inventions per screen
+- document minimum contrast expectations for focused vs unfocused states on warm surfaces
+- treat focus clarity as a functional requirement, not a decorative choice
+
+#### 0D. Produce a small implementation artifact
 - append a compact token table directly to this plan before implementation begins
-- map each token to likely XML resource names / drawable touchpoints
+- include, for each token: name, hex, role, allowed usage, banned usage, remap targets
+- append a compact component-rules table covering buttons, panels, inputs, chips, cards, modals, progress, and nav items
 - call out any intentionally neutral surfaces that should resist branding pressure
 
-#### 0D. Add a “brand acceptance” checklist
+#### 0E. Add a “brand acceptance” checklist
 - from 10 feet away, text remains readable
 - focused element is always unmistakable
 - artwork still feels primary on browse surfaces
 - settings/source screens feel branded, not merely recolored
+- the app feels intentionally styled, not over-skinned
 
-**Exit criteria:** there is a clear token/system map before wide visual churn begins.
+**Exit criteria:** there is a clear token/system map, including explicit focus behavior, before wide visual churn begins.
 
 ### Slice 1 — Core palette and surface rebalance
 
@@ -130,6 +146,8 @@ Translate the image into a stable TV UI language:
 - align spacing, shadows, and card grouping to the warmer visual language
 - make shelves feel curated rather than just rows of assets
 - preserve scanability and fast focus movement
+- keep this limited to rhythm/polish changes such as margins, gaps, row separation, padding, and grouping cues
+- do not change navigation behavior, IA, or core information density here unless a styling dependency clearly forces it
 
 #### 3C. Validate content-first behavior
 - verify branding supports the content rather than competing with it
@@ -204,21 +222,27 @@ For each major slice:
 4. verify DPAD focus visibility on every touched control type
 5. verify both focused and unfocused states on the same touched screens
 6. check at least one low-artwork or missing-artwork scenario
-7. compare against the source image and ask:
+7. check at least one long-title / long-subtitle scenario on a touched browse or details surface
+8. check at least one dense screen where many controls or cards are simultaneously visible
+9. check at least one layered state such as modal-over-shell or dialog-over-content
+10. compare against the source image and ask:
    - does this feel recognizably derived from the brand image?
    - is readability still strong from TV distance?
    - is content artwork still more important than decorative styling?
+   - does focus still win instantly against warm surfaces?
 
 ## Practical implementation order
 
 Recommended order:
-1. Slice 0 — define token system and component rules
+1. Slice 0 — define token system, component rules, and focus rules
 2. Slice 1 — global colors + shared drawables
 3. Slice 2 — shell/rail/chrome
 4. Slice 3 — browse/card pass using the updated primitives
 5. Slice 4 — buttons/inputs/modals/settings controls
 6. Slice 5 — details/sources polish
 7. Slice 6 — asset refinement and final sweep
+
+Note: if launcher/adaptive-icon crop quality is still unknown or clearly weak, pull Slice 6A forward immediately after Slice 0 so asset treatment can inform token decisions rather than lag behind them.
 
 Implementation discipline:
 - keep commits slice-sized where practical
@@ -248,3 +272,4 @@ This pass is done when:
 - focus and readability remain excellent on TV
 - artwork-heavy browse screens still prioritize the content over the theme
 - no touched screen still looks tied to the legacy blue-heavy system unless intentionally kept neutral
+- the UI feels intentionally branded without feeling over-skinned, fuzzy, or decorative at the expense of scanability
