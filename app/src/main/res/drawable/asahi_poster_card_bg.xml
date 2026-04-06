@@ -2,8 +2,8 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_focused="true">
         <shape>
-            <solid android:color="#141A24" />
-            <corners android:radius="0dp" />
+            <solid android:color="@color/asahi_color_card_focus_fill_candidate" />
+            <corners android:radius="22dp" />
             <stroke
                 android:width="2dp"
                 android:color="@color/asahi_focus" />
@@ -12,7 +12,7 @@
     <item android:state_pressed="true">
         <shape>
             <solid android:color="@color/asahi_panel_elevated" />
-            <corners android:radius="0dp" />
+            <corners android:radius="22dp" />
             <stroke
                 android:width="1dp"
                 android:color="@color/asahi_focus" />
@@ -21,7 +21,7 @@
     <item>
         <shape>
             <solid android:color="@color/asahi_panel_elevated" />
-            <corners android:radius="0dp" />
+            <corners android:radius="22dp" />
             <stroke
                 android:width="1dp"
                 android:color="@color/asahi_stroke" />

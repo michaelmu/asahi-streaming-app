@@ -186,7 +186,7 @@ class HomeScreenRenderer(
             host.addView(viewFactory.sectionTitle("Quick Picks"))
             host.addView(viewFactory.spacer(10))
             host.addView(buildQuickPickRow(shelfPicks, onQuickPick, onFirstFocusTarget))
-            host.addView(viewFactory.spacer(16))
+            host.addView(viewFactory.spacer(18))
         }
 
         val favoritesShelfItems = (movieFavorites + showFavorites).take(4)
@@ -255,7 +255,7 @@ class HomeScreenRenderer(
         }
         val recentPanel = viewFactory.panel(elevated = false).apply {
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
-                it.marginStart = viewFactory.dp(14)
+                it.marginStart = viewFactory.dp(16)
             }
             addView(viewFactory.sectionTitle("Recent Searches"))
             addView(viewFactory.spacer(8))
@@ -297,10 +297,10 @@ class HomeScreenRenderer(
             alpha = 0.99f
             setOnClickListener { onQuickPick(item) }
             setOnFocusChangeListener { view, hasFocus ->
-                view.scaleX = if (hasFocus) 1.01f else 1f
-                view.scaleY = if (hasFocus) 1.01f else 1f
+                view.scaleX = if (hasFocus) 1.02f else 1f
+                view.scaleY = if (hasFocus) 1.02f else 1f
                 view.alpha = if (hasFocus) 1f else 0.99f
-                view.translationZ = if (hasFocus) viewFactory.dp(18).toFloat() else 0f
+                view.translationZ = if (hasFocus) viewFactory.dp(20).toFloat() else 0f
             }
             setOnKeyListener { _, keyCode, event ->
                 if (event.action == KeyEvent.ACTION_DOWN && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)) {
@@ -342,10 +342,10 @@ class HomeScreenRenderer(
                         if (index > 0) it.marginStart = viewFactory.dp(12)
                     }
                 }
-                card.minimumHeight = viewFactory.dp(124)
+                card.minimumHeight = viewFactory.dp(132)
                 card.addView(homeShelfArtwork(
                     artworkUrl = item.artworkUrl,
-                    heightDp = 124,
+                    heightDp = 132,
                     fallbackIconResId = R.drawable.ic_nav_play,
                     fallbackLabel = "Continue Watching"
                 ))
@@ -376,10 +376,10 @@ class HomeScreenRenderer(
                         if (index > 0) it.marginStart = viewFactory.dp(12)
                     }
                 }
-                card.minimumHeight = viewFactory.dp(132)
+                card.minimumHeight = viewFactory.dp(140)
                 card.addView(homeShelfArtwork(
                     artworkUrl = item.backdropUrl?.takeIf { it.isNotBlank() } ?: item.posterUrl,
-                    heightDp = 132,
+                    heightDp = 140,
                     fallbackIconResId = if (item.mediaRef.mediaType == MediaType.SHOW) R.drawable.ic_nav_tv else R.drawable.ic_nav_movie,
                     fallbackLabel = item.mediaRef.mediaType.name.lowercase().replaceFirstChar { it.uppercase() }
                 ))
@@ -432,10 +432,10 @@ class HomeScreenRenderer(
             foreground = null
             setOnClickListener { onClick() }
             setOnFocusChangeListener { view, hasFocus ->
-                view.scaleX = if (hasFocus) 1.03f else 1f
-                view.scaleY = if (hasFocus) 1.03f else 1f
+                view.scaleX = if (hasFocus) 1.035f else 1f
+                view.scaleY = if (hasFocus) 1.035f else 1f
                 view.alpha = if (hasFocus) 1f else 0.985f
-                view.translationZ = if (hasFocus) viewFactory.dp(16).toFloat() else 0f
+                view.translationZ = if (hasFocus) viewFactory.dp(20).toFloat() else 0f
                 updateDescendantTextColors(
                     root = view,
                     primary = viewFactory.textPrimaryColor,
@@ -657,7 +657,7 @@ class ResultsScreenRenderer(
                 else -> "${state.searchResults.size} match(es) in ${state.searchMode.label.lowercase()}."
             }
         ))
-        host.addView(viewFactory.spacer(16))
+        host.addView(viewFactory.spacer(18))
 
         if (state.searchResults.isEmpty()) {
             host.addView(
@@ -705,7 +705,7 @@ class ResultsScreenRenderer(
                     elevated = absoluteIndex < gridColumnCount
                 ).apply {
                     layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
-                        if (columnIndex > 0) it.marginStart = viewFactory.dp(14)
+                        if (columnIndex > 0) it.marginStart = viewFactory.dp(16)
                     }
                 }
                 row.addView(card)
@@ -716,7 +716,7 @@ class ResultsScreenRenderer(
             repeat((gridColumnCount - rowItems.size).coerceAtLeast(0)) { spacerIndex ->
                 row.addView(View(activity).apply {
                     layoutParams = LinearLayout.LayoutParams(0, 1, 1f).also {
-                        if (rowItems.isNotEmpty() || spacerIndex > 0) it.marginStart = viewFactory.dp(14)
+                        if (rowItems.isNotEmpty() || spacerIndex > 0) it.marginStart = viewFactory.dp(16)
                     }
                     isFocusable = false
                     isClickable = false
@@ -725,7 +725,7 @@ class ResultsScreenRenderer(
             }
             grid.addView(row)
             if (rowIndex < results.chunked(gridColumnCount).lastIndex) {
-                grid.addView(viewFactory.spacer(14))
+                grid.addView(viewFactory.spacer(16))
             }
         }
 
@@ -744,7 +744,7 @@ class ResultsScreenRenderer(
         return viewFactory.panel(elevated = elevated).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.TOP
-            minimumHeight = viewFactory.dp(250)
+            minimumHeight = viewFactory.dp(258)
             isFocusable = true
             isFocusableInTouchMode = true
             isClickable = true
@@ -760,7 +760,7 @@ class ResultsScreenRenderer(
             val posterFrame = FrameLayout(context).apply {
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
-                    viewFactory.dp(250)
+                    viewFactory.dp(258)
                 )
             }
             val posterView = ImageView(activity).apply {
@@ -809,10 +809,10 @@ class ResultsScreenRenderer(
                 true
             }
             setOnFocusChangeListener { view, hasFocus ->
-                view.scaleX = if (hasFocus) 1.03f else 1f
-                view.scaleY = if (hasFocus) 1.03f else 1f
+                view.scaleX = if (hasFocus) 1.04f else 1f
+                view.scaleY = if (hasFocus) 1.04f else 1f
                 view.alpha = if (hasFocus) 1f else 0.985f
-                view.translationZ = if (hasFocus) viewFactory.dp(16).toFloat() else 0f
+                view.translationZ = if (hasFocus) viewFactory.dp(20).toFloat() else 0f
             }
             setOnKeyListener { _, keyCode, event ->
                 when {
@@ -897,7 +897,7 @@ class DetailsScreenRenderer(
         val infoPanel = LinearLayout(host.context).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
-                it.marginStart = viewFactory.dp(18)
+                it.marginStart = viewFactory.dp(20)
             }
         }
 
@@ -909,7 +909,7 @@ class DetailsScreenRenderer(
             if (details.mediaRef.mediaType == MediaType.SHOW) {
                 "Open the episode picker and jump straight into a season."
             } else {
-                "Open the ranked source list and pick a stream quickly."
+                "Open the ranked source list and pick a stream without digging through utility clutter."
             }
         ))
         infoPanel.addView(viewFactory.spacer(18))
@@ -1093,8 +1093,8 @@ class EpisodePickerScreenRenderer(
                     onEpisodePlay(episode.episodeNumber)
                 }
                 setOnFocusChangeListener { view, hasFocus ->
-                    view.scaleX = if (hasFocus) 1.02f else 1f
-                    view.scaleY = if (hasFocus) 1.02f else 1f
+                    view.scaleX = if (hasFocus) 1.025f else 1f
+                    view.scaleY = if (hasFocus) 1.025f else 1f
                     view.alpha = if (hasFocus || isSelected) 1f else 0.97f
                     background = ContextCompat.getDrawable(
                         context,
@@ -1287,10 +1287,10 @@ class SourcesScreenRenderer(
             foreground = null
             setOnClickListener { onClick() }
             setOnFocusChangeListener { view, hasFocus ->
-                view.scaleX = if (hasFocus) 1.02f else 1f
-                view.scaleY = if (hasFocus) 1.02f else 1f
+                view.scaleX = if (hasFocus) 1.025f else 1f
+                view.scaleY = if (hasFocus) 1.025f else 1f
                 view.alpha = if (hasFocus) 1f else 0.985f
-                view.translationZ = if (hasFocus) viewFactory.dp(16).toFloat() else 0f
+                view.translationZ = if (hasFocus) viewFactory.dp(18).toFloat() else 0f
                 updateDescendantTextColors(
                     root = view,
                     primary = viewFactory.textPrimaryColor,
@@ -1472,7 +1472,7 @@ class SettingsScreenRenderer(
     ) {
         host.addView(viewFactory.heroCard(
             title = "Settings",
-            subtitle = "Account status, updates, and source controls — without dumping utility noise into browsing."
+            subtitle = "Account status, updates, and source controls — still sharp, just less cold and toolish."
         ))
         host.addView(viewFactory.spacer())
 

@@ -40,7 +40,7 @@ class OverlayPopup(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
             )
-            setBackgroundColor(viewFactory.backgroundColor and 0x66FFFFFF)
+            setBackgroundColor(android.graphics.Color.argb(214, 9, 11, 18))
             isFocusable = true
             isFocusableInTouchMode = true
             descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
@@ -48,11 +48,11 @@ class OverlayPopup(
 
         val card = viewFactory.panel(elevated = true).apply {
             layoutParams = FrameLayout.LayoutParams(
-                viewFactory.dp(760),
+                viewFactory.dp(820),
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 Gravity.CENTER
             )
-            setPadding(viewFactory.dp(28), viewFactory.dp(28), viewFactory.dp(28), viewFactory.dp(28))
+            setPadding(viewFactory.dp(30), viewFactory.dp(30), viewFactory.dp(30), viewFactory.dp(30))
             isFocusable = true
             isFocusableInTouchMode = true
             descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS

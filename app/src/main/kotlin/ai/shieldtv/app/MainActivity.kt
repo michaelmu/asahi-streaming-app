@@ -291,22 +291,22 @@ class MainActivity : ComponentActivity() {
 
         root = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            setPadding(48, 32, 48, 32)
+            setPadding(44, 28, 44, 28)
         }
 
         sidebar = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.21f)
-            setPadding(0, 0, 28, 0)
+            setPadding(0, 0, 24, 0)
             setBackgroundResource(ai.shieldtv.app.R.drawable.asahi_panel_bg)
-            setPadding(22, 22, 22, 22)
+            setPadding(24, 24, 24, 24)
         }
 
         contentPane = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.79f)
             setBackgroundResource(ai.shieldtv.app.R.drawable.asahi_panel_elevated_bg)
-            setPadding(28, 28, 28, 28)
+            setPadding(30, 30, 30, 30)
         }
 
         val title = viewFactory.railTitle("Asahi")
@@ -1790,9 +1790,9 @@ class MainActivity : ComponentActivity() {
 
     private fun showStandardShell() {
         root.orientation = LinearLayout.HORIZONTAL
-        root.setPadding(48, 32, 48, 32)
+        root.setPadding(44, 28, 44, 28)
         sidebar.visibility = View.VISIBLE
-        contentPane.setPadding(28, 28, 28, 28)
+        contentPane.setPadding(30, 30, 30, 30)
         contentScrollView.setPadding(0, 0, 0, 0)
         sidebar.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.26f)
         contentPane.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.74f)

@@ -52,7 +52,7 @@ class ScreenViewFactory(
         setTextColor(textSecondaryColor)
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
         setTypeface(typeface, Typeface.BOLD)
-        letterSpacing = 0.18f
+        letterSpacing = 0.16f
     }
 
     fun title(text: String): View = TextView(context).apply {
@@ -66,18 +66,19 @@ class ScreenViewFactory(
         this.text = text
         setTextColor(textSecondaryColor)
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-        setLineSpacing(dp(4).toFloat(), 1.1f)
+        setLineSpacing(dp(5).toFloat(), 1.12f)
     }
 
     fun caption(text: String): View = TextView(context).apply {
         this.text = text
         setTextColor(textMutedColor)
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+        setLineSpacing(dp(2).toFloat(), 1.05f)
     }
 
     fun heroCard(title: String, subtitle: String): LinearLayout {
         return panel(vertical = true, elevated = true).apply {
-            setPadding(dp(24), dp(22), dp(24), dp(22))
+            setPadding(dp(26), dp(24), dp(26), dp(24))
             addView(sectionTitle("Now Building"))
             addView(spacer(10))
             addView(pageTitle(title))
@@ -105,7 +106,7 @@ class ScreenViewFactory(
                     FrameLayout.LayoutParams.MATCH_PARENT
                 )
                 scaleType = ImageView.ScaleType.CENTER_CROP
-                alpha = 0.42f
+                alpha = 0.46f
                 imageUrl?.takeIf { it.isNotBlank() }?.let { load(it) }
             }
 
@@ -124,7 +125,7 @@ class ScreenViewFactory(
                     FrameLayout.LayoutParams.MATCH_PARENT,
                     Gravity.BOTTOM
                 )
-                setPadding(dp(24), dp(24), dp(24), dp(24))
+                setPadding(dp(28), dp(26), dp(28), dp(26))
                 addView(sectionTitle("Featured"))
                 addView(spacer(10))
                 addView(pageTitle(title))
@@ -145,7 +146,7 @@ class ScreenViewFactory(
                 context,
                 if (elevated) R.drawable.asahi_panel_elevated_bg else R.drawable.asahi_panel_bg
             )
-            setPadding(dp(20), dp(20), dp(20), dp(20))
+            setPadding(dp(22), dp(22), dp(22), dp(22))
         }
     }
 
@@ -158,7 +159,7 @@ class ScreenViewFactory(
         onAction: (() -> Unit)? = null
     ): LinearLayout {
         return panel(vertical = true, elevated = true).apply {
-            setPadding(dp(22), dp(22), dp(22), dp(22))
+            setPadding(dp(24), dp(24), dp(24), dp(24))
             addView(sectionTitle("Nothing here yet"))
             addView(spacer(8))
             addView(title(title))
@@ -191,8 +192,8 @@ class ScreenViewFactory(
             setTextColor(textPrimaryColor)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
             isAllCaps = false
-            minHeight = dp(56)
-            setPadding(dp(20), dp(16), dp(20), dp(16))
+            minHeight = dp(58)
+            setPadding(dp(22), dp(16), dp(22), dp(16))
             iconResId?.let {
                 setCompoundDrawablesRelativeWithIntrinsicBounds(it, 0, 0, 0)
                 compoundDrawablePadding = dp(12)
@@ -206,8 +207,8 @@ class ScreenViewFactory(
             clipToOutline = true
             setOnClickListener { onClick() }
             setOnFocusChangeListener { view, hasFocus ->
-                view.scaleX = if (hasFocus) 1.015f else 1f
-                view.scaleY = if (hasFocus) 1.015f else 1f
+                view.scaleX = if (hasFocus) 1.02f else 1f
+                view.scaleY = if (hasFocus) 1.02f else 1f
                 view.alpha = if (hasFocus || isSelected) 1f else 0.98f
                 background = ContextCompat.getDrawable(
                     context,
@@ -237,8 +238,8 @@ class ScreenViewFactory(
             background = ContextCompat.getDrawable(context, R.drawable.asahi_chip_bg)
             setTextColor(if (selected) textPrimaryColor else textSecondaryColor)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            minHeight = dp(42)
-            minimumHeight = dp(42)
+            minHeight = dp(44)
+            minimumHeight = dp(44)
             setPadding(dp(18), dp(10), dp(18), dp(10))
             isSelected = selected
             elevation = 0f
@@ -248,8 +249,8 @@ class ScreenViewFactory(
             alpha = if (selected) 1f else 0.96f
             setOnClickListener { onClick() }
             setOnFocusChangeListener { view, hasFocus ->
-                view.scaleX = if (hasFocus) 1.02f else 1f
-                view.scaleY = if (hasFocus) 1.02f else 1f
+                view.scaleX = if (hasFocus) 1.03f else 1f
+                view.scaleY = if (hasFocus) 1.03f else 1f
                 view.alpha = if (hasFocus || isSelected) 1f else 0.96f
                 setTextColor(
                     when {
@@ -278,7 +279,7 @@ class ScreenViewFactory(
             setTextColor(textPrimaryColor)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
             background = ContextCompat.getDrawable(context, R.drawable.asahi_input_bg)
-            setPadding(dp(20), dp(18), dp(20), dp(18))
+            setPadding(dp(22), dp(18), dp(22), dp(18))
             isSingleLine = true
             imeOptions = EditorInfo.IME_ACTION_SEARCH
         }
