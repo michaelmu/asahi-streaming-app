@@ -247,7 +247,10 @@ Translate the image into a stable TV UI language:
 
 #### 6A. Launcher/icon refinement
 - verify the provided image crops well for launcher + round launcher + banner
+- explicitly reduce logo/mark scale if the current launcher presentation feels oversized or crowded
+- validate the foreground mark within the adaptive icon safe zone rather than judging only from in-app or full-bleed asset previews
 - if needed, create a cleaner adaptive-icon-safe composition derived from the image rather than relying on raw image placement alone
+- prefer a slightly smaller, more breathable mark over edge-to-edge occupancy; the icon should read cleanly from a distance and not feel jammed into the mask
 
 #### 6B. Optional branded placeholders
 - add fallback art/placeholders derived from the brand language for missing posters, empty states, or low-data surfaces
@@ -271,13 +274,19 @@ For each major slice:
    - details
    - sources / resolver flows
    - settings/modal flows
-4. verify DPAD focus visibility on every touched control type
-5. verify both focused and unfocused states on the same touched screens
-6. check at least one low-artwork or missing-artwork scenario
-7. check at least one long-title / long-subtitle scenario on a touched browse or details surface
-8. check at least one dense screen where many controls or cards are simultaneously visible
-9. check at least one layered state such as modal-over-shell or dialog-over-content
-10. compare against the source image and ask:
+4. for launcher/icon work, capture at least:
+   - launcher icon in standard launcher grid
+   - round launcher crop if available
+   - banner treatment if touched
+   - at least one view where neighboring app icons make relative scale obvious
+5. verify icon mark size feels balanced relative to common Android TV launcher icon density; avoid oversized foreground occupancy
+6. verify DPAD focus visibility on every touched control type
+7. verify both focused and unfocused states on the same touched screens
+8. check at least one low-artwork or missing-artwork scenario
+9. check at least one long-title / long-subtitle scenario on a touched browse or details surface
+10. check at least one dense screen where many controls or cards are simultaneously visible
+11. check at least one layered state such as modal-over-shell or dialog-over-content
+12. compare against the source image and ask:
    - does this feel recognizably derived from the brand image?
    - is readability still strong from TV distance?
    - is content artwork still more important than decorative styling?
@@ -294,7 +303,7 @@ Recommended order:
 6. Slice 5 — details/sources polish
 7. Slice 6 — asset refinement and final sweep
 
-Note: if launcher/adaptive-icon crop quality is still unknown or clearly weak, pull Slice 6A forward immediately after Slice 0 so asset treatment can inform token decisions rather than lag behind them.
+Note: if launcher/adaptive-icon crop quality is still unknown, clearly weak, or visibly oversized, pull Slice 6A forward immediately after Slice 0 so asset treatment can inform token decisions rather than lag behind them.
 
 Implementation discipline:
 - keep commits slice-sized where practical
@@ -306,7 +315,7 @@ Implementation discipline:
 - updated design-token palette in resources
 - tuned shared drawables and surface styles
 - runtime screenshots showing before/after style coherence
-- refined launcher/banner treatment if raw image placement proves weak
+- refined launcher/banner treatment if raw image placement proves weak or the launcher mark scale is too large
 - final note summarizing what from the source image was translated literally vs abstracted into the UI system
 
 ## Risks / watch-outs
@@ -314,12 +323,14 @@ Implementation discipline:
 - warm palettes can reduce focus clarity if contrast is not handled carefully
 - image-driven branding can clash with content artwork if overlays become too decorative
 - raw image-as-icon may look acceptable in-app but weak in launcher crops
+- oversized foreground logo treatment can make the icon feel cramped or low-quality even when the underlying artwork is good
 - too much brand styling on settings/sources can hurt legibility or make power-user tasks feel fuzzy
 
 ## Definition of done
 
 This pass is done when:
 - the app feels recognizably inspired by the shared image even outside the launcher icon
+- the launcher icon/logo scale feels balanced and no longer oversized within Android TV launcher masks
 - the shell, controls, and content surfaces all feel like one branded product
 - focus and readability remain excellent on TV
 - artwork-heavy browse screens still prioritize the content over the theme
