@@ -32,6 +32,16 @@ Translate the image into a stable TV UI language:
 - Do not over-theme content artwork; the app still needs to showcase movie/show art cleanly
 - Keep implementation compatible with the current XML/View-based UI stack
 - Prefer small, composable changes over one giant visual rewrite
+- Prefer shared primitive/style changes before per-screen overrides
+- Avoid mixing broad palette work with unrelated layout or interaction rewrites unless necessary
+
+## Out of scope
+
+- no navigation model rewrites
+- no deep information architecture changes
+- no major interaction-model changes for DPAD flows
+- no risky playback/controller refactors
+- no decorative treatments that reduce poster or backdrop fidelity
 
 ## Execution slices
 
@@ -39,6 +49,7 @@ Translate the image into a stable TV UI language:
 
 #### 0A. Extract usable design tokens from the image
 - identify 1 background tone, 2-3 surface tones, 1 primary accent, 1 secondary accent, 1 focus tone, 1 warning tone, and 3 text tones
+- assign stable resource names for those tokens before implementation begins
 - document which colors are decorative vs interactive vs semantic
 - avoid using every image color everywhere; keep the token set small and reusable
 
@@ -46,8 +57,14 @@ Translate the image into a stable TV UI language:
 - specify how buttons, panels, chips, cards, inputs, focus rings, progress bars, and modals should use the new tokens
 - define which surfaces should stay neutral so content art still pops
 - document when to use coral vs amber vs plum to avoid inconsistent theming
+- note where existing semantic resource names should be remapped rather than replaced with one-off colors
 
-#### 0C. Add a “brand acceptance” checklist
+#### 0C. Produce a small implementation artifact
+- add a compact token table to this plan or a companion note
+- map each token to likely XML resource names / drawable touchpoints
+- call out any intentionally neutral surfaces that should resist branding pressure
+
+#### 0D. Add a “brand acceptance” checklist
 - from 10 feet away, text remains readable
 - focused element is always unmistakable
 - artwork still feels primary on browse surfaces
@@ -59,6 +76,7 @@ Translate the image into a stable TV UI language:
 
 #### 1A. Rework global colors safely
 - update `colors.xml` with stable brand tokens
+- prefer remapping existing semantic/shared resource names to the new token system rather than proliferating one-off colors
 - align app background, panel, elevated panel, stroke, scrim, and text hierarchy to the new palette
 - make sure semantic colors still read correctly (warning/error/success if present)
 
@@ -106,6 +124,7 @@ Translate the image into a stable TV UI language:
 - tune card borders, scrims, elevation, and focus for the new palette
 - ensure image-only cards still feel polished and not too bare
 - consider subtle branded fallback placeholders when no artwork exists
+- do not add decorative overlays that reduce poster fidelity or compete with artwork
 
 #### 3B. Rebalance shelves and results spacing
 - align spacing, shadows, and card grouping to the warmer visual language
@@ -150,6 +169,7 @@ Translate the image into a stable TV UI language:
 #### 5C. Player-adjacent overlays (if present in scope)
 - check whether playback entry, loading, or transitional UI needs palette alignment
 - only touch player-facing UI if it can be done safely without destabilizing playback flow
+- do not change playback controller behavior or Media3 theming unless a purely cosmetic app-owned surface is clearly isolated
 
 **Exit criteria:** high-information screens still feel like part of the same product family.
 
@@ -182,7 +202,9 @@ For each major slice:
    - sources
    - settings/modal flows
 4. verify DPAD focus visibility on every touched control type
-5. compare against the source image and ask:
+5. verify both focused and unfocused states on the same touched screens
+6. check at least one low-artwork or missing-artwork scenario
+7. compare against the source image and ask:
    - does this feel recognizably derived from the brand image?
    - is readability still strong from TV distance?
    - is content artwork still more important than decorative styling?
@@ -193,10 +215,15 @@ Recommended order:
 1. Slice 0 — define token system and component rules
 2. Slice 1 — global colors + shared drawables
 3. Slice 2 — shell/rail/chrome
-4. Slice 4 — buttons/inputs/modals/settings controls
-5. Slice 3 — browse/card pass using the updated primitives
+4. Slice 3 — browse/card pass using the updated primitives
+5. Slice 4 — buttons/inputs/modals/settings controls
 6. Slice 5 — details/sources polish
 7. Slice 6 — asset refinement and final sweep
+
+Implementation discipline:
+- keep commits slice-sized where practical
+- verify emulator behavior after each slice before proceeding
+- avoid combining broad visual changes with structural rewrites unless a dependency forces it
 
 ## Deliverables
 
@@ -220,3 +247,4 @@ This pass is done when:
 - the shell, controls, and content surfaces all feel like one branded product
 - focus and readability remain excellent on TV
 - artwork-heavy browse screens still prioritize the content over the theme
+- no touched screen still looks tied to the legacy blue-heavy system unless intentionally kept neutral
