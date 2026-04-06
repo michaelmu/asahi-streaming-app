@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="asahi_bg">#0A0E17</color>
-    <color name="asahi_panel">#111827</color>
-    <color name="asahi_panel_elevated">#182235</color>
-    <color name="asahi_panel_soft">#1B2940</color>
-    <color name="asahi_accent">#5B8CFF</color>
-    <color name="asahi_accent_alt">#23C9A9</color>
-    <color name="asahi_accent_selected">#294A84</color>
-    <color name="asahi_accent_selected_focus">#3C63A6</color>
-    <color name="asahi_warning">#FFB84D</color>
-    <color name="asahi_error">#FF6B6B</color>
-    <color name="asahi_text_primary">#F7FAFF</color>
-    <color name="asahi_text_secondary">#A8B3C7</color>
-    <color name="asahi_text_muted">#7F8CA3</color>
-    <color name="asahi_stroke">#2B3952</color>
-    <color name="asahi_focus">#7AA2FF</color>
-    <color name="asahi_scrim">#CC05080F</color>
+    <color name="asahi_bg">#151927</color>
+    <color name="asahi_panel">#20253A</color>
+    <color name="asahi_panel_elevated">#2A314D</color>
+    <color name="asahi_panel_soft">#343D5F</color>
+    <color name="asahi_accent">#F06B5F</color>
+    <color name="asahi_accent_alt">#F3A64F</color>
+    <color name="asahi_accent_selected">#6B4B7D</color>
+    <color name="asahi_accent_selected_focus">#8A5FA1</color>
+    <color name="asahi_warning">#F3C76A</color>
+    <color name="asahi_error">#F06B5F</color>
+    <color name="asahi_text_primary">#FFF6EE</color>
+    <color name="asahi_text_secondary">#D8C6BF</color>
+    <color name="asahi_text_muted">#AE9EA0</color>
+    <color name="asahi_stroke">#4C557B</color>
+    <color name="asahi_focus">#F08A7E</color>
+    <color name="asahi_scrim">#CC11141F</color>
 </resources>
