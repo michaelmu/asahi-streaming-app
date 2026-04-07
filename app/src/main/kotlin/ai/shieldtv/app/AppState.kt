@@ -32,7 +32,8 @@ data class AppState(
     val selectedEpisodeNumber: Int? = null,
     val selectedSource: SourceResult? = null,
     val selectedSources: List<SourceResult> = emptyList(),
-    val recentQueries: List<String> = emptyList(),
+    val recentMovieQueries: List<String> = emptyList(),
+    val recentShowQueries: List<String> = emptyList(),
     val continueWatching: List<ContinueWatchingItem> = emptyList(),
     val favoritesBrowseMode: SearchMode? = null,
     val historyBrowseMode: SearchMode? = null
@@ -42,7 +43,8 @@ fun AppState.toBundleMap(): Map<String, String> = buildMap {
     put("destination", destination.name)
     put("searchMode", searchMode.name)
     put("query", query)
-    put("recentQueries", recentQueries.joinToString("|"))
+    put("recentMovieQueries", recentMovieQueries.joinToString("|"))
+    put("recentShowQueries", recentShowQueries.joinToString("|"))
     favoritesBrowseMode?.let { put("favoritesBrowseMode", it.name) }
     historyBrowseMode?.let { put("historyBrowseMode", it.name) }
     put(
@@ -75,7 +77,12 @@ fun appStateFromBundleMap(values: Map<String, String>): AppState {
         historyBrowseMode = values["historyBrowseMode"]?.let { SearchMode.valueOf(it) },
         selectedSeasonNumber = values["selectedSeasonNumber"]?.toIntOrNull(),
         selectedEpisodeNumber = values["selectedEpisodeNumber"]?.toIntOrNull(),
-        recentQueries = values["recentQueries"]
+        recentMovieQueries = values["recentMovieQueries"]
+            ?.split('|')
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+            ?: emptyList(),
+        recentShowQueries = values["recentShowQueries"]
             ?.split('|')
             ?.map { it.trim() }
             ?.filter { it.isNotEmpty() }

@@ -275,10 +275,14 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_BACK && dismissModal()) {
-            return true
+        if (keyCode == KeyEvent.KEYCODE_BACK && activeModalView != null) {
+            return dismissModal()
         }
         if (keyCode == KeyEvent.KEYCODE_BACK && handleBackPress()) {
+            return true
+        }
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            showExitConfirmation()
             return true
         }
         return super.onKeyDown(keyCode, event)
@@ -474,6 +478,22 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun showExitConfirmation() {
+        showInfoModal(
+            title = "Exit Asahi?",
+            message = "Are you sure you want to exit?",
+            primaryLabel = "Yes",
+            onPrimary = {
+                AppContainer.playbackEngine.stop()
+                finishAffinity()
+            },
+            secondaryLabel = "No",
+            onSecondary = {},
+            dismissOnBack = true,
+            defaultAction = ModalDefaultAction.SECONDARY
+        )
+    }
+
     private fun hydrateContinueWatchingFromPersistedSession() {
         val persistedItems = AppContainer.continueWatchingStore.load().map { it.toUiItem() }
         if (persistedItems.isNotEmpty()) {
@@ -658,8 +678,7 @@ class MainActivity : ComponentActivity() {
                     renderCurrentScreen()
                 },
                 onQuit = {
-                    AppContainer.playbackEngine.stop()
-                    finishAffinity()
+                    showExitConfirmation()
                 },
                 onFirstFocusTarget = ::focusView
             )
@@ -850,8 +869,8 @@ class MainActivity : ComponentActivity() {
                                 addAll(1..reportedSeasonCount)
                             }
                             addAll(details.episodesBySeason.keys)
-                        }.distinct().sorted()
-                        val defaultSeason = availableSeasonNumbers.lastOrNull() ?: (details.seasonCount ?: 1).coerceAtLeast(1)
+                        }.distinct().sortedDescending()
+                        val defaultSeason = availableSeasonNumbers.firstOrNull() ?: (details.seasonCount ?: 1).coerceAtLeast(1)
                         detailsNavigationCoordinator.openEpisodes(
                             coordinator = coordinator,
                             details = details,

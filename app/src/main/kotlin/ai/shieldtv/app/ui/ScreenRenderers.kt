@@ -253,19 +253,22 @@ class HomeScreenRenderer(
             addView(viewFactory.spacer(10))
             addView(actionButton("Browse TV Shows", onBrowseShows, R.drawable.ic_nav_tv))
         }
+        val homeRecentQueries = (state.recentMovieQueries + state.recentShowQueries)
+            .distinctBy { it.lowercase() }
+            .take(4)
         val recentPanel = viewFactory.panel(elevated = false).apply {
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
                 it.marginStart = viewFactory.dp(16)
             }
             addView(viewFactory.sectionTitle("Recent Searches"))
             addView(viewFactory.spacer(8))
-            if (state.recentQueries.isEmpty()) {
+            if (homeRecentQueries.isEmpty()) {
                 addView(viewFactory.caption("Recent searches show up here after your first browse."))
             } else {
-                state.recentQueries.take(4).forEachIndexed { index, query ->
+                homeRecentQueries.forEachIndexed { index, query ->
                     val button = actionButton(query, onClick = { onRecentQuery(query) }, iconResId = R.drawable.ic_nav_search)
                     addView(button)
-                    if (index < state.recentQueries.take(4).lastIndex) addView(viewFactory.spacer(10))
+                    if (index < homeRecentQueries.lastIndex) addView(viewFactory.spacer(10))
                 }
             }
         }
@@ -423,24 +426,19 @@ class HomeScreenRenderer(
     }
 
     private fun focusableCard(onClick: () -> Unit): LinearLayout {
-        return viewFactory.panel(elevated = true).apply {
+        return LinearLayout(host.context).apply {
+            orientation = LinearLayout.VERTICAL
             isFocusable = true
             isFocusableInTouchMode = true
             isClickable = true
             alpha = 0.985f
-            background = ContextCompat.getDrawable(context, R.drawable.asahi_poster_card_bg)
             foreground = null
             setOnClickListener { onClick() }
             setOnFocusChangeListener { view, hasFocus ->
-                view.scaleX = if (hasFocus) 1.035f else 1f
-                view.scaleY = if (hasFocus) 1.035f else 1f
+                view.scaleX = if (hasFocus) 1.03f else 1f
+                view.scaleY = if (hasFocus) 1.03f else 1f
                 view.alpha = if (hasFocus) 1f else 0.985f
-                view.translationZ = if (hasFocus) viewFactory.dp(20).toFloat() else 0f
-                updateDescendantTextColors(
-                    root = view,
-                    primary = viewFactory.textPrimaryColor,
-                    secondary = if (hasFocus) viewFactory.textPrimaryColor else viewFactory.textSecondaryColor
-                )
+                view.translationZ = if (hasFocus) viewFactory.dp(18).toFloat() else 0f
             }
             setOnKeyListener { _, keyCode, event ->
                 if (event.action == KeyEvent.ACTION_DOWN && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)) {
@@ -472,7 +470,6 @@ class HomeScreenRenderer(
                     FrameLayout.LayoutParams.MATCH_PARENT
                 )
                 scaleType = ImageView.ScaleType.CENTER_CROP
-                clipToOutline = true
                 resolvedArtwork?.let { load(it) }
                     ?: setImageDrawable(ContextCompat.getDrawable(context, fallbackIconResId))
                 imageAlpha = if (resolvedArtwork == null) 144 else 255
@@ -484,7 +481,7 @@ class HomeScreenRenderer(
                     FrameLayout.LayoutParams.MATCH_PARENT,
                     FrameLayout.LayoutParams.MATCH_PARENT
                 )
-                setBackgroundColor(Color.argb(24, 7, 10, 15))
+                setBackgroundColor(Color.argb(18, 7, 10, 15))
             })
 
             addView(TextView(host.context).apply {
@@ -534,6 +531,11 @@ class SearchScreenRenderer(
         onBack: (() -> Unit)?,
         onFirstFocusTarget: (View) -> Unit = {}
     ) {
+        val recentQueries = when (state.searchMode) {
+            SearchMode.MOVIES -> state.recentMovieQueries
+            SearchMode.SHOWS -> state.recentShowQueries
+        }
+
         val searchPanel = viewFactory.panel(elevated = true).apply {
             addView(viewFactory.pageTitle(state.searchMode.label))
             addView(viewFactory.spacer(12))
@@ -596,6 +598,22 @@ class SearchScreenRenderer(
                 ).also { it.marginStart = viewFactory.dp(16) }
             }
 
+            searchRow.addView(queryInput)
+            searchRow.addView(searchButton)
+            addView(searchRow)
+            if (recentQueries.isNotEmpty()) {
+                addView(viewFactory.spacer(12))
+                addView(viewFactory.sectionTitle("Recent Searches"))
+                addView(viewFactory.spacer(8))
+                recentQueries.take(3).forEachIndexed { index, query ->
+                    val recentButton = viewFactory.button(query, onClick = { onSearch(state.searchMode, query) }, iconResId = R.drawable.ic_nav_search)
+                    addView(recentButton)
+                    if (index < recentQueries.take(3).lastIndex) addView(viewFactory.spacer(10))
+                }
+            }
+            addView(viewFactory.spacer(10))
+            addView(viewFactory.caption("Down moves into recent searches first when present, then into results controls, with favorites and history one step above."))
+
             favoritesButton.nextFocusDownId = queryInput.id
             historyButton.nextFocusDownId = searchButton.id
             queryInput.nextFocusUpId = favoritesButton.id
@@ -603,16 +621,9 @@ class SearchScreenRenderer(
             searchButton.nextFocusUpId = historyButton.id
             searchButton.nextFocusLeftId = queryInput.id
 
-            searchRow.addView(queryInput)
-            searchRow.addView(searchButton)
-            addView(searchRow)
-            addView(viewFactory.spacer(10))
-            addView(viewFactory.caption("Down moves straight into results controls, with favorites and history one step above."))
-
-            queryInput.post {
-                onFirstFocusTarget(queryInput)
-                queryInput.requestFocus()
-                queryInput.setSelection(queryInput.text?.length ?: 0)
+            favoritesButton.post {
+                onFirstFocusTarget(favoritesButton)
+                favoritesButton.requestFocus()
             }
         }
 
@@ -741,16 +752,15 @@ class ResultsScreenRenderer(
         onLongPress: () -> Unit,
         elevated: Boolean = true
     ): LinearLayout {
-        return viewFactory.panel(elevated = elevated).apply {
+        return LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.TOP
-            minimumHeight = viewFactory.dp(258)
+            minimumHeight = viewFactory.dp(300)
             isFocusable = true
             isFocusableInTouchMode = true
             isClickable = true
             isLongClickable = true
             alpha = 0.985f
-            background = ContextCompat.getDrawable(context, R.drawable.asahi_poster_card_bg)
             foreground = null
             elevation = viewFactory.dp(if (elevated) 8 else 4).toFloat()
 
@@ -760,7 +770,7 @@ class ResultsScreenRenderer(
             val posterFrame = FrameLayout(context).apply {
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
-                    viewFactory.dp(258)
+                    viewFactory.dp(300)
                 )
             }
             val posterView = ImageView(activity).apply {
@@ -769,7 +779,6 @@ class ResultsScreenRenderer(
                     FrameLayout.LayoutParams.MATCH_PARENT
                 )
                 scaleType = ImageView.ScaleType.CENTER_CROP
-                clipToOutline = true
                 artworkUrl?.let { url -> load(url) }
                     ?: setImageDrawable(ContextCompat.getDrawable(context, R.drawable.ic_nav_movie))
                 imageAlpha = if (artworkUrl == null) 144 else 255
@@ -782,7 +791,7 @@ class ResultsScreenRenderer(
                     FrameLayout.LayoutParams.MATCH_PARENT,
                     FrameLayout.LayoutParams.MATCH_PARENT
                 )
-                setBackgroundColor(Color.argb(if (isFavorite) 18 else 24, 7, 10, 15))
+                setBackgroundColor(Color.argb(if (isFavorite) 14 else 18, 7, 10, 15))
             }
             posterFrame.addView(posterScrim)
 
@@ -809,8 +818,8 @@ class ResultsScreenRenderer(
                 true
             }
             setOnFocusChangeListener { view, hasFocus ->
-                view.scaleX = if (hasFocus) 1.04f else 1f
-                view.scaleY = if (hasFocus) 1.04f else 1f
+                view.scaleX = if (hasFocus) 1.025f else 1f
+                view.scaleY = if (hasFocus) 1.025f else 1f
                 view.alpha = if (hasFocus) 1f else 0.985f
                 view.translationZ = if (hasFocus) viewFactory.dp(20).toFloat() else 0f
             }
@@ -877,20 +886,19 @@ class DetailsScreenRenderer(
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.TOP
         }
-        val posterPanel = viewFactory.panel(elevated = true).apply {
-            layoutParams = LinearLayout.LayoutParams(viewFactory.dp(250), LinearLayout.LayoutParams.WRAP_CONTENT)
-            background = ContextCompat.getDrawable(context, R.drawable.asahi_poster_card_bg)
+        val posterPanel = FrameLayout(host.context).apply {
+            layoutParams = LinearLayout.LayoutParams(viewFactory.dp(270), viewFactory.dp(405))
             val poster = ImageView(host.context).apply {
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    viewFactory.dp(360)
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
                 )
                 scaleType = ImageView.ScaleType.CENTER_CROP
-                clipToOutline = true
                 details.posterUrl?.takeIf { it.isNotBlank() }?.let { load(it) }
                     ?: details.backdropUrl?.takeIf { it.isNotBlank() }?.let { load(it) }
                     ?: setImageDrawable(ContextCompat.getDrawable(context, if (details.mediaRef.mediaType == MediaType.SHOW) R.drawable.ic_nav_tv else R.drawable.ic_nav_movie))
                 imageAlpha = if (details.posterUrl.isNullOrBlank() && details.backdropUrl.isNullOrBlank()) 144 else 255
+                setBackgroundColor(Color.argb(18, 255, 255, 255))
             }
             addView(poster)
         }
@@ -1009,10 +1017,10 @@ class EpisodePickerScreenRenderer(
                 addAll(1..reportedSeasonCount)
             }
             addAll(details.episodesBySeason.keys)
-        }.distinct().sorted()
+        }.distinct().sortedDescending()
         val fallbackSeasonCount = details.seasonCount ?: 3
         val knownSeasonCount = availableSeasonNumbers.maxOrNull() ?: fallbackSeasonCount
-        val defaultSeason = availableSeasonNumbers.lastOrNull() ?: knownSeasonCount.coerceAtLeast(1)
+        val defaultSeason = availableSeasonNumbers.firstOrNull() ?: knownSeasonCount.coerceAtLeast(1)
         val selectedSeason = state.selectedSeasonNumber ?: defaultSeason
         val selectedEpisode = state.selectedEpisodeNumber ?: 1
 
@@ -1030,7 +1038,7 @@ class EpisodePickerScreenRenderer(
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-        (1..knownSeasonCount).forEach { season ->
+        (knownSeasonCount downTo 1).forEach { season ->
             val chip = viewFactory.chip("Season $season", selected = season == selectedSeason) {
                 onSeasonSelected(season)
             }
@@ -1047,7 +1055,8 @@ class EpisodePickerScreenRenderer(
         host.addView(HorizontalScrollView(activity).apply {
             addView(seasonStrip)
             post {
-                val selectedSeasonView = seasonStrip.getChildAt((selectedSeason - 1).coerceAtLeast(0) * 2)
+                val selectedIndex = (knownSeasonCount - selectedSeason).coerceAtLeast(0) * 2
+                val selectedSeasonView = seasonStrip.getChildAt(selectedIndex)
                 if (selectedSeasonView != null) {
                     smoothScrollTo((selectedSeasonView.left - viewFactory.dp(24)).coerceAtLeast(0), 0)
                 }
@@ -1283,7 +1292,6 @@ class SourcesScreenRenderer(
             isFocusableInTouchMode = true
             isClickable = true
             alpha = 0.985f
-            background = ContextCompat.getDrawable(context, R.drawable.asahi_poster_card_bg)
             foreground = null
             setOnClickListener { onClick() }
             setOnFocusChangeListener { view, hasFocus ->

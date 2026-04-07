@@ -47,8 +47,16 @@ class AppCoordinator(
     }
 
     fun showResults(query: String, results: List<SearchResult>) {
-        val updatedRecentQueries = (listOf(query) + state.recentQueries.filterNot { it.equals(query, ignoreCase = true) })
-            .take(6)
+        val updatedRecentMovieQueries = if (state.searchMode == SearchMode.MOVIES) {
+            (listOf(query) + state.recentMovieQueries.filterNot { it.equals(query, ignoreCase = true) }).take(3)
+        } else {
+            state.recentMovieQueries
+        }
+        val updatedRecentShowQueries = if (state.searchMode == SearchMode.SHOWS) {
+            (listOf(query) + state.recentShowQueries.filterNot { it.equals(query, ignoreCase = true) }).take(3)
+        } else {
+            state.recentShowQueries
+        }
         state = state.copy(
             destination = AppDestination.RESULTS,
             query = query,
@@ -59,7 +67,8 @@ class AppCoordinator(
             selectedEpisodeNumber = null,
             selectedSource = null,
             selectedSources = emptyList(),
-            recentQueries = updatedRecentQueries,
+            recentMovieQueries = updatedRecentMovieQueries,
+            recentShowQueries = updatedRecentShowQueries,
             favoritesBrowseMode = null,
             historyBrowseMode = null
         )
@@ -67,12 +76,24 @@ class AppCoordinator(
     }
 
     fun showDetails(mediaRef: MediaRef, details: TitleDetails) {
+        val defaultShowSeason = if (mediaRef.mediaType == MediaType.SHOW) {
+            buildList {
+                val reportedSeasonCount = details.seasonCount ?: 0
+                if (reportedSeasonCount > 0) {
+                    addAll(1..reportedSeasonCount)
+                }
+                addAll(details.episodesBySeason.keys)
+            }.distinct().maxOrNull() ?: 1
+        } else {
+            null
+        }
+
         state = state.copy(
             destination = AppDestination.DETAILS,
             selectedMedia = mediaRef,
             selectedDetails = details,
-            selectedSeasonNumber = if (mediaRef.mediaType.name == "SHOW") 1 else null,
-            selectedEpisodeNumber = if (mediaRef.mediaType.name == "SHOW") 1 else null,
+            selectedSeasonNumber = defaultShowSeason,
+            selectedEpisodeNumber = if (mediaRef.mediaType == MediaType.SHOW) 1 else null,
             selectedSource = null,
             selectedSources = emptyList()
         )

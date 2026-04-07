@@ -9,7 +9,7 @@ import org.junit.Test
 
 class AppStateSerializationTest {
     @Test
-    fun bundle_round_trip_preserves_recent_queries_and_continue_watching() {
+    fun bundle_round_trip_preserves_recent_queries_by_mode_and_continue_watching() {
         val state = AppState(
             destination = AppDestination.SOURCES,
             searchMode = SearchMode.SHOWS,
@@ -17,7 +17,8 @@ class AppStateSerializationTest {
             selectedMedia = MediaRef(MediaType.SHOW, MediaIds(null, null, null), "Severance", year = 2022),
             selectedSeasonNumber = 1,
             selectedEpisodeNumber = 2,
-            recentQueries = listOf("Severance", "Andor"),
+            recentMovieQueries = listOf("Dune", "Alien"),
+            recentShowQueries = listOf("Severance", "Andor"),
             continueWatching = listOf(
                 ContinueWatchingItem(
                     mediaTitle = "Severance",
@@ -36,7 +37,8 @@ class AppStateSerializationTest {
         assertEquals("Severance", restored.query)
         assertEquals(1, restored.selectedSeasonNumber)
         assertEquals(2, restored.selectedEpisodeNumber)
-        assertEquals(listOf("Severance", "Andor"), restored.recentQueries)
+        assertEquals(listOf("Dune", "Alien"), restored.recentMovieQueries)
+        assertEquals(listOf("Severance", "Andor"), restored.recentShowQueries)
         assertEquals(1, restored.continueWatching.size)
         assertEquals("Severance", restored.continueWatching.first().mediaTitle)
         assertEquals(42, restored.continueWatching.first().progressPercent)
@@ -55,7 +57,8 @@ class AppStateSerializationTest {
         assertEquals(AppDestination.HOME, restored.destination)
         assertEquals(SearchMode.MOVIES, restored.searchMode)
         assertEquals("Dune", restored.query)
-        assertEquals(emptyList<String>(), restored.recentQueries)
+        assertEquals(emptyList<String>(), restored.recentMovieQueries)
+        assertEquals(emptyList<String>(), restored.recentShowQueries)
         assertEquals(emptyList<ContinueWatchingItem>(), restored.continueWatching)
     }
 }
