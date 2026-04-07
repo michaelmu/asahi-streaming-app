@@ -1,6 +1,6 @@
 # Asahi Execution Plan — Device Hardening and Shell Cleanup
 
-Last updated: 2026-04-04 UTC
+Last updated: 2026-04-07 UTC
 Status: IN_PROGRESS
 Owner: shield-tv-bot + Mike
 Location: `docs/exec-plans/in_progress/2026-04-04-device-hardening-and-shell-cleanup.md`
@@ -58,13 +58,12 @@ A task is only `DONE` when:
 
 ## Current Focus
 
-**Current phase:** Phase B — remaining shell cleanup
+**Current phase:** Phase A/B reassessment — decide whether this pass still has a concrete next slice
 
-**Immediate target:** keep shrinking small workflow seams in `MainActivity`, starting with continue-watching hydration fallback logic that currently leaks screen-state repair into the activity.
+**Immediate target:** truthfully close or retarget the plan after the completed continue-watching hydration cleanup, instead of pretending that already-finished work is still the active task.
 
 **Why this now:**
-The previous plan materially improved the app’s internal architecture and source pipeline.
-With the latest Shield/UI work landed, the best proactive next step is to keep shrinking app-shell glue in `MainActivity` without forcing a huge architectural rewrite.
+The prior `Current Focus` section had gone stale: it still pointed at continue-watching hydration fallback cleanup even though that slice was already logged as completed on 2026-04-05. Before more code work happens under this plan, the plan itself needs to reflect reality so future sessions can resume cleanly.
 
 ---
 
@@ -215,9 +214,13 @@ Avoid speculative churn unless a pattern is clearly risky.
 Current recommendation:
 Maybe, but only after understanding which failures are genuinely environmental vs indicating parser/runtime instability.
 
-### Q3. Is the remaining `MainActivity` cleanup worth a full app-store/effect-loop pivot?
+### Q3. Does this plan still have a real next required slice, or should it be closed and replaced by a narrower follow-up when the next concrete device/runtime or shell-cleanup task appears?
 Current recommendation:
-Not yet. Finish the smaller shell extractions first and reassess.
+Lean toward closing this plan once the next session confirms there is no immediate high-value hardening or shell-cleanup slice queued. Do not keep it in `in_progress/` just because it might become relevant again later.
+
+### Q4. Is the remaining `MainActivity` cleanup worth a full app-store/effect-loop pivot?
+Current recommendation:
+Not yet. The smaller shell extractions are still the right threshold for this pass; if there is no obvious next small extraction, stop rather than forcing a larger rewrite.
 
 ---
 
@@ -267,6 +270,12 @@ Not yet. Finish the smaller shell extractions first and reassess.
 - Kept persistence formats unchanged; this was intentionally a low-risk cleanup, not a playback-session schema expansion.
 - Validation: `./gradlew testDebugUnitTest assembleDebug` passed.
 
+### 2026-04-07 18:00 UTC
+- Reviewed the plan for status honesty after adjacent TV UX and Android Auto planning work accumulated.
+- Identified that the `Current Focus` section had gone stale because it still named the continue-watching hydration fallback task as active even though that slice was already completed and logged.
+- Updated the plan to reflect a reassessment state rather than implying unfinished work that had already landed.
+- Validation: documentation-only truthfulness pass; no code/build validation needed.
+
 ---
 
 ## Scope Changes
@@ -289,6 +298,9 @@ Intended task: Continue the active device/shell plan by extracting the source/se
 
 ### 2026-04-05 05:38 UTC
 Intended task: reduce `MainActivity` glue further by moving continue-watching hydration fallback handling behind the hydrator boundary
+
+### 2026-04-07 18:00 UTC
+Intended task: clean up stale plan state and decide whether this pass should remain active or be closed on the next concrete review
 
 ---
 
