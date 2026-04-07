@@ -1348,6 +1348,7 @@ class PlayerScreenRenderer(
             setBackgroundColor(Color.BLACK)
         }
 
+        (playerView.parent as? ViewGroup)?.removeView(playerView)
         playerView.layoutParams = FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
             FrameLayout.LayoutParams.MATCH_PARENT

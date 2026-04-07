@@ -1508,6 +1508,9 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             AppContainer.playbackEngine.observeState().collectLatest { state ->
                 latestPlaybackState = state
+                if (coordinator.currentState().destination == AppDestination.PLAYER) {
+                    renderCurrentScreen()
+                }
             }
         }
     }
