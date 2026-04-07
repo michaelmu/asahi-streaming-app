@@ -128,7 +128,7 @@ The purpose is not to ship the final Android Auto app. The purpose is to produce
 # Phase A — Real child browse branches
 
 ## A1. Make `Movies` root child content real
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
@@ -151,7 +151,7 @@ Right now the root exposes a movie entry point that does not yet lead anywhere m
 ---
 
 ## A2. Make `TV Shows` root child content real
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
@@ -174,7 +174,7 @@ The product direction explicitly supports TV in MVP, but only in constrained act
 ---
 
 ## A3. Define collection child-loading conventions
-Status: TODO
+Status: DONE
 Priority: Medium
 
 ### Goal
@@ -197,7 +197,7 @@ Phase 2 made root-level browse work. Phase 3 will multiply child-loading branche
 # Phase B — Real Auto search
 
 ## B1. Implement Auto search execution in repository/service flow
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
@@ -221,7 +221,7 @@ Search is a core MVP capability in the decision doc. Without it, the Auto surfac
 ---
 
 ## B2. Add search-result mapping helpers and constraints
-Status: TODO
+Status: DONE
 Priority: Medium
 
 ### Goal
@@ -245,7 +245,7 @@ Search result items carry different expectations than library/history items. Con
 # Phase C — Service behavior tightening
 
 ## C1. Improve service browse/play callback coverage
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
@@ -267,7 +267,7 @@ Phase 2 proved the service boundary. Phase 3 needs to make that boundary robust 
 ---
 
 ## C2. Add concise blocked/failed/empty-state handling in service responses
-Status: TODO
+Status: DONE
 Priority: Medium
 
 ### Goal
@@ -381,6 +381,14 @@ Not yet unless Phase 3 service/runtime validation reveals clear limitations. Kee
 - Scoped this phase around real child browse collections, search execution, service callback tightening, and manual-validation readiness.
 - No Phase 3 implementation work completed yet.
 
+### 2026-04-07 19:xx UTC
+- Replaced placeholder `Movies` / `TV Shows` branches with real flat playable lists built from continue-watching, favorites, and recent signals, deduped by stable media identity.
+- Added `AutoBrowseRepository.children(collectionId)` so collection loading is centralized instead of being hard-coded ad hoc inside the service.
+- Wired Auto search through `SearchTitlesUseCase`, mapping movie results to `PLAY_MOVIE` and show results to `PLAY_SHOW_DEFAULT`, with constrained result counts and explicit empty/query states.
+- Tightened `AsahiAutoService` browse handling to support collection children plus Media3 search callbacks (`onSearch`, `onGetSearchResult`).
+- Added concise explicit empty-state/message nodes so empty branches stop looking like silent failures.
+- Validation pending: `:app:testDebugUnitTest` and `:app:assembleDebug` still need to be run after the code pass.
+
 ---
 
 ## Scope Changes
@@ -388,6 +396,8 @@ Not yet unless Phase 3 service/runtime validation reveals clear limitations. Kee
 ### 2026-04-07
 - Initial Phase 3 scope established.
 - Preserved future hooks for deeper player/session integration, browse/search polish, and DHU-driven fixes after the first manual Auto pass.
+- Chose the simplest honest MVP branch shape for Phase 3: flat playable `Movies` / `TV Shows` lists instead of mini-hubs or deep episode trees.
+- Chose explicit non-playable message nodes for empty/query-empty states so Auto behavior stays inspectable during DHU/manual validation.
 
 ---
 
@@ -395,6 +405,9 @@ Not yet unless Phase 3 service/runtime validation reveals clear limitations. Kee
 
 ### 2026-04-07 18:54 UTC
 Intended task: create the Phase 3 execution plan as the next active driver after the Phase 2 service/browse/playback skeleton landed
+
+### 2026-04-07 19:14 UTC
+Intended task: review the Phase 3 plan against repo reality, then implement real browse/search behavior in the Android Auto package if the plan still held up
 
 ---
 

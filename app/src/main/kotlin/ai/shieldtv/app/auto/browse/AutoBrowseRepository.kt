@@ -5,6 +5,7 @@ import ai.shieldtv.app.core.model.media.MediaType
 
 interface AutoBrowseRepository {
     suspend fun root(): List<AutoBrowseNode>
+    suspend fun children(collectionId: String): List<AutoBrowseNode>
     suspend fun favorites(mediaType: MediaType?): List<AutoBrowseNode>
     suspend fun recent(mediaType: MediaType?): List<AutoBrowseNode>
     suspend fun continueWatching(): List<AutoBrowseNode>

@@ -6,6 +6,7 @@ import ai.shieldtv.app.continuewatching.PersistedContinueWatchingItem
 import ai.shieldtv.app.core.model.media.MediaIds
 import ai.shieldtv.app.core.model.media.MediaRef
 import ai.shieldtv.app.core.model.media.MediaType
+import ai.shieldtv.app.core.model.media.SearchResult
 import ai.shieldtv.app.favorites.FavoriteItem
 import ai.shieldtv.app.history.WatchHistoryItem
 
@@ -37,6 +38,17 @@ object AutoBrowseNodeMapper {
             browsable = false,
             playable = false,
             actionHint = AutoActionHint.SEARCH
+        )
+    }
+
+    fun message(key: String, title: String, subtitle: String? = null): AutoBrowseNode {
+        return AutoBrowseNode(
+            id = AutoMediaId.Collection("message:$key").rawValue,
+            title = title,
+            subtitle = subtitle,
+            browsable = false,
+            playable = false,
+            actionHint = null
         )
     }
 
@@ -118,6 +130,35 @@ object AutoBrowseNodeMapper {
             mediaRef = mediaRef,
             artworkUrl = item.artworkUrl,
             actionHint = action
+        )
+    }
+
+    fun searchResult(result: SearchResult): AutoBrowseNode {
+        val action = when (result.mediaRef.mediaType) {
+            MediaType.MOVIE -> AutoActionHint.PLAY_MOVIE
+            MediaType.SHOW -> AutoActionHint.PLAY_SHOW_DEFAULT
+            else -> AutoActionHint.PLAY_MOVIE
+        }
+        val subtitle = listOfNotNull(
+            result.mediaRef.year?.toString(),
+            result.subtitle?.takeIf { it.isNotBlank() }
+        ).joinToString(" • ").ifBlank { null }
+        return mediaItem(
+            mediaRef = result.mediaRef,
+            actionHint = action,
+            subtitle = subtitle,
+            artworkUrl = result.posterUrl ?: result.backdropUrl
+        )
+    }
+
+    fun showDefaultAction(node: AutoBrowseNode): AutoBrowseNode {
+        val mediaRef = node.mediaRef ?: return node
+        if (mediaRef.mediaType != MediaType.SHOW) return node
+        return mediaItem(
+            mediaRef = mediaRef,
+            actionHint = AutoActionHint.PLAY_SHOW_DEFAULT,
+            subtitle = node.subtitle,
+            artworkUrl = node.artworkUrl
         )
     }
 

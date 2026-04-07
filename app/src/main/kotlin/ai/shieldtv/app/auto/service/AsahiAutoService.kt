@@ -3,6 +3,7 @@ package ai.shieldtv.app.auto.service
 import ai.shieldtv.app.auto.AutoFeature
 import ai.shieldtv.app.auto.browse.AutoBrowseRepository
 import ai.shieldtv.app.auto.browse.AutoMediaId
+import ai.shieldtv.app.auto.model.AutoActionHint
 import ai.shieldtv.app.auto.model.AutoBrowseNode
 import ai.shieldtv.app.auto.model.AutoPlaybackResult
 import ai.shieldtv.app.auto.playback.AutoPlaybackFacade
@@ -10,6 +11,7 @@ import ai.shieldtv.app.di.AppContainer
 import android.os.Bundle
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaLibraryService.MediaLibrarySession
@@ -17,7 +19,6 @@ import androidx.media3.session.MediaLibraryService.MediaLibrarySession.Callback
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
-import androidx.media3.exoplayer.ExoPlayer
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -34,7 +35,8 @@ class AsahiAutoService : MediaLibraryService() {
         browseRepository = AutoFeature.createBrowseRepository(
             favoritesStore = AppContainer.favoritesStore,
             watchHistoryStore = AppContainer.watchHistoryStore,
-            continueWatchingStore = AppContainer.continueWatchingStore
+            continueWatchingStore = AppContainer.continueWatchingStore,
+            searchTitlesUseCase = AppContainer.searchTitlesUseCase
         )
         playbackFacade = AutoFeature.createPlaybackFacade(
             getRealDebridAuthStateUseCase = AppContainer.getRealDebridAuthStateUseCase,
@@ -88,14 +90,16 @@ private class AutoLibraryCallback(
         pageSize: Int,
         params: MediaLibraryService.LibraryParams?
     ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
-        val nodes = when (parentId) {
-            ROOT_ID -> runBlockingResult { browseRepository.root() }
-            AutoMediaId.Collection("continue-watching").rawValue -> runBlockingResult { browseRepository.continueWatching() }
-            AutoMediaId.Collection("favorites").rawValue -> runBlockingResult { browseRepository.favorites(mediaType = null) }
-            AutoMediaId.Collection("recent").rawValue -> runBlockingResult { browseRepository.recent(mediaType = null) }
-            AutoMediaId.Collection("movies").rawValue,
-            AutoMediaId.Collection("tv-shows").rawValue,
-            AutoMediaId.Search().rawValue -> emptyList()
+        val nodes = when {
+            parentId == ROOT_ID -> runBlockingResult { browseRepository.root() }
+            parentId.startsWith(SEARCH_PREFIX) -> {
+                val query = parentId.removePrefix(SEARCH_PREFIX)
+                runBlockingResult { browseRepository.search(query, mediaType = null) }
+            }
+            parentId.startsWith(COLLECTION_PREFIX) -> {
+                val collectionId = parentId.removePrefix(COLLECTION_PREFIX)
+                runBlockingResult { browseRepository.children(collectionId) }
+            }
             else -> emptyList()
         }
         val pagedItems = nodes
@@ -117,15 +121,15 @@ private class AutoLibraryCallback(
             is AutoMediaId.Collection -> mediaItem(
                 id = parsed.rawValue,
                 title = parsed.rawValue.substringAfter("collection:").replace('-', ' ').replaceFirstChar { it.uppercase() },
-                subtitle = "Auto collection",
-                isBrowsable = true,
+                subtitle = if (parsed.rawValue.contains("message:")) "Status" else "Auto collection",
+                isBrowsable = !parsed.rawValue.contains("message:"),
                 isPlayable = false
             )
             is AutoMediaId.Search -> mediaItem(
                 id = parsed.rawValue,
                 title = "Search",
-                subtitle = parsed.rawValue.substringAfter(':', "Search"),
-                isBrowsable = false,
+                subtitle = parsed.rawValue.substringAfter(':', "Find movies and shows"),
+                isBrowsable = parsed.rawValue != AutoMediaId.Search().rawValue,
                 isPlayable = false
             )
             is AutoMediaId.Item -> mediaItem(
@@ -146,6 +150,33 @@ private class AutoLibraryCallback(
         return Futures.immediateFuture(LibraryResult.ofItem(item, null))
     }
 
+    override fun onSearch(
+        session: MediaLibrarySession,
+        browser: MediaSession.ControllerInfo,
+        query: String,
+        params: MediaLibraryService.LibraryParams?
+    ): ListenableFuture<LibraryResult<Void>> {
+        return Futures.immediateFuture(LibraryResult.ofVoid(params))
+    }
+
+    override fun onGetSearchResult(
+        session: MediaLibrarySession,
+        browser: MediaSession.ControllerInfo,
+        query: String,
+        page: Int,
+        pageSize: Int,
+        params: MediaLibraryService.LibraryParams?
+    ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
+        val nodes = runBlockingResult { browseRepository.search(query, mediaType = null) }
+        val pagedItems = nodes
+            .drop((page * pageSize).coerceAtLeast(0))
+            .take(pageSize.coerceAtLeast(0))
+            .map(::mediaItem)
+        return Futures.immediateFuture(
+            LibraryResult.ofItemList(ImmutableList.copyOf(pagedItems), params)
+        )
+    }
+
     override fun onSetMediaItems(
         mediaSession: MediaSession,
         controller: MediaSession.ControllerInfo,
@@ -158,10 +189,10 @@ private class AutoLibraryCallback(
             when (val parsed = AutoMediaId.parse(mediaId)) {
                 is AutoMediaId.Item -> runBlockingResult {
                     when (parsed.action) {
-                        ai.shieldtv.app.auto.model.AutoActionHint.PLAY_MOVIE -> playbackFacade.playMovie(parsed.mediaRef)
-                        ai.shieldtv.app.auto.model.AutoActionHint.RESUME -> playbackFacade.resume(parsed.mediaRef)
-                        ai.shieldtv.app.auto.model.AutoActionHint.PLAY_SHOW_DEFAULT -> playbackFacade.playShowDefault(parsed.mediaRef)
-                        ai.shieldtv.app.auto.model.AutoActionHint.PLAY_EPISODE -> {
+                        AutoActionHint.PLAY_MOVIE -> playbackFacade.playMovie(parsed.mediaRef)
+                        AutoActionHint.RESUME -> playbackFacade.resume(parsed.mediaRef)
+                        AutoActionHint.PLAY_SHOW_DEFAULT -> playbackFacade.playShowDefault(parsed.mediaRef)
+                        AutoActionHint.PLAY_EPISODE -> {
                             val seasonNumber = parsed.seasonNumber
                             val episodeNumber = parsed.episodeNumber
                             if (seasonNumber != null && episodeNumber != null) {
@@ -249,5 +280,7 @@ private class AutoLibraryCallback(
 
     companion object {
         private const val ROOT_ID = "asahi-auto-root"
+        private const val COLLECTION_PREFIX = "collection:"
+        private const val SEARCH_PREFIX = "search:"
     }
 }

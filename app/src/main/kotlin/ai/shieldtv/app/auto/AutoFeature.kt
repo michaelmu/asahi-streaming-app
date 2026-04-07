@@ -9,6 +9,7 @@ import ai.shieldtv.app.auto.playback.DefaultAutoSourceSelector
 import ai.shieldtv.app.continuewatching.ContinueWatchingStore
 import ai.shieldtv.app.domain.usecase.auth.GetRealDebridAuthStateUseCase
 import ai.shieldtv.app.domain.usecase.details.GetTitleDetailsUseCase
+import ai.shieldtv.app.domain.usecase.search.SearchTitlesUseCase
 import ai.shieldtv.app.domain.usecase.sources.FindSourcesUseCase
 import ai.shieldtv.app.favorites.FavoritesStore
 import ai.shieldtv.app.history.WatchHistoryCoordinator
@@ -20,12 +21,14 @@ object AutoFeature {
     fun createBrowseRepository(
         favoritesStore: FavoritesStore,
         watchHistoryStore: WatchHistoryStore,
-        continueWatchingStore: ContinueWatchingStore
+        continueWatchingStore: ContinueWatchingStore,
+        searchTitlesUseCase: SearchTitlesUseCase
     ): AutoBrowseRepository {
         return DefaultAutoBrowseRepository(
             favoritesStore = favoritesStore,
             watchHistoryStore = watchHistoryStore,
-            continueWatchingStore = continueWatchingStore
+            continueWatchingStore = continueWatchingStore,
+            searchTitlesUseCase = searchTitlesUseCase
         )
     }
 
