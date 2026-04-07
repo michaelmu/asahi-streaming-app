@@ -1,0 +1,16 @@
+# Optional local.properties helpers for Android Auto / DHU testing
+# Copy the entries you want into local.properties.
+# Do not commit machine-specific values.
+
+# Android SDK root
+ANDROID_AUTO_SDK_DIR=/opt/android-sdk
+
+# Helpful explicit tool paths
+ANDROID_AUTO_ADB=/opt/android-sdk/platform-tools/adb
+ANDROID_AUTO_EMULATOR=/opt/android-sdk/emulator/emulator
+
+# Recommended dedicated phone AVD for Android Auto work
+ANDROID_AUTO_PHONE_AVD=asahi-auto-test
+
+# Desktop Head Unit location (path varies by SDK install)
+ANDROID_AUTO_DHU_MAIN=/opt/android-sdk/extras/google/auto/desktop-head-unit
