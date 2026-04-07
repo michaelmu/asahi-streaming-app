@@ -4,6 +4,8 @@ import ai.shieldtv.app.auto.AutoFeature
 import ai.shieldtv.app.auto.browse.AutoBrowseRepository
 import ai.shieldtv.app.auto.browse.AutoMediaId
 import ai.shieldtv.app.auto.model.AutoBrowseNode
+import ai.shieldtv.app.auto.model.AutoPlaybackResult
+import ai.shieldtv.app.auto.playback.AutoPlaybackFacade
 import ai.shieldtv.app.di.AppContainer
 import android.os.Bundle
 import androidx.media3.common.MediaItem
@@ -23,6 +25,7 @@ import com.google.common.util.concurrent.ListenableFuture
 class AsahiAutoService : MediaLibraryService() {
     private lateinit var player: ExoPlayer
     private lateinit var browseRepository: AutoBrowseRepository
+    private lateinit var playbackFacade: AutoPlaybackFacade
     private var mediaLibrarySession: MediaLibrarySession? = null
 
     override fun onCreate() {
@@ -33,10 +36,19 @@ class AsahiAutoService : MediaLibraryService() {
             watchHistoryStore = AppContainer.watchHistoryStore,
             continueWatchingStore = AppContainer.continueWatchingStore
         )
+        playbackFacade = AutoFeature.createPlaybackFacade(
+            getRealDebridAuthStateUseCase = AppContainer.getRealDebridAuthStateUseCase,
+            getTitleDetailsUseCase = AppContainer.getTitleDetailsUseCase,
+            findSourcesUseCase = AppContainer.findSourcesUseCase,
+            playbackMemoryStore = AppContainer.playbackMemoryStore,
+            watchHistoryCoordinator = AppContainer.watchHistoryCoordinator,
+            sourcePreferencesStore = AppContainer.sourcePreferencesStore,
+            availableProviderIds = { AppContainer.availableProviderIds().toSet() }
+        )
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession {
-        return mediaLibrarySession ?: MediaLibrarySession.Builder(this, player, AutoLibraryCallback(browseRepository)).build()
+        return mediaLibrarySession ?: MediaLibrarySession.Builder(this, player, AutoLibraryCallback(browseRepository, playbackFacade)).build()
             .also { mediaLibrarySession = it }
     }
 
@@ -49,7 +61,8 @@ class AsahiAutoService : MediaLibraryService() {
 }
 
 private class AutoLibraryCallback(
-    private val browseRepository: AutoBrowseRepository
+    private val browseRepository: AutoBrowseRepository,
+    private val playbackFacade: AutoPlaybackFacade
 ) : Callback {
 
     override fun onGetLibraryRoot(
@@ -140,9 +153,52 @@ private class AutoLibraryCallback(
         startIndex: Int,
         startPositionMs: Long
     ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
-        return Futures.immediateFuture(
-            MediaSession.MediaItemsWithStartPosition(mediaItems, startIndex, startPositionMs)
-        )
+        val requestedItem = mediaItems.getOrNull(startIndex.coerceAtLeast(0)) ?: mediaItems.firstOrNull()
+        val resolved = requestedItem?.mediaId?.let { mediaId ->
+            when (val parsed = AutoMediaId.parse(mediaId)) {
+                is AutoMediaId.Item -> runBlockingResult {
+                    when (parsed.action) {
+                        ai.shieldtv.app.auto.model.AutoActionHint.PLAY_MOVIE -> playbackFacade.playMovie(parsed.mediaRef)
+                        ai.shieldtv.app.auto.model.AutoActionHint.RESUME -> playbackFacade.resume(parsed.mediaRef)
+                        ai.shieldtv.app.auto.model.AutoActionHint.PLAY_SHOW_DEFAULT -> playbackFacade.playShowDefault(parsed.mediaRef)
+                        ai.shieldtv.app.auto.model.AutoActionHint.PLAY_EPISODE -> {
+                            val seasonNumber = parsed.seasonNumber
+                            val episodeNumber = parsed.episodeNumber
+                            if (seasonNumber != null && episodeNumber != null) {
+                                playbackFacade.playEpisode(parsed.mediaRef, seasonNumber, episodeNumber)
+                            } else {
+                                AutoPlaybackResult.Failed("Episode target was incomplete.")
+                            }
+                        }
+                        else -> AutoPlaybackResult.Failed("Unsupported Auto action.")
+                    }
+                }
+                else -> AutoPlaybackResult.Failed("Unsupported Auto media selection.")
+            }
+        } ?: AutoPlaybackResult.Failed("No Auto media item was provided.")
+
+        return when (resolved) {
+            is AutoPlaybackResult.Ready -> {
+                val playableItem = MediaItem.Builder()
+                    .setMediaId(requestedItem?.mediaId ?: resolved.source.id)
+                    .setUri(resolved.source.url)
+                    .setMediaMetadata(
+                        MediaMetadata.Builder()
+                            .setTitle(resolved.source.mediaRef.title)
+                            .setSubtitle(resolved.source.displayName)
+                            .setIsPlayable(true)
+                            .build()
+                    )
+                    .build()
+                Futures.immediateFuture(
+                    MediaSession.MediaItemsWithStartPosition(listOf(playableItem), 0, startPositionMs)
+                )
+            }
+            is AutoPlaybackResult.Blocked,
+            is AutoPlaybackResult.Failed -> Futures.immediateFuture(
+                MediaSession.MediaItemsWithStartPosition(emptyList(), 0, 0L)
+            )
+        }
     }
 
     override fun onCustomCommand(

@@ -63,9 +63,9 @@ A task is only `DONE` when:
 
 ## Current Focus
 
-**Current phase:** Phase 2 — service shell and browse skeleton
+**Current phase:** Phase 2 — service, browse, and playback skeleton
 
-**Immediate target:** complete the minimal Android Auto media service/session shell plus the root browse projection, then move next to playback facade wiring
+**Immediate target:** tighten end-to-end Auto selection behavior and document the remaining gaps before Phase 3 child browse/search work
 
 **Why this now:**
 Phase 1 established the contracts and pure rule logic. The next honest step is to exercise those contracts through a real Auto entry surface so future implementation can build on something runnable instead of abstract interfaces alone.
@@ -211,7 +211,7 @@ This reduces duplicated mapping logic and keeps browse semantics stable as more 
 # Phase C — Playback handoff skeleton
 
 ## C1. Add a thin `AutoPlaybackFacade` implementation
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
@@ -234,7 +234,7 @@ The facade is the main guardrail preventing the Auto integration from bypassing 
 ---
 
 ## C2. Add lookup/identifier strategy for Auto playable nodes
-Status: TODO
+Status: DONE
 Priority: Medium
 
 ### Goal
@@ -257,7 +257,7 @@ The service shell will need stable ids for browse callbacks and playback dispatc
 # Phase D — Service-to-repository wiring
 
 ## D1. Wire service callbacks to root browse and playback seams
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
@@ -321,7 +321,9 @@ Only if the existing search pipeline plugs in cheaply. Otherwise, expose the roo
 - Browse ids can become ad hoc quickly if not standardized before service callback wiring.
 - It is easy to accidentally smuggle TV-specific messaging, state, or source-picker assumptions into the Auto playback facade.
 - Search can sprawl fast; keep it constrained unless it comes together almost for free.
-- Current service shell owns its own `ExoPlayer` only to satisfy the Media3 session boundary; real playback handoff still needs Phase C/D work so Auto requests route through app playback rules instead of pretending playback is complete.
+- Current service shell owns its own `ExoPlayer` only to satisfy the Media3 session boundary.
+- Auto requests now resolve through the playback facade, but the final player/session integration is still intentionally shallow: the service currently turns a selected `SourceResult` into a playable Media3 item rather than fully reusing the TV playback engine/state pipeline.
+- Auto blocked/failure outcomes are explicit, but there is not yet a rich car-safe error/reporting UX or real browse-child expansion for Movies / TV Shows / Search.
 - Unrelated local edits in the repo increase the chance of accidental overlap; keep commits tightly scoped.
 
 ---
@@ -350,6 +352,15 @@ Only if the existing search pipeline plugs in cheaply. Otherwise, expose the roo
 - Real projections are implemented for continue watching, favorites, and recent via existing stores; movies / TV shows / search remain explicit stubs for later phases.
 - Validation: `./gradlew :app:testDebugUnitTest :app:assembleDebug` passed after landing the service and browse skeleton.
 
+### 2026-04-07 19:02 UTC
+- Added `DefaultAutoPlaybackFacade` as the first concrete Auto playback implementation.
+- Movie playback now searches sources using current source preferences/provider selection and applies `DefaultAutoSourceSelector` so Auto only accepts cached-or-direct results.
+- Show default playback now loads title details, derives a resume/default episode via `DefaultAutoShowProgressResolver`, and uses playback memory plus watched-episode history as inputs.
+- `AutoMediaId` item identifiers are now exercised by the service playback path, so playable browse items resolve through the Auto facade instead of bypassing it.
+- `AsahiAutoService` now routes `onSetMediaItems` playable requests through `AutoPlaybackFacade`; unsupported/blocked/failure cases remain explicit and non-magical.
+- Added targeted `DefaultAutoPlaybackFacadeTest` coverage for cached/direct preference, RD-blocked failure, and show-default resume selection.
+- Validation: `./gradlew :app:testDebugUnitTest :app:assembleDebug` passed after playback facade and service wiring landed.
+
 ---
 
 ## Scope Changes
@@ -367,6 +378,9 @@ Intended task: create the Phase 2 execution plan and use it as the sole active i
 
 ### 2026-04-07 18:29 UTC
 Intended task: land Phase 2 service shell + manifest wiring + root browse repository and stable media-id skeleton before moving on to playback facade work
+
+### 2026-04-07 18:46 UTC
+Intended task: implement the thin Auto playback facade, wire playable Auto ids through the service callback path, and validate with focused unit tests
 
 ---
 
