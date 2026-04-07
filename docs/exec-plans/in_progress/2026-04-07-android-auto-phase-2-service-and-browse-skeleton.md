@@ -65,7 +65,7 @@ A task is only `DONE` when:
 
 **Current phase:** Phase 2 — service shell and browse skeleton
 
-**Immediate target:** add a minimal Android Auto media service/session shell plus a root browse projection and thin playback facade placeholder wiring
+**Immediate target:** complete the minimal Android Auto media service/session shell plus the root browse projection, then move next to playback facade wiring
 
 **Why this now:**
 Phase 1 established the contracts and pure rule logic. The next honest step is to exercise those contracts through a real Auto entry surface so future implementation can build on something runnable instead of abstract interfaces alone.
@@ -116,7 +116,7 @@ The purpose is not to finish the whole Android Auto app. The purpose is to de-ri
 # Phase A — Service and manifest skeleton
 
 ## A1. Add minimal Auto media service shell
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
@@ -139,7 +139,7 @@ Until a real service shell exists, Auto work remains theoretical. This task make
 ---
 
 ## A2. Add required manifest and metadata wiring
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
@@ -163,7 +163,7 @@ Without manifest registration, the new service shell is dead code and future DHU
 # Phase B — Browse projection skeleton
 
 ## B1. Implement a root-level `AutoBrowseRepository` projection
-Status: TODO
+Status: DONE
 Priority: High
 
 ### Goal
@@ -187,7 +187,7 @@ The Auto UX depends on a browse tree that is independent from TV screens. This r
 ---
 
 ## B2. Add browse-node mapping helpers
-Status: TODO
+Status: DONE
 Priority: Medium
 
 ### Goal
@@ -307,7 +307,7 @@ Start with the smallest real `MediaLibraryService`/session shell that matches An
 
 ### Q2. Which root nodes should be real in this phase versus placeholders?
 Current recommendation:
-Make `Continue Watching`, `Favorites`, and `Recent` real if they can be projected cheaply from existing stores. Keep `Movies`, `TV Shows`, and `Search` as either simple real entry points or explicit placeholders depending on implementation cost discovered during repository review.
+Resolved for this slice: `Continue Watching`, `Favorites`, and `Recent` are real store-backed projections. `Movies`, `TV Shows`, and `Search` are explicit placeholders/stubs and should only become real when child browse/search execution is implemented.
 
 ### Q3. Should Phase 2 include real search handling already?
 Current recommendation:
@@ -321,6 +321,7 @@ Only if the existing search pipeline plugs in cheaply. Otherwise, expose the roo
 - Browse ids can become ad hoc quickly if not standardized before service callback wiring.
 - It is easy to accidentally smuggle TV-specific messaging, state, or source-picker assumptions into the Auto playback facade.
 - Search can sprawl fast; keep it constrained unless it comes together almost for free.
+- Current service shell owns its own `ExoPlayer` only to satisfy the Media3 session boundary; real playback handoff still needs Phase C/D work so Auto requests route through app playback rules instead of pretending playback is complete.
 - Unrelated local edits in the repo increase the chance of accidental overlap; keep commits tightly scoped.
 
 ---
@@ -341,6 +342,14 @@ Only if the existing search pipeline plugs in cheaply. Otherwise, expose the roo
 - Established scope around service shell, root browse projection, playback facade wiring, and stable id handling.
 - No Phase 2 implementation work completed yet.
 
+### 2026-04-07 18:45 UTC
+- Added the first concrete Android Auto service shell as `AsahiAutoService` using Media3 `MediaLibraryService` and a minimal `MediaLibrarySession` callback.
+- Added manifest wiring plus `res/xml/automotive_app_desc.xml` so the app now declares an Auto media surface.
+- Added a concrete `DefaultAutoBrowseRepository`, `AutoBrowseNodeMapper`, and stable `AutoMediaId` helpers.
+- Root collections now expose `Continue Watching`, `Favorites`, `Recent`, `Movies`, `TV Shows`, and `Search`.
+- Real projections are implemented for continue watching, favorites, and recent via existing stores; movies / TV shows / search remain explicit stubs for later phases.
+- Validation: `./gradlew :app:testDebugUnitTest :app:assembleDebug` passed after landing the service and browse skeleton.
+
 ---
 
 ## Scope Changes
@@ -355,6 +364,9 @@ Only if the existing search pipeline plugs in cheaply. Otherwise, expose the roo
 
 ### 2026-04-07 18:17 UTC
 Intended task: create the Phase 2 execution plan and use it as the sole active implementation driver for the next Android Auto pass
+
+### 2026-04-07 18:29 UTC
+Intended task: land Phase 2 service shell + manifest wiring + root browse repository and stable media-id skeleton before moving on to playback facade work
 
 ---
 
