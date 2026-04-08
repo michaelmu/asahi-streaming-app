@@ -22,6 +22,7 @@ import androidx.media3.session.SessionResult
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import kotlinx.coroutines.withTimeoutOrNull
 
 class AsahiAutoService : MediaLibraryService() {
     private lateinit var player: ExoPlayer
@@ -185,24 +186,27 @@ private class AutoLibraryCallback(
         startPositionMs: Long
     ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
         val requestedItem = mediaItems.getOrNull(startIndex.coerceAtLeast(0)) ?: mediaItems.firstOrNull()
-        val resolved = requestedItem?.mediaId?.let { mediaId ->
+        val requestedMediaId = requestedItem?.mediaId
+        val resolved = requestedMediaId?.let { mediaId ->
             when (val parsed = AutoMediaId.parse(mediaId)) {
                 is AutoMediaId.Item -> runBlockingResult {
-                    when (parsed.action) {
-                        AutoActionHint.PLAY_MOVIE -> playbackFacade.playMovie(parsed.mediaRef)
-                        AutoActionHint.RESUME -> playbackFacade.resume(parsed.mediaRef)
-                        AutoActionHint.PLAY_SHOW_DEFAULT -> playbackFacade.playShowDefault(parsed.mediaRef)
-                        AutoActionHint.PLAY_EPISODE -> {
-                            val seasonNumber = parsed.seasonNumber
-                            val episodeNumber = parsed.episodeNumber
-                            if (seasonNumber != null && episodeNumber != null) {
-                                playbackFacade.playEpisode(parsed.mediaRef, seasonNumber, episodeNumber)
-                            } else {
-                                AutoPlaybackResult.Failed("Episode target was incomplete.")
+                    withTimeoutOrNull(8_000) {
+                        when (parsed.action) {
+                            AutoActionHint.PLAY_MOVIE -> playbackFacade.playMovie(parsed.mediaRef)
+                            AutoActionHint.RESUME -> playbackFacade.resume(parsed.mediaRef)
+                            AutoActionHint.PLAY_SHOW_DEFAULT -> playbackFacade.playShowDefault(parsed.mediaRef)
+                            AutoActionHint.PLAY_EPISODE -> {
+                                val seasonNumber = parsed.seasonNumber
+                                val episodeNumber = parsed.episodeNumber
+                                if (seasonNumber != null && episodeNumber != null) {
+                                    playbackFacade.playEpisode(parsed.mediaRef, seasonNumber, episodeNumber)
+                                } else {
+                                    AutoPlaybackResult.Failed("Episode target was incomplete.")
+                                }
                             }
+                            else -> AutoPlaybackResult.Failed("Unsupported Auto action.")
                         }
-                        else -> AutoPlaybackResult.Failed("Unsupported Auto action.")
-                    }
+                    } ?: AutoPlaybackResult.Failed("Auto playback timed out while loading sources.")
                 }
                 else -> AutoPlaybackResult.Failed("Unsupported Auto media selection.")
             }
@@ -211,7 +215,7 @@ private class AutoLibraryCallback(
         return when (resolved) {
             is AutoPlaybackResult.Ready -> {
                 val playableItem = MediaItem.Builder()
-                    .setMediaId(requestedItem?.mediaId ?: resolved.source.id)
+                    .setMediaId(requestedMediaId ?: resolved.source.id)
                     .setUri(resolved.source.url)
                     .setMediaMetadata(
                         MediaMetadata.Builder()
@@ -225,11 +229,39 @@ private class AutoLibraryCallback(
                     MediaSession.MediaItemsWithStartPosition(listOf(playableItem), 0, startPositionMs)
                 )
             }
-            is AutoPlaybackResult.Blocked,
+            is AutoPlaybackResult.Blocked -> Futures.immediateFuture(
+                MediaSession.MediaItemsWithStartPosition(
+                    listOf(buildStatusItem(requestedMediaId, requestedItem, resolved.userMessage)),
+                    0,
+                    0L
+                )
+            )
             is AutoPlaybackResult.Failed -> Futures.immediateFuture(
-                MediaSession.MediaItemsWithStartPosition(emptyList(), 0, 0L)
+                MediaSession.MediaItemsWithStartPosition(
+                    listOf(buildStatusItem(requestedMediaId, requestedItem, resolved.userMessage)),
+                    0,
+                    0L
+                )
             )
         }
+    }
+
+    private fun buildStatusItem(
+        requestedMediaId: String?,
+        requestedItem: MediaItem?,
+        message: String
+    ): MediaItem {
+        return MediaItem.Builder()
+            .setMediaId(requestedMediaId ?: "auto-status")
+            .setUri("https://invalid.local/auto-status")
+            .setMediaMetadata(
+                MediaMetadata.Builder()
+                    .setTitle(requestedItem?.mediaMetadata?.title ?: "Asahi")
+                    .setSubtitle(message)
+                    .setIsPlayable(true)
+                    .build()
+            )
+            .build()
     }
 
     override fun onCustomCommand(

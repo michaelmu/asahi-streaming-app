@@ -67,6 +67,22 @@ class DefaultAutoPlaybackFacadeTest {
     }
 
     @Test
+    fun playMovie_failsWhenNoAutoSafeSourceExists() = runBlocking {
+        val movieRef = movieRef("Primer")
+        val facade = buildFacade(
+            authState = RealDebridAuthState(isLinked = true),
+            sourceResults = listOf(
+                source(movieRef, id = "uncached-rd", cacheStatus = CacheStatus.UNCACHED, debridService = DebridService.REAL_DEBRID)
+            )
+        )
+
+        val result = facade.playMovie(movieRef)
+
+        assertTrue(result is AutoPlaybackResult.Failed)
+        assertEquals("No Auto-safe source was available.", (result as AutoPlaybackResult.Failed).userMessage)
+    }
+
+    @Test
     fun playShowDefault_prefersResumeEpisodeThenSelectsPlayableSource() = runBlocking {
         val showRef = showRef("Severance", tmdbId = "95396")
         val playbackMemoryFile = tempFile("auto-playback-memory")
