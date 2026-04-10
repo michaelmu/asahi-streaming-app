@@ -1,6 +1,6 @@
 # Shield Streaming App Research
 
-Last updated: 2026-04-01 UTC
+Last updated: 2026-04-10 UTC
 
 ## Scope
 Research baseline for a TV-first streaming/media app targeting NVIDIA Shield and other Android TV / Google TV devices.
@@ -9,6 +9,7 @@ Inspiration/codebases under review:
 - `xbmc` (Kodi)
 - `stremio-core`
 - `FenlightAnonyMouse.github.io`
+- `NuvioTV`
 
 ## Repo Intake Status
 
@@ -85,6 +86,28 @@ Inspiration/codebases under review:
 - Not a strong source repo for architecture learning in its current form.
 - Still very important as a **behavioral/product reference**.
 - We should inventory Fenlight features explicitly and decide which ones belong in v1 vs later phases.
+
+### 4) NuvioTV (`NuvioTV`)
+- New repo added to the research set on 2026-04-10.
+- URL: `https://github.com/NuvioMedia/NuvioTV.git`
+- Initial classification: another Android TV / streaming product reference worth comparing alongside Kodi, Stremio, and Fenlight.
+- Needs a proper inspection pass to determine:
+  - app architecture and module boundaries
+  - TV navigation/focus patterns
+  - playback stack and player UX
+  - catalog/search/details flows
+  - provider/source integration approach
+  - settings, auth, and account-management patterns
+
+**Why it matters for us**
+- Gives us another modern reference point that may be closer to the kind of Shield-first streaming UX we actually want.
+- Useful as a comparison repo between heavyweight platform-style apps and plugin-driven ecosystems.
+- May expose implementation shortcuts or pitfalls that are more directly reusable than Kodi and less abstract than Stremio core.
+
+**Immediate takeaways**
+- Add it to the active benchmark set now.
+- Schedule a deeper review pass rather than assuming it is only inspirational at the product surface.
+- Compare it specifically against our desired Android TV UX, playback model, and source integration strategy.
 
 ## Early Cross-Repo Conclusions
 
