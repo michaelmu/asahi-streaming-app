@@ -88,26 +88,156 @@ Inspiration/codebases under review:
 - We should inventory Fenlight features explicitly and decide which ones belong in v1 vs later phases.
 
 ### 4) NuvioTV (`NuvioTV`)
-- New repo added to the research set on 2026-04-10.
-- URL: `https://github.com/NuvioMedia/NuvioTV.git`
-- Initial classification: another Android TV / streaming product reference worth comparing alongside Kodi, Stremio, and Fenlight.
-- Needs a proper inspection pass to determine:
-  - app architecture and module boundaries
-  - TV navigation/focus patterns
-  - playback stack and player UX
-  - catalog/search/details flows
-  - provider/source integration approach
-  - settings, auth, and account-management patterns
+- URL under review: `https://github.com/NuvioMedia/NuvioTV.git`
+- Positioning from README: a modern Android TV media player built around the Stremio add-on ecosystem, explicitly optimized for TV-first playback.
+- Tech stack signal is very relevant to our own direction:
+  - Kotlin
+  - Jetpack Compose + TV Material3
+  - Hilt DI
+  - Retrofit / OkHttp
+  - Media3 / ExoPlayer with custom local AAR replacements
+- Repo shape suggests a real product app, not just a concept demo:
+  - full Android app module
+  - baseline profile module
+  - release scripts
+  - in-app updater via GitHub releases
+  - localization resources
+  - bundled native libs for torrent support
 
-**Why it matters for us**
-- Gives us another modern reference point that may be closer to the kind of Shield-first streaming UX we actually want.
-- Useful as a comparison repo between heavyweight platform-style apps and plugin-driven ecosystems.
-- May expose implementation shortcuts or pitfalls that are more directly reusable than Kodi and less abstract than Stremio core.
+**Architecture / code structure**
+- Monolithic app module, but internally split into recognizable layers:
+  - `core/*` for auth, networking, player helpers, plugins, sync, TMDb, torrent, local servers
+  - `data/*` for local stores, DTOs, APIs, mappers, repositories, trailer services
+  - `domain/*` for models and repository interfaces
+  - `ui/*` for navigation, reusable components, screens, and theme
+- This is not as cleanly modularized as a multi-module enterprise Android app, but the package boundaries are still disciplined enough to be useful.
+- Good example of a pragmatic product architecture: keep shipping velocity high while still separating domain/data/UI concerns.
 
-**Immediate takeaways**
-- Add it to the active benchmark set now.
-- Schedule a deeper review pass rather than assuming it is only inspirational at the product surface.
-- Compare it specifically against our desired Android TV UX, playback model, and source integration strategy.
+**TV UX / navigation observations**
+- Strong TV-native bias throughout:
+  - Compose navigation with custom fade transitions
+  - sidebar/drawer-oriented navigation
+  - explicit focus restoration and focus requesters across screens
+  - multiple home presentations (`ClassicHomeContent`, `GridHomeContent`, `ModernHomeContent`)
+  - hero carousel / backdrop behavior
+  - many screens built around remote-first interaction rather than touch-first assumptions
+- Main activity shows a lot of custom work for:
+  - sidebar collapse / expansion
+  - focus routing
+  - theme/font/layout preferences
+  - onboarding and profile gating
+  - startup sync behavior
+- This is one of the strongest product references so far for actual Android TV focus ergonomics.
+
+**Content / catalog model**
+- Home screen architecture is materially richer than a simple row-list app:
+  - catalog rows
+  - collections/folders
+  - continue watching
+  - hero presentations
+  - trailer preview enrichment
+  - TMDb / MDBList / Trakt-influenced presentation
+- `HomeViewModel` is large and orchestration-heavy, which is both informative and cautionary.
+- Takeaway: a polished TV home surface becomes complex quickly once it mixes live catalogs, user library state, continue-watching, hero enrichment, preview media, and profile-specific customization.
+
+**Add-on / plugin architecture**
+- Very important reference point.
+- NuvioTV combines multiple source/plugin ideas rather than choosing just one:
+  - Stremio-style add-on repositories and manifests
+  - local plugin runtime management
+  - CloudStream extension compatibility layers
+  - repository parsing and local extension loading/execution
+  - QR/local-web flows for add-on management
+- `PluginManager` includes:
+  - repo URL normalization and manifest canonicalization
+  - short-code resolution
+  - remote sync integration
+  - concurrency limits for scraper execution
+  - streaming execution of scraper results as they arrive
+- This is useful because it demonstrates a hybrid architecture that is broader than pure Stremio.
+
+**Why that matters for us**
+- Confirms there is real product value in treating “provider ecosystem” as a first-class subsystem.
+- Also confirms the danger: once plugin compatibility and repo management enter the picture, complexity balloons across networking, sandboxing, sync, auth, UX, and debugging.
+- Strong argument for us to define a narrower provider/plugin scope for v1 unless ecosystem compatibility is itself the product.
+
+**Playback stack observations**
+- The player stack is unusually ambitious:
+  - custom local AAR replacements for stock Media3 ExoPlayer/UI
+  - FFmpeg-related decoder AARs
+  - MPV Android library integration
+  - ASS/SSA subtitle support
+  - explicit frame-rate matching utilities
+  - track selection, subtitle timing, subtitle style panels, audio selection overlays
+  - next-episode overlays, source panels, episode side panels, pause overlays
+  - engine failover / recovery handling in player runtime controller files
+- The player implementation is decomposed into many `PlayerRuntimeController*` files instead of one giant class, which is a good pattern once player complexity gets serious.
+- This repo is probably our strongest playback-focused benchmark so far.
+
+**Torrent / streaming observations**
+- Bundles `libtorrserver.so` for multiple ABIs and includes a dedicated torrent service.
+- Torrent flow appears to:
+  - start a local TorrServer-compatible binary
+  - add torrent via magnet
+  - resolve file index heuristically
+  - expose a local HTTP stream URL to the player
+  - poll stats for buffering/download state
+- This is directly relevant if we ever want torrent-backed playback, but it is also a complexity and legal/policy multiplier.
+
+**Auth / sync / account model**
+- Includes meaningful account infrastructure:
+  - Supabase auth
+  - email auth
+  - QR-based TV login helpers
+  - sync owner / effective user resolution
+  - profile sync and startup sync services
+  - remote syncing of plugin and profile state
+- This is a reminder that once a TV app supports accounts plus ecosystem configuration, backend/state-sync concerns become a real product pillar.
+
+**Local companion-web flows**
+- Notable and very reusable idea:
+  - local NanoHTTPD-based pages for add-on/repository configuration
+  - device-local webpage + QR code flows
+  - pending confirmation model before applying remote changes
+- This is an excellent pattern for TV UX where text entry and repo management are painful with a remote.
+- Worth borrowing conceptually even if our backend/provider model differs.
+
+**Strengths as a reference**
+- Probably the closest repo yet to a real Shield/Android TV streaming product target.
+- Very useful for:
+  - focus/navigation ergonomics
+  - complex home surface composition
+  - player UX depth
+  - add-on management flows
+  - local QR/web companion configuration patterns
+- Much closer to “how a shipping Android TV app feels” than `stremio-core`, which is more architectural than product-facing.
+
+**Cautions / tradeoffs exposed by the repo**
+- It is also a good warning sign.
+- Clear complexity hotspots:
+  - huge orchestration view models
+  - broad dependency surface
+  - hybrid plugin compatibility burden
+  - custom playback engine maintenance cost
+  - torrent/runtime/native binary burden
+- In other words: this is useful inspiration, but also a map of how fast the product can become a monster.
+
+**Immediate takeaways for Asahi**
+- Borrow aggressively from NuvioTV in these areas:
+  - TV-native focus and drawer ergonomics
+  - companion QR/web flows for painful TV configuration tasks
+  - decomposition of a complex player runtime into focused controller slices
+  - layering of domain/data/UI even within a mostly single-app-module codebase
+- Avoid copying it wholesale in these areas:
+  - broad plugin/runtime compatibility from day one
+  - overly expansive home-surface enrichment before the core app loop is solid
+  - heavy playback engine customization too early unless it solves a specific blocker
+  - torrent/native-binary complexity unless it is a deliberate product requirement
+
+**Current opinion**
+- NuvioTV is one of the highest-value benchmark repos in the set so far.
+- It is more directly useful to our Shield app than Kodi for immediate UX/product decisions, and more concrete than Stremio Core for Android TV implementation details.
+- If Kodi is the big legacy benchmark and Stremio is the clean architecture benchmark, NuvioTV is the strongest “modern TV product implementation” benchmark.
 
 ## Early Cross-Repo Conclusions
 
