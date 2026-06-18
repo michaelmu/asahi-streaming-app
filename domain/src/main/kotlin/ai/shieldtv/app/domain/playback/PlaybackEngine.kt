@@ -1,16 +1,10 @@
-package ai.shieldtv.app.domain.playback
+package ai.codexa.app.domain.playback
 
-import ai.shieldtv.app.core.model.playback.PlaybackItem
-import ai.shieldtv.app.core.model.playback.PlaybackState
-import kotlinx.coroutines.flow.Flow
+import ai.codexa.app.core.model.playback.PlaybackItem
 
 interface PlaybackEngine {
-    suspend fun prepare(item: PlaybackItem, startPositionMs: Long = 0L)
+    suspend fun prepare(item: PlaybackItem)
     fun play()
     fun pause()
     fun stop()
-    fun release()
-    fun getCurrentItem(): PlaybackItem?
-    fun getCurrentUrl(): String?
-    fun observeState(): Flow<PlaybackState>
 }

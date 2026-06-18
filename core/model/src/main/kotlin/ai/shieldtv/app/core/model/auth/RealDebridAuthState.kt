@@ -1,4 +1,4 @@
-package ai.shieldtv.app.core.model.auth
+package ai.codexa.app.core.model.auth
 
 data class RealDebridAuthState(
     val isLinked: Boolean,

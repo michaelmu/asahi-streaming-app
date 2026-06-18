@@ -1,6 +1,6 @@
-package ai.shieldtv.app.core.model.source
+package ai.codexa.app.core.model.source
 
-import ai.shieldtv.app.core.model.media.MediaRef
+import ai.codexa.app.core.model.media.MediaRef
 
 data class SourceResult(
     val id: String,
@@ -14,24 +14,9 @@ data class SourceResult(
     val displayName: String,
     val quality: Quality,
     val cacheStatus: CacheStatus,
-    val seasonNumber: Int? = null,
-    val episodeNumber: Int? = null,
     val infoHash: String? = null,
     val sizeBytes: Long? = null,
     val sizeLabel: String? = null,
     val score: Double? = null,
-    val providerIds: Set<String> = setOf(providerId),
-    val providerDisplayNames: Set<String> = setOf(providerDisplayName),
-    val rawMetadata: Map<String, String> = emptyMap(),
-    val origins: List<SourceOrigin> = listOf(
-        SourceOrigin(
-            providerId = providerId,
-            providerDisplayName = providerDisplayName,
-            displayName = displayName,
-            cacheStatus = cacheStatus,
-            sizeBytes = sizeBytes,
-            seeders = rawMetadata["seeders"]?.toIntOrNull(),
-            quality = quality
-        )
-    )
+    val rawMetadata: Map<String, String> = emptyMap()
 )

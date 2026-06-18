@@ -1,4 +1,4 @@
-package ai.shieldtv.app.core.model.media
+package ai.codexa.app.core.model.media
 
 data class MediaRef(
     val mediaType: MediaType,

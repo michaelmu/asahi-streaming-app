@@ -1,19 +1,9 @@
 .gradle/
 build/
 local.properties
-.tmp-release-signing.env
-*.keystore
-*.jks
-keystores/
 *.iml
 .idea/
 .DS_Store
 /captures/
 .externalNativeBuild/
 .cxx/
-
-app/debug/
-/app/app/
-
-# local hook logs / temp
-.pre-commit-cache/

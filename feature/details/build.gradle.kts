@@ -1,5 +1,5 @@
 plugins {
-    id("asahi.kotlin-jvm")
+    id("org.jetbrains.kotlin.jvm")
 }
 
 dependencies {

@@ -1,13 +1,8 @@
-package ai.shieldtv.app.domain.repository
+package ai.codexa.app.domain.repository
 
-import ai.shieldtv.app.core.model.source.SourceResult
-import ai.shieldtv.app.core.model.source.SourceSearchRequest
+import ai.codexa.app.core.model.source.SourceResult
+import ai.codexa.app.core.model.source.SourceSearchRequest
 
 interface SourceRepository {
-    suspend fun findSources(
-        request: SourceSearchRequest,
-        enabledProviderIds: Set<String> = emptySet(),
-        onProgress: ((SourceFetchProgress) -> Unit)? = null,
-        onIncrementalResults: ((IncrementalSourceResult) -> Unit)? = null
-    ): List<SourceResult>
+    suspend fun findSources(request: SourceSearchRequest): List<SourceResult>
 }

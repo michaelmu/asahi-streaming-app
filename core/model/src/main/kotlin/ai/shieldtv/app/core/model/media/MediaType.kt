@@ -1,4 +1,4 @@
-package ai.shieldtv.app.core.model.media
+package ai.codexa.app.core.model.media
 
 enum class MediaType {
     MOVIE,

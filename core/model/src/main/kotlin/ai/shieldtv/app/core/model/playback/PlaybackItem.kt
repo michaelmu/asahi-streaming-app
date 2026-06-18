@@ -1,7 +1,7 @@
-package ai.shieldtv.app.core.model.playback
+package ai.codexa.app.core.model.playback
 
-import ai.shieldtv.app.core.model.media.MediaRef
-import ai.shieldtv.app.core.model.source.ResolvedStream
+import ai.codexa.app.core.model.media.MediaRef
+import ai.codexa.app.core.model.source.ResolvedStream
 
 data class PlaybackItem(
     val mediaRef: MediaRef,

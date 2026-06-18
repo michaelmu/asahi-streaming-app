@@ -1,4 +1,4 @@
-package ai.shieldtv.app.core.model.source
+package ai.codexa.app.core.model.source
 
 enum class CacheStatus {
     CACHED,

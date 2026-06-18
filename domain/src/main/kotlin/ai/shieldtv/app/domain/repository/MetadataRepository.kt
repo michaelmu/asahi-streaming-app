@@ -1,10 +1,8 @@
-package ai.shieldtv.app.domain.repository
+package ai.codexa.app.domain.repository
 
-import ai.shieldtv.app.core.model.media.MediaRef
-import ai.shieldtv.app.core.model.media.SearchResult
-import ai.shieldtv.app.core.model.media.TitleDetails
+import ai.codexa.app.core.model.media.MediaRef
 
 interface MetadataRepository {
-    suspend fun search(query: String): List<SearchResult>
-    suspend fun getTitleDetails(mediaRef: MediaRef): TitleDetails
+    suspend fun search(query: String): List<MediaRef>
+    suspend fun getTitleDetails(mediaRef: MediaRef): MediaRef
 }
